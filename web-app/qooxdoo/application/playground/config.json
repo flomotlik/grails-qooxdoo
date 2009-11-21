@@ -1,0 +1,71 @@
+{
+  "name"    : "Playground config.json",
+
+  "include" :
+  [
+    {
+      "path" : "${QOOXDOO_PATH}/tool/data/config/application.json"
+    }
+  ],
+
+  "let" :
+  {
+    "APPLICATION"  : "playground",
+    "QOOXDOO_PATH" : "../..",
+    "CACHE"        : "${TMPDIR}/cache",
+    "QXTHEME"      : "qx.theme.Modern",
+    "LOCALES"      : [ "en", "de" ],
+    "TEST_INCLUDE"   : "${APPLICATION}.*",
+    "ROOT"         : "."
+  },
+  
+  "jobs" :
+  {
+    "build-script" :
+    {
+
+      "include" :     
+      [
+        "${APPLICATION}.*",
+        "qx.*"
+      ],
+      "exclude" :
+      [
+        "qx.legacy.*",
+        "qx.test.*",
+        "qx.dev.unit.*"
+      ],
+
+      "variants" :
+      {
+        "=qx.debug" : ["on"]
+      },
+      "code" :
+      {
+        "optimize" : ["variables", "basecalls", "privates", "strings"]
+      }
+    },
+    
+    "source" :
+    {
+
+      "include" :     
+      [
+        "${APPLICATION}.*",
+        "qx.*"
+      ],
+      "exclude" :
+      [
+        "qx.legacy.*",
+        "qx.test.*",
+        "qx.dev.unit.*"
+      ],
+
+      "variants" :
+      {
+        "=qx.debug" : ["on"]
+      }
+    }    
+    
+  }
+}

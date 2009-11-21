@@ -1,0 +1,58 @@
+{
+  "name"    : "Feedreader config.json",
+
+  "include" :
+  [
+    {
+      "path" : "${QOOXDOO_PATH}/tool/data/config/application.json"
+    },
+    {
+      "path" : "image.json"
+    }
+  ],
+
+
+  "let" :
+  {
+    "APPLICATION"  : "feedreader",
+    "QOOXDOO_PATH" : "../..",
+    "CACHE"        : "${TMPDIR}/cache",
+    "QXTHEME"      : "qx.theme.Modern",
+    "LOCALES"      : ["en", "de", "es", "fr", "it", "nl", "sv"],
+    "TEST_INCLUDE" : "${APPLICATION}.*",
+    "OPTIMIZE"     : ["basecalls", "strings", "privates", "variables"], 
+    "ROOT"         : "."
+  },
+  
+  
+  "jobs" :
+  {
+    "common" :
+    {
+      "packages" : 
+      {
+        "parts" : 
+        {
+          "boot": 
+          {
+            "include" : ["${QXTHEME}", "feedreader.Application"]
+          },
+          "settings": 
+          {
+            "include" : ["feedreader.view.PreferenceWindow"]
+            //,"expected-load-order" : 1
+          },
+          "addfeed": 
+          {
+            "include" : ["feedreader.view.AddFeedWindow"]
+            //,"expected-load-order" : 1
+          }
+        },
+        "sizes" : 
+        {
+          "min-package" : 10
+        } 
+      }
+    }
+  }  
+}

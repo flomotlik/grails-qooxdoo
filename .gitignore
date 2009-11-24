@@ -10,6 +10,6 @@ lib
 FacebookConfig.groovy
 build
 *~
-classes
 *.launch
 *.tmproj
+web-app/WEB-INF/classes

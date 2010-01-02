@@ -75,7 +75,7 @@ qx.Class.define("qx.ui.table.cellrenderer.Default",
      * Determines the styles to apply to the cell
      *
      * @param cellInfo {Map} cellInfo of the cell
-     *     See {@link #createDataCellHtml}.
+     *     See {@link qx.ui.table.cellrenderer.Abstract#createDataCellHtml}.
      * @return {Integer} the sum of any of the STYLEFLAGS defined below
      */
     _getStyleFlags : function(cellInfo)
@@ -126,7 +126,7 @@ qx.Class.define("qx.ui.table.cellrenderer.Default",
      *
      * @param cellInfo {Map} A map containing the information about the cell to
      *          create. This map has the same structure as in
-     *          {@link DataCellRenderer#createDataCell}.
+     *          {@link qx.ui.table.cellrenderer.Abstract#createDataCellHtml}.
      * @return {String} the formatted value.
      */
     _formatValue : function(cellInfo)

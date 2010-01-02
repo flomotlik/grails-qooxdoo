@@ -39,6 +39,13 @@ qx.Class.define("qx.ui.core.queue.Manager",
     __jobs : {},
 
 
+    /** {Integer} Counts how often a flush failed due to exceptions */
+    __retries : 0,
+
+    /** {Integer} Maximum number of flush retries */
+    MAX_RETRIES : 10,
+
+
     /**
      * Schedule a deferred flush of all queues.
      *
@@ -63,7 +70,7 @@ qx.Class.define("qx.ui.core.queue.Manager",
 
     /**
      * Flush all layout queues in the correct order. This function is called
-     * deferred if {@link scheduleFlush} is called.
+     * deferred if {@link #scheduleFlush} is called.
      *
      * @return {void}
      */
@@ -82,62 +89,119 @@ qx.Class.define("qx.ui.core.queue.Manager",
       // Cancel timeout if called manually
       self.__deferredCall.cancel();
 
-      // Process jobs
       var jobs = self.__jobs;
-      while (jobs.visibility || jobs.widget || jobs.appearance || jobs.layout || jobs.element)
+
+      self.__executeAndRescheduleOnError(function()
       {
-        // No else blocks here because each flush can influence the following flushes!
-        if (jobs.widget)
+        // Process jobs
+        while (jobs.visibility || jobs.widget || jobs.appearance || jobs.layout || jobs.element)
         {
-          delete jobs.widget;
-          qx.ui.core.queue.Widget.flush();
+          // No else blocks here because each flush can influence the following flushes!
+          if (jobs.widget)
+          {
+            delete jobs.widget;
+            qx.ui.core.queue.Widget.flush();
+          }
+
+          if (jobs.visibility)
+          {
+            delete jobs.visibility;
+            qx.ui.core.queue.Visibility.flush();
+          }
+
+          if (jobs.appearance)
+          {
+            delete jobs.appearance;
+            qx.ui.core.queue.Appearance.flush();
+          }
+
+          // Defer layout as long as possible
+          if (jobs.widget || jobs.visibility || jobs.appearance) {
+            continue;
+          }
+
+          if (jobs.layout)
+          {
+            delete jobs.layout;
+            qx.ui.core.queue.Layout.flush();
+          }
+
+          // Defer element as long as possible
+          if (jobs.widget || jobs.visibility || jobs.appearance || jobs.layout) {
+            continue;
+          }
+
+          if (jobs.element)
+          {
+            delete jobs.element;
+            qx.html.Element.flush();
+          }
         }
+      }, function() {
+        self.__scheduled = false;
+      });
 
-        if (jobs.visibility)
-        {
-          delete jobs.visibility;
-          qx.ui.core.queue.Visibility.flush();
-        }
-
-        if (jobs.appearance)
-        {
-          delete jobs.appearance;
-          qx.ui.core.queue.Appearance.flush();
-        }
-
-        // Omit layout as long as possible
-        if (jobs.widget || jobs.visibility || jobs.appearance) {
-          continue;
-        }
-
-        if (jobs.layout)
-        {
-          delete jobs.layout;
-          qx.ui.core.queue.Layout.flush();
-        }
-
-        // Omit element as long as possible
-        if (jobs.widget || jobs.visibility || jobs.appearance || jobs.layout) {
-          continue;
-        }
-
-        if (jobs.element)
-        {
-          delete jobs.element;
-          qx.html.Element.flush();
-        }
-      }
-
-      qx.ui.core.queue.Manager.__scheduled = false;
-
-      if (jobs.dispose)
+      self.__executeAndRescheduleOnError(function()
       {
-        delete jobs.dispose;
-        qx.ui.core.queue.Dispose.flush();
-      }
+        if (jobs.dispose)
+        {
+          delete jobs.dispose;
+          qx.ui.core.queue.Dispose.flush();
+        }
+      }, function() {
+        // Clear flag
+        self.__inFlush = false;
+      });
 
-      // Clear flag
-      self.__inFlush = false;
+      // flush succeeded successfully. Reset retries
+      self.__retries = 0;
+    },
+
+
+    /**
+     * Executes the callback code. If the callback throws an error the current
+     * flush is cleaned up and rescheduled. The finally code is called after the
+     * callback even if it has thrown an exception.
+     *
+     * @param callback {Function} the callback function
+     * @param finallyCode {Function} function to be called in the finally block
+     */
+    __executeAndRescheduleOnError : function(callback, finallyCode)
+    {
+      var self = qx.ui.core.queue.Manager;
+
+      try
+      {
+        callback();
+      }
+      catch (e)
+      {
+        if (qx.core.Variant.isSet("qx.debug", "on")) {
+          qx.log.Logger.error(
+            "Error while layout flush: " + e + "\n" +
+            "Stack trace: \n" +
+            qx.dev.StackTrace.getStackTraceFromError(e)
+          );
+        }
+        self.__scheduled = false;
+        self.__inFlush = false;
+        self.__retries += 1;
+
+        if (self.__retries <= self.MAX_RETRIES) {
+          self.scheduleFlush();
+        } else {
+          throw new Error(
+            "Fatal Error: Flush terminated " + (self.__retries-1) + " times in a row" +
+            " due to exceptions in user code. The application has to be reloaded!"
+          );
+        }
+
+        throw e;
+      }
+      finally
+      {
+        finallyCode();
+      }
     }
   },
 

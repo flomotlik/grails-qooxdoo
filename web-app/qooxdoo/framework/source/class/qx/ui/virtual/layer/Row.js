@@ -67,7 +67,7 @@ qx.Class.define("qx.ui.virtual.layer.Row",
 
       for (var y=0; y<rowSizes.length; y++)
       {
-        var decorator = this.getDecorator(row);
+        var decorator = this.getBackground(row);
         if (decorator)
         {
           decorations.push({
@@ -158,7 +158,7 @@ qx.Class.define("qx.ui.virtual.layer.Row",
 
 
     // overridden
-    setDecorator : function(index, decorator)
+    setBackground : function(index, decorator)
     {
       this.base(arguments, index, decorator);
       if (this.__isRowRendered(index)) {
@@ -167,6 +167,13 @@ qx.Class.define("qx.ui.virtual.layer.Row",
     },
 
 
+    /**
+     * Whether the row with the given index is currently rendered (i.e. in the
+     * layer's view port).
+     *
+     * @param index {Integer} The row's index
+     * @return {Boolean} Whether the row is rendered
+     */
     __isRowRendered : function(index)
     {
       var firstRow = this.getFirstRow();

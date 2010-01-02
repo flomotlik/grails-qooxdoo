@@ -22,6 +22,8 @@
 
 #asset(qx/icon/${qx.icontheme}/16/apps/internet-feed-reader.png)
 
+#tag(noPlayground)
+
 ************************************************************************ */
 
 qx.Class.define("demobrowser.demo.test.Table_HeaderRenderer",
@@ -45,30 +47,6 @@ qx.Class.define("demobrowser.demo.test.Table_HeaderRenderer",
     {
       this._container = new qx.ui.container.Composite(new qx.ui.layout.VBox(10));
       this.getRoot().add(this._container, { left : 20, top: 20});
-    },
-
-
-    testDefaultRenderer : function()
-    {
-      var renderer = new qx.ui.table.headerrenderer.Default();
-
-      var cellDataOptions =
-      {
-        name : ["Name"],
-        col : [1],
-        xPos : [2],
-        editable : [true, false],
-        sorted : [true, false],
-        sortedAscending : [true, false]
-      }
-
-      var container = this._getNewHeaderContainer()
-      qx.util.Permutation.permute(cellDataOptions, function(cellData)
-      {
-        var header = renderer.createHeaderCell(cellData);
-        container.add(header);
-        renderer.updateHeaderCell(cellData, header);
-      });
     },
 
 

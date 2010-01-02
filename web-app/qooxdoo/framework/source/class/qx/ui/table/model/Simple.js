@@ -31,7 +31,6 @@ qx.Class.define("qx.ui.table.model.Simple",
 
     this.__rowArr = [];
     this.__sortColumnIndex = -1;
-    this.__sortAscending;
 
     // Array of objects, each with property "ascending" and "descending"
     this.__sortMethods = [];
@@ -361,6 +360,22 @@ qx.Class.define("qx.ui.table.model.Simple",
 
 
     /**
+     * Returns the sortMethod(s) for a table column.
+     *
+     * @param columnIndex {Integer} The index of the column or which the sort
+     *   methods are being  provided.
+     *
+     * @return {Map} a map with the two properties "ascending"
+     *   and "descending" for the specified column.
+     *   The property value of each is a comparator function, as described
+     *   in {@link #setSortMethods}.
+     */
+    getSortMethods : function(columnIndex) {
+      return this.__sortMethods[columnIndex];
+    },
+
+
+    /**
      * Clears the sorting.
      */
     clearSorting : function()
@@ -676,7 +691,9 @@ qx.Class.define("qx.ui.table.model.Simple",
   },
 
 
-  destruct : function() {
-    this._disposeFields("__rowArr", "__editableColArr", "__sortMethods", "__sortableColArr");
+  destruct : function()
+  {
+    this.__rowArr = this.__editableColArr = this.__sortMethods =
+      this.__sortableColArr = null;
   }
 });

@@ -47,16 +47,11 @@ qx.Class.define("qx.ui.menu.Manager",
     // Create data structure
     this.__objects = [];
 
-    var root = qx.core.Init.getApplication().getRoot();
     var el = document.body;
     var Registration = qx.event.Registration;
 
-    // React on mousedown/mouseup events
-    root.addListener("mousedown", this._onMouseDown, this, true);
-    root.addListener("mouseup", this._onMouseUp, this);
-
-    // support for inline applications
-    Registration.addListener(window.document.documentElement, "mouseup", this._onMouseUp, this);
+    // React on mousedown/mouseup events, but on native, to support inline applications
+    Registration.addListener(window.document.documentElement, "mousedown", this._onMouseDown, this, true);
 
     // React on keypress events
     Registration.addListener(el, "keydown", this._onKeyUpDown, this, true);
@@ -421,6 +416,16 @@ qx.Class.define("qx.ui.menu.Manager",
     _onMouseDown : function(e)
     {
       var target = e.getTarget();
+      target = qx.ui.core.Widget.getWidgetByElement(target);
+
+      // If the target is 'null' the click appears on a DOM element witch is not
+      // a widget. This happens normally with a inline application, when the user
+      // clicks not in the inline application. In this case all all currently
+      // open menus should be closed.
+      if (target == null) {
+        this.hideAll();
+        return;
+      }
 
       // If the target is the one which has opened the current menu
       // we ignore the mousedown to let the button process the event
@@ -434,45 +439,6 @@ qx.Class.define("qx.ui.menu.Manager",
         this.hideAll();
       }
     },
-
-
-    /**
-     * Event handler for mouseup events
-     *
-     * @param e {qx.event.type.Mouse} mouseup event
-     */
-    _onMouseUp : function(e)
-    {
-      var target = e.getTarget();
-      var widget;
-
-      if (target instanceof qx.ui.core.Widget) {
-        widget = target;
-      }
-      else {
-        widget = qx.ui.core.Widget.getWidgetByElement(target);
-      }
-
-      // All mouseups not exactly clicking on the menu hide all currently
-      // open menus.
-      // Separators for example are anonymous. This way the
-      // target is the menu. It is a wanted behavior that clicks on
-      // separators are ignored completely.
-      // Do not hide the menu if the target widget is a disabled menu button
-      if (!(widget instanceof qx.ui.menu.Menu)) {
-
-        widget = this._getMenuButton(widget);
-        if (widget != null &&
-            widget instanceof qx.ui.menu.AbstractButton && !widget.isEnabled()) {
-          return;
-        }
-
-        this.hideAll();
-      }
-    },
-
-
-
 
 
     /*
@@ -679,8 +645,19 @@ qx.Class.define("qx.ui.menu.Manager",
           return;
         }
 
-        var prevButton = index == 0 ? buttons[buttons.length-1] : buttons[index-1];
-        if (prevButton != menuOpener) {
+        // Get previous button, fallback to end if first arrived
+        var prevButton = null;
+        var length =  buttons.length;
+        for (var i = 1; i <= length; i++)
+        {
+          var button = buttons[(index - i + length) % length];
+          if(button.isEnabled()) {
+            prevButton = button;
+            break;
+          }
+        }
+
+        if (prevButton && prevButton != menuOpener) {
           prevButton.open(true);
         }
       }
@@ -775,13 +752,19 @@ qx.Class.define("qx.ui.menu.Manager",
           return;
         }
 
-        // Try next button, fallback to first
-        var nextButton = buttons[index+1];
-        if (!nextButton) {
-          nextButton = buttons[0];
+        // Get next button, fallback to first if end arrived
+        var nextButton = null;
+        var length =  buttons.length;
+        for (var i = 1; i <= length; i++)
+        {
+          var button = buttons[(index + i) % length];
+          if(button.isEnabled()) {
+            nextButton = button;
+            break;
+          }
         }
 
-        if (nextButton != menuOpener) {
+        if (nextButton && nextButton != menuOpener) {
           nextButton.open(true);
         }
       }
@@ -852,12 +835,9 @@ qx.Class.define("qx.ui.menu.Manager",
   {
     var Registration = qx.event.Registration;
     var el = document.body;
-    var root = qx.core.Init.getApplication().getRoot();
 
     // React on mousedown/mouseup events
-    root.removeListener("mousedown", this._onMouseDown, this, true);
-    root.removeListener("mouseup", this._onMouseUp, this);
-    Registration.removeListener(window.document.documentElement, "mouseup", this._onMouseUp, this);
+    Registration.removeListener(window.document.documentElement, "mousedown", this._onMouseDown, this, true);
 
     // React on keypress events
     Registration.removeListener(el, "keydown", this._onKeyUpDown, this, true);

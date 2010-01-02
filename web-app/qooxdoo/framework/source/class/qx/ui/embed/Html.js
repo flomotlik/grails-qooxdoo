@@ -33,7 +33,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/widget/html' target='_blank'>
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/html' target='_blank'>
  * Documentation of this widget in the qooxdoo wiki.</a>
  */
 qx.Class.define("qx.ui.embed.Html",
@@ -152,8 +152,10 @@ qx.Class.define("qx.ui.embed.Html",
 
       // Local style override problematic sections applied through
       // a optional classname
-      elem.setStyle("padding", "0px");
-      elem.setStyle("border", "none");
+      elem.setStyles({
+        "padding": "0px",
+        "border": "none"
+      });
     },
 
 

@@ -18,9 +18,15 @@
 
 ************************************************************************ */
 
+/* ************************************************************************
+
+#tag(noPlayground)
+
+************************************************************************ */
+
 qx.Class.define("demobrowser.demo.util.PropertyEditor",
 {
-  extend : qx.ui.core.AbstractScrollArea,
+  extend : qx.ui.core.scroll.AbstractScrollArea,
 
   construct : function()
   {
@@ -197,8 +203,6 @@ qx.Class.define("demobrowser.demo.util.PropertyEditor",
         return this._editorGroups[name];
       }
 
-      var widget;
-
       switch(name)
       {
         case "wlpe_qx.ui.layout.HBox":
@@ -255,8 +259,6 @@ qx.Class.define("demobrowser.demo.util.PropertyEditor",
         return this._editorGroups[name];
       }
 
-      var widget;
-
       switch(name)
       {
         case "lpe_qx.ui.layout.HBox":
@@ -303,6 +305,7 @@ qx.Class.define("demobrowser.demo.util.PropertyEditor",
 
   destruct : function()
   {
-    this._disposeFields("_pane", "_editorGroups", "_widgetIndicator", "_layoutControls");
+    this._pane = this._editorGroups = this._widgetIndicator = 
+      this._layoutControls = null;
   }
 });

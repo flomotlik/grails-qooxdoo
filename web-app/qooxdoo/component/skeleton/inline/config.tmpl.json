@@ -15,7 +15,7 @@
     "clean",
     "distclean",
     "fix",
-    "inspector",
+    "info",
     "lint",
     "migration",
     "pretty",
@@ -32,7 +32,7 @@
     "APPLICATION"  : "${Namespace}",
     "QOOXDOO_PATH" : "${REL_QOOXDOO_PATH}",
     "QXTHEME"      : "${Namespace}.theme.Theme",
-    "API_EXCLUDE"  : ["qx.legacy.*","qx.test.*"],
+    "API_EXCLUDE"  : ["qx.test.*", "$${APPLICATION}.theme.*", "$${APPLICATION}.test.*"],
     "LOCALES"      : [ "en" ],
     "CACHE"        : "${Cache}",
     "ROOT"         : "."
@@ -63,7 +63,7 @@
     // To see a list of available jobs, invoke 'generate.py x'.
     "build-script" :
     {
-      "compile-dist" : 
+      "compile-options" : 
       {
         "code" :
         {

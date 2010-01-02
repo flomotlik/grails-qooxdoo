@@ -132,63 +132,6 @@ qx.Mixin.define("qx.ui.core.MResizable",
 
     /*
     ---------------------------------------------------------------------------
-      DEPRECATED API
-    ---------------------------------------------------------------------------
-    */
-
-    /**
-     * Get whether all edges are resizable
-     *
-     * @deprecated Use the properties 'resizableTop', 'resizableRight',
-     *     'resizableBottom', 'resizableLeft' separately
-     *
-     * @return {Boolean} Whether all edges are resizable
-     */
-    getResizeAllEdges : function()
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Please use the properties 'resizableTop', 'resizableRight', 'resizableBottom', 'resizableLeft' separately."
-      );
-
-      return (
-        this.getResizableTop() &&
-        this.getResizableRight() &&
-        this.getResizableBottom() &&
-        this.getResizableLeft()
-      );
-    },
-
-
-    /**
-     * Set the resize mode.
-     *
-     * <code>true</code> means that all edges are enabled for resizing (Windows mode)
-     * <code>false</code> means that only the right/bottom edges are enabled (Mac mode)
-     *
-     * @deprecated Use the properties 'resizableTop', 'resizableRight',
-     *     'resizableBottom', 'resizableLeft' separately
-     *
-     * @param value {Boolean} The mode
-     */
-    setResizeAllEdges : function(value)
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Please use the properties 'resizableTop', 'resizableRight', 'resizableBottom', 'resizableLeft' separately."
-      );
-
-      this.set({
-        resizableTop: value,
-        resizableRight: true,
-        resizableBottom: true,
-        resizableLeft: value
-      });
-    },
-
-
-    /*
-    ---------------------------------------------------------------------------
       CORE FEATURES
     ---------------------------------------------------------------------------
     */
@@ -319,7 +262,11 @@ qx.Mixin.define("qx.ui.core.MResizable",
     },
 
 
-    /** {Map} Maps internal states to cursor symbols to use */
+    /**
+     * {Map} Maps internal states to cursor symbols to use
+     *
+     * @lint ignoreReferenceField(__resizeCursors)
+     */
     __resizeCursors :
     {
       1  : "n-resize",
@@ -390,9 +337,6 @@ qx.Mixin.define("qx.ui.core.MResizable",
       // Add resize state
       this.addState("resize");
 
-      // Enable capturing
-      this.capture();
-
       // Store mouse coordinates
       this.__resizeLeft = e.getDocumentLeft();
       this.__resizeTop = e.getDocumentTop();
@@ -413,6 +357,9 @@ qx.Mixin.define("qx.ui.core.MResizable",
         this.__showResizeFrame();
       }
 
+      // Enable capturing
+      this.capture();
+
       // Stop event
       e.stop();
     },
@@ -427,7 +374,7 @@ qx.Mixin.define("qx.ui.core.MResizable",
     __onResizeMouseUp : function(e)
     {
       // Check for active resize
-      if (!this.__resizeActive) {
+      if (!this.hasState("resize")) {
         return;
       }
 
@@ -464,6 +411,8 @@ qx.Mixin.define("qx.ui.core.MResizable",
 
       // Disable capturing
       this.releaseCapture();
+
+      e.stopPropagation();
     },
 
 
@@ -529,7 +478,7 @@ qx.Mixin.define("qx.ui.core.MResizable",
         }
 
         // Full stop for event
-        e.stop();
+        e.stopPropagation();
       }
       else if (!this.hasState("maximized"))
       {
@@ -582,7 +531,12 @@ qx.Mixin.define("qx.ui.core.MResizable",
   *****************************************************************************
   */
 
-  destruct : function() {
-    this._disposeObjects("__resizeFrame");
+  destruct : function()
+  {
+    if (this.__resizeFrame != null && !qx.core.ObjectRegistry.inShutDown)
+    {
+      this.__resizeFrame.destroy();
+      this.__resizeFrame = null;
+    }
   }
 });

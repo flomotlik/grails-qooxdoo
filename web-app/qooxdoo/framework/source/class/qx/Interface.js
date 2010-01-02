@@ -30,7 +30,7 @@
  * See the description of the {@link #define} method how an interface is
  * defined.
  */
-qx.Class.define("qx.Interface",
+qx.Bootstrap.define("qx.Interface",
 {
   statics :
   {
@@ -47,7 +47,7 @@ qx.Class.define("qx.Interface",
      * and <code>statics</code> are called before the original function with the
      * same arguments. This can be used to check the passed arguments. If the
      * checks fail, an exception should be thrown. It is convenient to use the
-     * method defined in {@link qx.dev.unit.Massert} to check the arguments.
+     * method defined in {@link qx.core.MAssert} to check the arguments.
      *
      * In the <code>build</code> version the checks are omitted.
      *

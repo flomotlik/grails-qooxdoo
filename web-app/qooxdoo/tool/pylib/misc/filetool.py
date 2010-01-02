@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -22,10 +22,7 @@ import os, codecs, cPickle, sys, re, time
 import gzip as sys_gzip
 import textutil
 
-if sys.platform == "win32":
-    import msvcrt
-else:
-    import fcntl
+VERSIONCONTROL_DIR_PATTS = (r'^\.svn$', r'^_svn$', r'^CVS$')
 
 def gzip(filePath, content, encoding="utf-8"):
     if not filePath.endswith(".gz"):
@@ -136,21 +133,15 @@ def root():
     
     root = os.path.abspath(toolfolder)
 
-    # Try to remove bytecode
-    if modulepath.endswith(".py"):
-        modulepath = modulepath[:-2] + "pyc"
-        
-    try:
-        os.remove(modulepath)
-    except OSError:
-        pass
-    
     return root
 
 
-def find(rootpath, pattern=None):
-    dirwalker = os.walk(rootpath)
-    alwaysSkip = re.compile(r'(?:\.svn)',re.I)
+def find(rootpath, pattern=None, includedirs=False):
+    dirwalker   = os.walk(rootpath)
+    findPattern = None
+    if pattern:
+        findPattern = re.compile(pattern)
+    alwaysSkip  = re.compile(r'%s' % '|'.join(VERSIONCONTROL_DIR_PATTS),re.I)
 
     for (path, dirlist, filelist) in dirwalker:
         # correct dirlist (only with 'while' you can change it in place)
@@ -162,10 +153,14 @@ def find(rootpath, pattern=None):
             i += 1
 
         ## go through files
-        for filename in filelist:
+        if includedirs: 
+            checklist = dirlist + filelist
+        else:
+            checklist = filelist
+        for filename in checklist:
             if re.search(alwaysSkip, filename):
                 continue
-            if (pattern and not re.search(pattern, filename)):
+            if (findPattern and not re.search(findPattern, filename)):
                 continue
 
             yield os.path.join(path,filename)
@@ -180,7 +175,7 @@ def findYoungest(rootpath, pattern=None):
     youngest = rootpath
     ymodified= lastModified(rootpath)
 
-    for path in find(rootpath, pattern):
+    for path in find(rootpath, pattern, includedirs=True):
         m = lastModified(path)
         if m > ymodified:
             ymodified = m
@@ -192,76 +187,6 @@ def findYoungest(rootpath, pattern=None):
 def lockFileName(path):
     return '.'.join((path, "lock"))
 
-
-def lock1(path, id=None, timeout=None):
-    # create a lock file and return when we can safely access path
-
-    def timeIsOut():
-        now = time.time()
-        if now - starttime > timeout:
-            return True
-        else:
-            return False
-
-    starttime = time.time()
-    lockfile  = lockFileName(path)
-    if not id:
-        id = os.getpid()
-    
-    while True:
-        # check timeout
-        if timeout and timeIsOut():
-            return False
-
-        # wait for non-existence
-        if os.path.exists(lockfile):
-            time.sleep(0.05)
-            continue
-
-        # create file and write pid
-        open(lockfile,"w").write(repr(id))
-
-        # re-open and read contents, compare with pid
-        c = open(lockfile,"r").read()
-        c = int(c)
-        if c == pid:
-            break
-
-    return True
-
-
-def unlock1(path):
-    lockfile = lockFileName(path)
-    if os.path.exists(lockfile) and os.path.isFile(lockfile):
-        os.path.unlink(lockfile)
-        return True
-    else:
-        return False
-
-
-def lock2(fd, write=False):
-    if sys.platform == "win32":
-        if write:
-            flag = msvcrt.LK_RLCK
-        else:
-            flag = msvcrt.LK_LOCK
-        msvcrt.locking(fd, flag, 10)  # assuming the first 10 bytes; throws IOError after 10secs
-        os.lseek(fd, 0, 0)  # make sure we're at the beginning
-    
-    else:  # some *ix system
-        fcntl.flock(fd, fcntl.LOCK_EX) # blocking
-
-    return
-
-
-def unlock2(fd):
-    if sys.platform == "win32":
-        os.lseek(fd, 0, 0)  # make sure we're at the beginning
-        msvcrt.locking(fd, msvcrt.LK_UNLCK, 10) # assuming first 10 bytes!
-    else:
-        fcntl.flock(fd, fcntl.LOCK_UN)
-
-    return
 
 def lock(path, retries=4, timeout=0.5):
     #print "xxx creating file lock on: %r" % path
@@ -289,3 +214,10 @@ def unlock(path):
     if lockfile and os.path.exists(lockfile):
         #print "xxx releasing file lock on: %r" % path
         os.unlink(lockfile)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        raise RuntimeError, "Usage: %s <dirpath>" % sys.argv[0]
+    for entry in find(*sys.argv[1:]):
+        print entry

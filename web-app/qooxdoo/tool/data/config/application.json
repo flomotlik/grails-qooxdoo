@@ -58,21 +58,14 @@
     {
       "desc"   : "create api doc for the current library",
 
-      "extend" : ["apiconf::build"],
+      "extend" : ["libraries", "apiconf::build"],
 
       "let"    :
       {
         "APIVIEWER_ROOT" : "${QOOXDOO_PATH}/component/apiviewer",
         "BUILD_PATH"     : "${ROOT}/api",
         "API_INCLUDE"    : ["qx.*", "${APPLICATION}.*"]
-      },
-
-      "library":
-      [
-        {
-          "manifest"     : "${ROOT}/Manifest.json"
-        }
-      ]
+      }
     },
 
     "inspector":
@@ -110,7 +103,7 @@
     {
       "extend"  : ["inspector::build-script"],
 
-      "compile-dist": 
+      "compile-options": 
       {
         "uris" : 
         { 
@@ -140,7 +133,7 @@
     {
       "desc"    : "create a test runner app for unit tests of the current library",
 
-      "extend" : ["testrunner::build"],
+      "extend" : ["libraries", "testrunner::build"],
 
       "let" :
       {
@@ -148,21 +141,41 @@
         "TEST_INCLUDE"    : "${APPLICATION}.test.*",
         "QXTHEME"         : "qx.theme.Modern",
         "BUILD_PATH"      : "${ROOT}/test"
-      },
-
-      "library" :
-      [
-        {
-          "manifest" : "${ROOT}/Manifest.json"
-        }
-      ]
+      }
     },
+
+
+    "test-inline" :
+    {
+      "extend" : ["test"],
+      
+      "let" : 
+      {
+        "TESTS_SCRIPT" : "tests-inline.js"
+      },
+      
+      "include" : ["testrunner.TestLoaderInline", "${TEST_INCLUDE}", "${QXTHEME}"]
+    },
+
+
+    "test-native" :
+    {
+      "extend" : ["test"],
+      
+      "let" : 
+      {
+        "TESTS_SCRIPT" : "tests-native.js"
+      },
+      
+      "include" : ["testrunner.TestLoaderNative", "${TEST_INCLUDE}", "${QXTHEME}"]
+    },
+
 
     "test-source" :
     {
       "desc"    : "create a test runner app for unit tests (source version) of the current library",
 
-      "extend" : ["testrunner::build-with-tests-source"],
+      "extend" : ["libraries", "testrunner::build-with-tests-source"],
 
       "let" :
       {
@@ -170,14 +183,7 @@
         "TEST_INCLUDE"    : "${APPLICATION}.test.*",
         "QXTHEME"         : "qx.theme.Modern",
         "BUILD_PATH"      : "${ROOT}/test"
-      },
-
-      "library" :
-      [
-        {
-          "manifest" : "${ROOT}/Manifest.json"
-        }
-      ]
+      }
     }
   }
 }

@@ -156,6 +156,7 @@ qx.Class.define("demobrowser.TreeDataHandler",
       for (var j=0; j<struct.tests.length; j++)
       {
         node = new demobrowser.Tree(struct.tests[j].name);
+        node.tags = struct.tests[j].tags;
         node.type = "test";  // tests are leaf nodes
         node.desc = struct.tests[j].desc;
         tree.add(node);
@@ -356,13 +357,14 @@ qx.Class.define("demobrowser.TreeDataHandler",
      * @param node {Node} TODOC
      * @return {var} TODOC
      * @lint ignoreUnused(tests)
+     * @lint ignoreUndefined(classloop) TODO: Workaround for bug #2221
      */
     classFromTest : function(node)
     {
       var classname = "";
       var tests = [];
+      
       classloop:
-
       for (var i=0; i<this.tmap.length; i++)
       {
         for (var j=0; j<this.tmap[i].tests.length; j++)
@@ -473,7 +475,7 @@ qx.Class.define("demobrowser.TreeDataHandler",
 
   destruct : function()
   {
-    this._disposeFields("tmap");
+    this.tmap = null;
     this._disposeObjects("ttree");
   }
 });

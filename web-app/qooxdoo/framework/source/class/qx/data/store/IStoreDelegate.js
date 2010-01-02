@@ -19,8 +19,6 @@
 ************************************************************************ */
 
 /**
- * EXPERIMENTAL!
- *
  * Objects, which are used as delegates for a data binding store may
  * implement any of the methods described in this interface. The delegate does
  * not need implement all of the methods of this interface. If a method is not
@@ -77,6 +75,25 @@ qx.Interface.define("qx.data.store.IStoreDelegate",
      *   given in the parameter. If <code>null</code> will be returned, no mixin
      *   will be included.
      */
-    getModelMixins : function(properties) {}
+    getModelMixins : function(properties) {},
+
+
+    /**
+     * This method manipulates the data from the request and returns the
+     * manipulated data.
+     *
+     * @param data {Object} The data received by the request.
+     * @return {Object} The manipulated data.
+     */
+    manipulateData : function(data) {},
+
+
+    /**
+     * This method can change the settings on the used request by the store.
+     *
+     * @param request {var} The created request, depending on the implementation
+     *   of the data store.
+     */
+    configureRequest : function(request) {}
   }
 });

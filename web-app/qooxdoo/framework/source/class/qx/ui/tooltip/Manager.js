@@ -155,7 +155,9 @@ qx.Class.define("qx.ui.tooltip.Manager",
       // If old tooltip existing, hide it and clear widget binding
       if (old)
       {
-        old.exclude();
+        if (!old.isDisposed()) {
+          old.exclude();
+        }
 
         this.__showTimer.stop();
         this.__hideTimer.stop();
@@ -199,7 +201,7 @@ qx.Class.define("qx.ui.tooltip.Manager",
     __onShowInterval : function(e)
     {
       var current = this.getCurrent();
-      if (current)
+      if (current && !current.isDisposed())
       {
         this.__hideTimer.startWith(current.getHideTimeout());
 
@@ -224,7 +226,7 @@ qx.Class.define("qx.ui.tooltip.Manager",
     __onHideInterval : function(e)
     {
       var current = this.getCurrent();
-      if (current) {
+      if (current && !current.isDisposed()) {
         current.exclude();
       }
 
@@ -258,7 +260,7 @@ qx.Class.define("qx.ui.tooltip.Manager",
     /**
      * Searches for the tooltip of the target widget. If any tooltip instance
      * is found this instance is bound to the target widget and the tooltip is
-     * set as {@link #currentToolTip}
+     * set as {@link #current}
      *
      * @param e {qx.event.type.Mouse} mouseOver event
      * @return {void}
@@ -293,6 +295,10 @@ qx.Class.define("qx.ui.tooltip.Manager",
         return;
       }
 
+      if (target.isBlockToolTip()) {
+        return;
+      }
+
       // Set Property
       if (invalidMessage && target.getEnabled())
       {
@@ -317,7 +323,7 @@ qx.Class.define("qx.ui.tooltip.Manager",
 
 
     /**
-     * Resets the property {@link #currentToolTip} if there was a
+     * Resets the property {@link #current} if there was a
      * tooltip and no new one is created.
      *
      * @param e {qx.event.type.Mouse} mouseOut event
@@ -370,7 +376,7 @@ qx.Class.define("qx.ui.tooltip.Manager",
 
 
     /**
-     * Reset the property {@link #currentToolTip} if the
+     * Reset the property {@link #current} if the
      * current tooltip is the tooltip of the target widget.
      *
      * @param e {qx.event.type.Focus} blur event
@@ -408,7 +414,7 @@ qx.Class.define("qx.ui.tooltip.Manager",
     qx.event.Registration.removeListener(document.body, "mouseover", this.__onMouseOverRoot, this, true);
 
     // Dispose timers
-    this._disposeObjects("__showTimer", "__hideTimer");
-    this._disposeFields("__mousePosition");
+    this._disposeObjects("__showTimer", "__hideTimer", "__sharedToolTip");
+    this.__mousePosition = null;
   }
 });

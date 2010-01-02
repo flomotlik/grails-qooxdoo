@@ -76,7 +76,7 @@
  *
  * *External Documentation*
  *
- * See <a href='http://qooxdoo.org/documentation/0.8/layout/Box'>extended documentation</a>
+ * See <a href='http://qooxdoo.org/documentation/1.0/layout/Box'>extended documentation</a>
  * and links to demos for this layout.
  *
  */
@@ -248,6 +248,9 @@ qx.Class.define("qx.ui.layout.VBox",
         {
           flexs[i] = props.flex;
           enableFlex = true;
+        } else {
+          // reset (in case the index of the children changed: BUG #3131)
+          flexs[i] = 0;
         }
       }
 
@@ -537,12 +540,7 @@ qx.Class.define("qx.ui.layout.VBox",
   *****************************************************************************
   */
 
-  destruct : function()
-  {
-    this._disposeFields(
-      "__heights",
-      "__flexs",
-      "__children"
-    );
+  destruct : function() {
+    this.__heights = this.__flexs = this.__children = null;
   }
 });

@@ -126,35 +126,6 @@ qx.Class.define("qx.html.Element",
 
 
     /**
-     * Sorts elements by their cascading level
-     *
-     * @signature function(a, b)
-     * @param a {Element} DOM element 1
-     * @param b {Element} DOM element 2
-     */
-    _mshtmlVisibilitySort : qx.core.Variant.select("qx.client",
-    {
-      "mshtml" : function(a, b)
-      {
-        var al = a.__element;
-        var bl = b.__element;
-
-        if (al.contains(bl)) {
-          return 1;
-        }
-
-        if (bl.contains(al)) {
-          return -1;
-        }
-
-        return 0;
-      },
-
-      "default" : null
-    }),
-
-
-    /**
      * Flush the global modified list
      */
     flush : function()
@@ -242,33 +213,6 @@ qx.Class.define("qx.html.Element",
       // Process visibility list
       var visibility = this._visibility;
 
-      // IE, at least version 7.0, has issues when hiding cascaded
-      // elements (settings them to display=none). In this case we must
-      // be sure to hide them from inner to outer.
-      if (qx.core.Variant.isSet("qx.client", "mshtml"))
-      {
-        // Build list
-        var list = [];
-        for (var hc in visibility) {
-          list.push(visibility[hc]);
-        }
-
-        // Only makes sense when at least one item should be modified
-        if (list.length > 1)
-        {
-          // Sort list
-          list.sort(this._mshtmlVisibilitySort);
-
-          // Rebuild map structure from list
-          visibility = this._visibility = {};
-          for (var i=0; i<list.length; i++)
-          {
-            obj = list[i];
-            visibility[obj.$$hash] = obj;
-          }
-        }
-      }
-
       for (var hc in visibility)
       {
         obj = visibility[hc];
@@ -281,6 +225,14 @@ qx.Class.define("qx.html.Element",
         }
 
         obj.__element.style.display = obj.__visible ? "" : "none";
+        // also hide the element (fixed some rendering problem in IE<8 & IE8 quirks)
+        if (qx.core.Variant.isSet("qx.client", "mshtml"))
+        {
+          if (!(document.documentMode >= 8)) {
+            obj.__element.style.visibility = obj.__visible ? "visible" : "hidden";
+          }
+        }
+
         delete visibility[hc];
       }
 
@@ -366,7 +318,9 @@ qx.Class.define("qx.html.Element",
         if (!element || !activityEndActions[action.type] && !action.element.__willBeSeeable()) {
           continue;
         }
-        qx.bom.Element[action.type](element);
+        var args = action.args;
+        args.unshift(element);
+        qx.bom.Element[action.type].apply(qx.bom.Element, args);
       }
       this._actions = [];
 
@@ -636,7 +590,7 @@ qx.Class.define("qx.html.Element",
       var ObjectRegistry = qx.core.ObjectRegistry;
 
       var dataChildren = this.__children;
-      var dataLength = dataChildren.length
+      var dataLength = dataChildren.length;
       var dataChild;
       var dataEl;
 
@@ -750,11 +704,8 @@ qx.Class.define("qx.html.Element",
       if (data)
       {
         var Style = qx.bom.element.Style;
-        if (fromMarkup)
-        {
-          for (var key in data) {
-            Style.set(elem, key, data[key]);
-          }
+        if (fromMarkup) {
+          Style.setStyles(elem, data);
         }
         else
         {
@@ -834,17 +785,12 @@ qx.Class.define("qx.html.Element",
         var data = this.__styleValues;
         if (data)
         {
-          var value;
-          for (var key in jobs)
-          {
-            value = data[key];
-
-            if (value !== undefined) {
-              Style.set(elem, key, value);
-            } else {
-              Style.reset(elem, key);
-            }
+          var styles = {};
+          for (var key in jobs) {
+            styles[key] = data[key]
           }
+
+          Style.setStyles(elem, styles);
         }
 
         this.__styleJobs = null;
@@ -1833,6 +1779,43 @@ qx.Class.define("qx.html.Element",
     },
 
 
+    /**
+     * Disables browser-native scrolling
+     */
+    disableScrolling : function()
+    {
+      this.enableScrolling();
+      this.scrollToX(0);
+      this.scrollToY(0);
+      this.addListener("scroll", this.__onScroll, this);
+    },
+
+
+    /**
+     * Re-enables browser-native scrolling
+     */
+    enableScrolling : function() {
+      this.removeListener("scroll", this.__onScroll, this);
+    },
+
+
+    __inScroll : null,
+
+    /**
+     * Handler for the scroll-event
+     *
+     * @param e {qx.event.type.Native} scroll-event
+     */
+    __onScroll : function(e)
+    {
+      if (!this.__inScroll)
+      {
+        this.__inScroll = true;
+        this.__element.scrollTop = 0;
+        this.__element.scrollLeft = 0;
+        delete this.__inScroll;
+      }
+    },
 
 
     /*
@@ -1840,87 +1823,6 @@ qx.Class.define("qx.html.Element",
       TEXT SELECTION SUPPORT
     ---------------------------------------------------------------------------
     */
-
-    /**
-     * Get the selection of the element.
-     *
-     * If the underlaying DOM element is not yet created, this methods returns
-     * a null value.
-     *
-     * @deprecated Use public method 'getTextSelection' instead
-     * @return {String|null}
-     */
-    getSelection : function()
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'getTextSelection' instead!"
-      );
-
-      return this.getTextSelection();
-    },
-
-
-    /**
-     * Get the length of selection of the element.
-     *
-     * If the underlaying DOM element is not yet created, this methods returns
-     * a null value.
-     *
-     * @deprecated Use public method 'getTextSelectionLength' instead
-     * @return {Integer|null}
-     */
-    getSelectionLength : function()
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'getTextSelectionLength' instead!"
-      );
-
-      return this.getTextSelectionLength();
-    },
-
-
-    /**
-     * Set the selection of the element with the given start and end value.
-     * If no end value is passed the selection will extend to the end.
-     *
-     * This method only works if the underlying DOM element is already created.
-     *
-     * @deprecated Use public method 'setTextSelection' instead
-     * @param start {Integer} start of the selection (zero based)
-     * @param end {Integer} end of the selection
-     * @return {void}
-     */
-    setSelection : function(start, end)
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'setTextSelection' instead!"
-      );
-
-      this.setTextSelection(start, end);
-    },
-
-
-    /**
-     * Clears the selection of the element.
-     *
-     * This method only works if the underlying DOM element is already created.
-     *
-     * @deprecated Use public method 'clearTextSelection' instead
-     * @return {void}
-     */
-    clearSelection : function()
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'clearTextSelection' instead!"
-      );
-
-      this.clearTextSelection();
-    },
-
 
     /**
      * Get the selection of the element.
@@ -1954,6 +1856,44 @@ qx.Class.define("qx.html.Element",
       var el = this.__element;
       if (el) {
         return qx.bom.Selection.getLength(el);
+      }
+
+      return null;
+    },
+
+
+    /**
+     * Get the start of the selection of the element.
+     *
+     * If the underlaying DOM element is not yet created, this methods returns
+     * a null value.
+     *
+     * @return {Integer|null}
+     */
+    getTextSelectionStart : function()
+    {
+      var el = this.__element;
+      if (el) {
+        return qx.bom.Selection.getStart(el);
+      }
+
+      return null;
+    },
+
+
+    /**
+     * Get the end of the selection of the element.
+     *
+     * If the underlaying DOM element is not yet created, this methods returns
+     * a null value.
+     *
+     * @return {Integer|null}
+     */
+    getTextSelectionEnd : function()
+    {
+      var el = this.__element;
+      if (el) {
+        return qx.bom.Selection.getEnd(el);
       }
 
       return null;
@@ -2018,15 +1958,17 @@ qx.Class.define("qx.html.Element",
      * underlying DOM element is not yet created.
      *
      * @param action {String} action to queue
+     * @param args {Array} optional list of arguments for the action
      * @return {void}
      */
-    __performAction : function(action)
+    __performAction : function(action, args)
     {
       var actions = qx.html.Element._actions;
 
       actions.push({
         type: action,
-        element: this
+        element: this,
+        args: args || []
       });
       qx.html.Element._scheduleFlush("element");
     },
@@ -2077,9 +2019,13 @@ qx.Class.define("qx.html.Element",
 
     /**
      * Captures all mouse events to this element
+     *
+     * @param containerCapture {Boolean?true} If true all events originating in
+     *   the container are captured. If false events originating in the container
+     *   are not captured.
      */
-    capture : function() {
-      this.__performAction("capture");
+    capture : function(containerCapture) {
+      this.__performAction("capture", [containerCapture !== false]);
     },
 
 
@@ -2165,8 +2111,65 @@ qx.Class.define("qx.html.Element",
      */
     setStyles : function(map, direct)
     {
-      for (var key in map) {
-        this.setStyle(key, map[key], direct);
+      // inline calls to "set" because this method is very
+      // performance critical!
+
+      var Style = qx.bom.element.Style;
+
+      if (!this.__styleValues) {
+        this.__styleValues = {};
+      }
+
+      if (this.__element)
+      {
+        // Dynamically create if needed
+        if (!this.__styleJobs) {
+          this.__styleJobs = {};
+        }
+
+        for (var key in map)
+        {
+          var value = map[key];
+          if (this.__styleValues[key] == value) {
+            continue;
+          }
+
+          if (value == null) {
+            delete this.__styleValues[key];
+          } else {
+            this.__styleValues[key] = value;
+          }
+
+          // Omit queuing in direct mode
+          if (direct)
+          {
+            Style.set(this.__element, key, value);
+            continue;
+          }
+
+          // Store job info
+          this.__styleJobs[key] = true;
+        }
+
+        // Register modification
+        qx.html.Element._modified[this.$$hash] = this;
+        qx.html.Element._scheduleFlush("element");
+      }
+      else
+      {
+        for (var key in map)
+        {
+          var value = map[key];
+          if (this.__styleValues[key] == value) {
+            continue;
+          }
+
+          if (value == null) {
+            delete this.__styleValues[key];
+          } else {
+            this.__styleValues[key] = value;
+          }
+        }
       }
 
       return this;
@@ -2659,8 +2662,10 @@ qx.Class.define("qx.html.Element",
     }
 
     this._disposeArray("__children");
-    this._disposeFields("__attribValues", "__styleValues", "__eventValues",
-      "__propertyValues", "__attribJobs", "__styleJobs", "__propertyJobs",
-      "__element", "__parent", "__lazyScrollIntoViewX", "__lazyScrollIntoViewY");
+
+    this.__attribValues = this.__styleValues = this.__eventValues =
+      this.__propertyValues = this.__attribJobs = this.__styleJobs =
+      this.__propertyJobs = this.__element = this.__parent =
+      this.__lazyScrollIntoViewX = this.__lazyScrollIntoViewY = null;
   }
 });

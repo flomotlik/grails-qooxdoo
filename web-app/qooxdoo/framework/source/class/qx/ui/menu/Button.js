@@ -37,15 +37,12 @@ qx.Class.define("qx.ui.menu.Button",
   /**
    * @param label {String} Initial label
    * @param icon {String} Initial icon
-   * @param command {qx.event.Command} Intial command (shortcut)
+   * @param command {qx.ui.core.Command} Intial command (shortcut)
    * @param menu {qx.ui.menu.Menu} Initial sub menu
    */
   construct : function(label, icon, command, menu)
   {
     this.base(arguments);
-
-    // Add command listener
-    this.addListener("changeCommand", this._onChangeCommand, this);
 
     // Initialize with incoming arguments
     if (label != null) {
@@ -101,45 +98,6 @@ qx.Class.define("qx.ui.menu.Button",
     ---------------------------------------------------------------------------
     */
 
-    /**
-     * Event listener for command changes. Updates the text of the shortcut.
-     *
-     * @param e {qx.event.type.Data} Property change event
-     */
-    _onChangeCommand : function(e)
-    {
-      var command = e.getData();
-
-      if (qx.core.Variant.isSet("qx.dynlocale", "on"))
-      {
-        var oldCommand = e.getOldData();
-        if (!oldCommand) {
-          qx.locale.Manager.getInstance().addListener("changeLocale", this._onChangeLocale, this);
-        }
-        if (!command) {
-          qx.locale.Manager.getInstance().removeListener("changeLocale", this._onChangeLocale, this);
-        }
-      }
-
-      this.getChildControl("shortcut").setValue(command.toString());
-    },
-
-
-    /**
-     * Update command string on locale changes
-     */
-    _onChangeLocale : qx.core.Variant.select("qx.dynlocale",
-    {
-      "on" : function(e) {
-        var command = this.getCommand();
-        if (command != null) {
-          this.getChildControl("shortcut").setValue(command.toString());
-        }
-      },
-
-      "off" : null
-    }),
-
 
     // overridden
     _onMouseUp : function(e)
@@ -148,30 +106,19 @@ qx.Class.define("qx.ui.menu.Button",
       {
         this.execute();
 
-        // stop menu from closing
+        // don't close menus if the button is a sub menu button
         if (this.getMenu()) {
-          e.stopPropagation();
+          return;
         }
       }
+
+      qx.ui.menu.Manager.getInstance().hideAll();
     },
 
 
     // overridden
     _onKeyPress : function(e) {
       this.execute();
-    }
-  },
-
-
-  /*
-  *****************************************************************************
-     DESTRUCTOR
-  *****************************************************************************
-  */
-
-  destruct : function() {
-    if (qx.core.Variant.isSet("qx.dynlocale", "on")) {
-      qx.locale.Manager.getInstance().removeListener("changeLocale", this._onChangeLocale, this);
     }
   }
 });

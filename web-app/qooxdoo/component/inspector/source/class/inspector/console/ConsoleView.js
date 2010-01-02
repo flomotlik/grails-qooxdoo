@@ -14,6 +14,7 @@
 
    Authors:
      * Martin Wittemann (martinwittemann)
+     * Christian Schmidt (chris_schmidt)
 
 ************************************************************************ */
 qx.Class.define("inspector.console.ConsoleView",
@@ -48,11 +49,6 @@ qx.Class.define("inspector.console.ConsoleView",
     // html embed
     this._content = new qx.ui.embed.Html("");
     this._content.setOverflowY("scroll");
-    // wait until the dom element is created
-    this.addListenerOnce("appear", function() {
-      // set the id for the dom element
-      this._content.getContentElement().getDomElement().id = "consoleViewHtmlEmbed";
-    }, this);
     this._add(this._content, {flex: 1});
 
     // inputfield
@@ -67,7 +63,7 @@ qx.Class.define("inspector.console.ConsoleView",
     // TODO Blue arrows at the beginning
     leadingLabel.setFont(font);
     inputComposite.add(leadingLabel);
-    this._inputTextField = new qx.ui.form.TextField();
+    this._inputTextField = new qx.ui.form.TextField("");
     this._inputTextField.setLiveUpdate(true);
     this._inputTextField.setDecorator(null);
     this._inputTextField.setFont(font);
@@ -92,16 +88,6 @@ qx.Class.define("inspector.console.ConsoleView",
 
   members :
   {
-
-    setAns: function(ans) {
-      this._ans = ans;
-    },
-
-    getAns: function() {
-      return this._ans;
-    },
-
-
     clear: function() {
       this._content.setHtml("");
     },
@@ -116,21 +102,10 @@ qx.Class.define("inspector.console.ConsoleView",
       // store the new filter
       this._filter = filter;
 
-      // TODO remove cross browser code!
-      // check for the browser variants
-      if (qx.core.Variant.isSet("qx.client", "gecko")) {
-        // get all children in a gecko browser
-        var children = document.getElementById("consoleViewHtmlEmbed").childNodes;
-      } else if (qx.core.Variant.isSet("qx.client", "opera|webkit|mshtml")) {
-        // get all children in opera, ie and safari
-        var children = document.getElementById("consoleViewHtmlEmbed").childNodes[0].childNodes;
-      } else {
-        // dont do anything because the browser is not known
-        return;
-      }
-
       // try to filter
       try {
+        var children = this._content.getContentElement().getDomElement().childNodes;
+
         // create a regexp object for filtering
         var regExp = new RegExp(this._filter);
         // go threw all children
@@ -145,17 +120,12 @@ qx.Class.define("inspector.console.ConsoleView",
           }
 
           // test if the current content fits the filter
-          if (regExp.test(content)) {
-            // if there is a style attribute
-            if (children[i].style != undefined) {
-              // set the current child visible
-              children[i].style.display = "";
-            }
-          } else {
-            // if the child has a style attribute
-            if (children[i].style != undefined) {
-              // hide the current child
-              children[i].style.display = "none";
+          if (qx.dom.Node.isElement(children[i]))
+          {
+            if (regExp.test(content)) {
+              qx.bom.element.Style.set(children[i], "display", null);
+            } else {
+              qx.bom.element.Style.set(children[i], "display", "none");
             }
           }
         }
@@ -196,7 +166,7 @@ qx.Class.define("inspector.console.ConsoleView",
           // mark the stuff in the ()
           var start = this._inputTextField.getValue().lastIndexOf("(") + 1;
           var end = this._inputTextField.getValue().length - 1;
-          this._inputTextField.setSelection(start, end);
+          this._inputTextField.setTextSelection(start, end);
         }
       }
     },
@@ -206,63 +176,17 @@ qx.Class.define("inspector.console.ConsoleView",
     _process: function(text) {
       // add the text to the embedded
       this._printText(this._console.escapeHtml(text));
-      // try to run the code
+
       try {
-        // run it and store the result in the global ans value
-        var iFrameWindow = qx.core.Init.getApplication().getIframeWindowObject();
-        if (qx.core.Variant.isSet("qx.client", "webkit|mshtml|gecko")) {
-          if (qx.core.Variant.isSet("qx.client", "mshtml") ||
-              qx.core.Variant.isSet("qx.client", "webkit")) {
-            text = text.replace(/^(\s*var\s+)(.*)$/, "$2");
-          }
+        var object = inspector.console.Util.evalOnIframe(text);
 
-          var returnCode = "";
-          // Fix for webkit version > nightly
-          if (qx.core.Variant.isSet("qx.client", "webkit") &&
-              qx.bom.client.Engine.FULLVERSION >= 528) {
-            returnCode = "return eval('" + text + "');"
-          } else {
-            returnCode = "return eval.call(window, '" + text + "');"
-          }
-
-          iFrameWindow.qx.lang.Function.globalEval([
-            "window.top.inspector.$$inspector = function()",
-            "{",
-            "  try {",
-            returnCode,
-            "  } catch (ex) {",
-            "    return ex;",
-            "  }",
-            "};"].join("")
-          );
-          this.setAns(
-            inspector.$$inspector.call(qx.core.Init.getApplication().getSelectedObject())
-          );
-        } else if (qx.core.Variant.isSet("qx.client", "opera")) {
-          this.setAns(
-            (function(text) {
-              return iFrameWindow.eval(text);
-            }).call(qx.core.Init.getApplication().getSelectedObject(), text)
-          );
-        }
-
-        // if ans is defined
-        var ans = this.getAns();
-        if (ans != null)
+        if (object != null)
         {
-          if (ans instanceof iFrameWindow.Error) {
-            throw ans;
-          }
-
-          // store the object in the local reference folder
-          this._objectFolder[this._objectFolderIndex] = {name: text, object: ans};
-          // print put the return value
-          this._printReturnValue(ans);
-          // invoke the addition to the index after the objects has been printed to the screen
+          this._objectFolder[this._objectFolderIndex] = {name: text, object: object};
+          this._printReturnValue(object);
           this._objectFolderIndex++;
         }
       } catch (ex) {
-        // print out the exception
         this.error(ex);
       }
     },
@@ -356,7 +280,7 @@ qx.Class.define("inspector.console.ConsoleView",
             // remove the selection of the text
             window.setTimeout(function() {
               var length = self._inputTextField.getValue().length;
-              self._inputTextField.setSelection(length, length);
+              self._inputTextField.setTextSelection(length, length);
             }, 0);
           }
 

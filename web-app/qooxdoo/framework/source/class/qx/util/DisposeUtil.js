@@ -29,10 +29,16 @@ qx.Class.define("qx.util.DisposeUtil",
      *
      * @param obj {Object} Object which contains the fields
      * @param arr {Array} List of fields to dispose
-     * @return {void}
+     * @deprecated Performance: Don't use 'disposeFields' - instead
+     *      assign directly to <code>null</code>
      */
     disposeFields : function(obj, arr)
     {
+      qx.log.Logger.deprecatedMethodWarning(
+        arguments.callee,
+        "Don't use 'disposeFields' - instead assign directly to 'null'"
+      );
+
       var name;
 
       for (var i=0, l=arr.length; i<l; i++)
@@ -164,6 +170,22 @@ qx.Class.define("qx.util.DisposeUtil",
 
       // Finally remove field
       obj[field] = null;
+    },
+
+    /**
+     * Disposes a given object when another object is disposed
+     *
+     * @param disposeMe {Object} Object to dispose when other object is disposed
+     * @param trigger {Object} Other object
+     *
+     */
+    disposeTriggeredBy : function(disposeMe, trigger)
+    {
+      var triggerDispose = trigger.dispose;
+      trigger.dispose = function(){
+        triggerDispose.call(trigger);
+        disposeMe.dispose();
+      }
     }
   }
 });

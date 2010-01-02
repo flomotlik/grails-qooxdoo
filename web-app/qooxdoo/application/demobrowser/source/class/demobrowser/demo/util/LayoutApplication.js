@@ -18,6 +18,12 @@
 
 ************************************************************************ */
 
+/* ************************************************************************
+
+#tag(noPlayground)
+
+************************************************************************ */
+
 qx.Class.define("demobrowser.demo.util.LayoutApplication",
 {
   extend : qx.application.Standalone,
@@ -63,6 +69,6 @@ qx.Class.define("demobrowser.demo.util.LayoutApplication",
 
 
   destruct : function() {
-    this._disposeFields("_root", "_editor");
+    this._root = this._editor = null;
   }
 });

@@ -16,30 +16,41 @@
      * Sebastian Werner (wpbasti)
      * Andreas Ecker (ecker)
      * Martin Wittemann (martinwittemann)
+     * Fabian Jakobs (fjakobs)
 
 ************************************************************************ */
 
 /**
- * The RepeatButton is a special button, which fires repeatedly {@link execute}
+ * The RepeatButton is a special button, which fires repeatedly {@link #execute}
  * events, while the mouse button is pressed on the button. The initial delay
  * and the interval time can be set using the properties {@link #firstInterval}
- * and {@link #interval}. The {@link execute} events will be fired in a shorter
+ * and {@link #interval}. The {@link #execute} events will be fired in a shorter
  * amount of time if the mouse button is hold, until the min {@link #minTimer}
  * is reached. The {@link #timerDecrease} property sets the amount of milliseconds
  * which will decreased after every firing.
+ *
+ * <pre class='javascript'>
+ *   var button = new qx.ui.form.RepeatButton("Hello World");
+ *
+ *   button.addListener("execute", function(e) {
+ *     alert("Button is executed");
+ *   }, this);
+ *
+ *   this.getRoot.add(button);
+ * </pre>
+ *
+ * This example creates a button with the label "Hello World" and attaches an
+ * event listener to the {@link #execute} event.
+ *
+ * *External Documentation*
+ *
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/repeatbutton' target='_blank'>
+ * Documentation of this widget in the qooxdoo wiki.</a>
  */
 qx.Class.define("qx.ui.form.RepeatButton",
 {
   extend : qx.ui.form.Button,
 
-
-
-
-  /*
-  *****************************************************************************
-     CONSTRUCTOR
-  *****************************************************************************
-  */
 
   /**
    * @param label {String} Label to use
@@ -50,18 +61,10 @@ qx.Class.define("qx.ui.form.RepeatButton",
     this.base(arguments, label, icon);
 
     // create the timer and add the listener
-    this.__timer = new qx.event.Timer(this.getInterval());
+    this.__timer = new qx.event.AcceleratingTimer();
     this.__timer.addListener("interval", this._onInterval, this);
   },
 
-
-
-
-  /*
-  *****************************************************************************
-     EVENTS
-  *****************************************************************************
-  */
 
   events :
   {
@@ -82,14 +85,6 @@ qx.Class.define("qx.ui.form.RepeatButton",
     "release" : "qx.event.type.Event"
   },
 
-
-
-
-  /*
-  *****************************************************************************
-     PROPERTIES
-  *****************************************************************************
-  */
 
   properties :
   {
@@ -130,17 +125,8 @@ qx.Class.define("qx.ui.form.RepeatButton",
   },
 
 
-
-
-  /*
-  *****************************************************************************
-     MEMBERS
-  *****************************************************************************
-  */
-
   members :
   {
-    __currentInterval : null,
     __executed : null,
     __timer : null,
 
@@ -190,7 +176,7 @@ qx.Class.define("qx.ui.form.RepeatButton",
       // only if the button is pressed
       if (this.hasState("pressed"))
       {
-        // if the button hast not been executed
+        // if the button has not been executed
         if (!this.__executed) {
           this.execute();
         }
@@ -203,9 +189,6 @@ qx.Class.define("qx.ui.form.RepeatButton",
       // stop the repeat timer and therefore the execution
       this.__stopInternalTimer();
     },
-
-
-
 
 
     /*
@@ -229,9 +212,6 @@ qx.Class.define("qx.ui.form.RepeatButton",
         this.__stopInternalTimer();
       }
     },
-
-
-
 
 
     /*
@@ -290,7 +270,6 @@ qx.Class.define("qx.ui.form.RepeatButton",
         this.removeState("pressed");
         this.addState("abandoned");
         this.__timer.stop();
-        this.__currentInterval = this.getInterval();
       }
     },
 
@@ -415,27 +394,9 @@ qx.Class.define("qx.ui.form.RepeatButton",
      */
     _onInterval : function(e)
     {
-      this.__timer.stop();
-
-      // if the current interval is not set
-      if (this.__currentInterval == null)
-      {
-        // set the current interval to the given interval
-        this.__currentInterval = this.getInterval();
-      }
-
-      // reduce the current interval
-      this.__currentInterval = (Math.max(this.getMinTimer(), this.__currentInterval - this.getTimerDecrease()));
-
-      // restart the timer
-      this.__timer.restartWith(this.__currentInterval);
-
-      // fire the execute event
       this.__executed = true;
       this.fireEvent("execute");
     },
-
-
 
 
     /*
@@ -456,8 +417,12 @@ qx.Class.define("qx.ui.form.RepeatButton",
 
       this.__executed = false;
 
-      this.__timer.setInterval(this.getFirstInterval());
-      this.__timer.start();
+      this.__timer.set({
+        interval: this.getInterval(),
+        firstInterval: this.getFirstInterval(),
+        minimum: this.getMinTimer(),
+        decrease: this.getTimerDecrease()
+      }).start();
 
       this.removeState("abandoned");
       this.addState("pressed");
@@ -474,8 +439,6 @@ qx.Class.define("qx.ui.form.RepeatButton",
       this.fireEvent("release");
 
       this.__timer.stop();
-
-      this.__currentInterval = null;
 
       this.removeState("abandoned");
       this.removeState("pressed");

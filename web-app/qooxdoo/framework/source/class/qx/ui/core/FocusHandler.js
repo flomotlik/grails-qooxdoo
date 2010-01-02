@@ -359,9 +359,10 @@ qx.Class.define("qx.ui.core.FocusHandler",
 
 
     /**
-     * Returns the first widget of the given
+     * Returns the first widget.
      *
-     * @return {var} TODOC
+     * @return {qx.ui.core.Widget} Retuns the first (positioned) widget from
+     *    the current root.
      */
     __getFirstWidget : function() {
       return this.__getFirst(this.__currentRoot, null);
@@ -369,9 +370,10 @@ qx.Class.define("qx.ui.core.FocusHandler",
 
 
     /**
-     * Returns the first widget
+     * Returns the last widget.
      *
-     * @return {var} TODOC
+     * @return {qx.ui.core.Widget} Returns the last (positioned) widget from
+     *    the current root.
      */
     __getLastWidget : function() {
       return this.__getLast(this.__currentRoot, null);
@@ -612,7 +614,6 @@ qx.Class.define("qx.ui.core.FocusHandler",
   destruct : function()
   {
     this._disposeMap("__roots");
-    this._disposeFields("__focusedChild",
-      "__activeChild", "__currentRoot");
+    this.__focusedChild = this.__activeChild = this.__currentRoot = null;
   }
 });

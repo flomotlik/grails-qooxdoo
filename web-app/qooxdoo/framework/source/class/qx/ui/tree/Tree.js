@@ -38,7 +38,7 @@
  */
 qx.Class.define("qx.ui.tree.Tree",
 {
-  extend : qx.ui.core.AbstractScrollArea,
+  extend : qx.ui.core.scroll.AbstractScrollArea,
   implement : [qx.ui.core.IMultiSelection, qx.ui.form.IModelSelection],
   include : [
     qx.ui.core.MMultiSelectionHandling,
@@ -67,6 +67,9 @@ qx.Class.define("qx.ui.tree.Tree",
 
     this.initOpenMode();
     this.initRootOpenClose();
+
+    this.addListener("changeSelection", this._onChangeSelection, this);
+    this.addListener("keypress", this._onKeyPress, this);
   },
 
 
@@ -274,12 +277,14 @@ qx.Class.define("qx.ui.tree.Tree",
      * @param treeItem {AbstractTreeItem} The tree item to get the item after
      * @param invisible {Boolean?true} Whether invisible/closed tree items
      *     should be returned as well.
+     * @param stayInSameNestLevel {Boolean?false} if true, only the same nest level
+     *                                            will be searched
      * @return {AbstractTreeItem?null} The item after the given item. May be
      *     <code>null</code> if the item is the last item.
      */
-    getNextSiblingOf : function(treeItem, invisible)
+    getNextSiblingOf : function(treeItem, invisible, stayInSameNestLevel)
     {
-      if ((invisible !== false || treeItem.isOpen()) && treeItem.hasChildren()) {
+      if ((invisible !== false || treeItem.isOpen()) && !(stayInSameNestLevel == true) && treeItem.hasChildren()) {
         return treeItem.getChildren()[0];
       }
 
@@ -308,10 +313,14 @@ qx.Class.define("qx.ui.tree.Tree",
      * @param treeItem {AbstractTreeItem} The tree item to get the item before
      * @param invisible {Boolean?true} Whether invisible/closed tree items
      *     should be returned as well.
+     * @param stayInSameNestLevel {Boolean?false} if true, only the same nest level
+     *                                            will be searched
+     *
+     *
      * @return {AbstractTreeItem?null} The item before the given item. May be
      *     <code>null</code> if the item is the first item.
      */
-    getPreviousSiblingOf : function(treeItem, invisible)
+    getPreviousSiblingOf : function(treeItem, invisible, stayInSameNestLevel)
     {
       var parent = treeItem.getParent();
       if (!parent) {
@@ -339,7 +348,7 @@ qx.Class.define("qx.ui.tree.Tree",
       if (index > 0)
       {
         var folder = parentChildren[index-1];
-        while ((invisible !== false || folder.isOpen()) && folder.hasChildren())
+        while ((invisible !== false || folder.isOpen()) && !(stayInSameNestLevel == true) && folder.hasChildren())
         {
           var children = folder.getChildren();
           folder = children[children.length-1];
@@ -383,19 +392,6 @@ qx.Class.define("qx.ui.tree.Tree",
       }
       else {
         return [];
-      }
-    },
-
-
-    // overridden
-    scrollChildIntoViewY : function(child, align, direct)
-    {
-      // if the last item is selected the content should be scrolled down to
-      // the end including the content paddings
-      if (!this.getNextSiblingOf(child, false)) {
-        this.scrollToY(1000000);
-      } else {
-        this.base(arguments, child, align, direct);
       }
     },
 
@@ -466,6 +462,63 @@ qx.Class.define("qx.ui.tree.Tree",
 
       treeItem.setOpen(!treeItem.isOpen());
       e.stopPropagation();
+    },
+
+
+    /**
+     * Event handler for changeSelection events, which opens all parent folders
+     * of the selected folders.
+     *
+     * @param e {qx.event.type.Data} The selection data event.
+     */
+    _onChangeSelection : function(e) {
+      var selection = e.getData();
+      // for every selected folder
+      for (var i = 0; i < selection.length; i++) {
+        var folder = selection[i];
+        // go up all parents and open them
+        while (folder.getParent() != null) {
+          folder = folder.getParent();
+          folder.setOpen(true);
+        }
+      }
+    },
+
+
+    /**
+     * Event handler for key press events. Open and close the current selected
+     * item on key left and right press.
+     *
+     * @param e {qx.event.type.KeySequence} key event.
+     */
+    _onKeyPress : function(e)
+    {
+      var item = this._getLeadItem();
+
+      if (item !== null)
+      {
+        switch(e.getKeyIdentifier())
+        {
+          case "Left":
+            if (item.isOpenable() && item.isOpen()) {
+              item.setOpen(false);
+            }
+            break;
+
+          case "Right":
+            if (item.isOpenable() && !item.isOpen()) {
+              item.setOpen(true);
+            }
+            break;
+
+          case "Enter":
+          case "Space":
+            if (item.isOpenable()) {
+              item.toggleOpen();
+            }
+            break;
+        }
+      }
     }
   },
 

@@ -23,6 +23,8 @@
 #asset(qx/icon/${qx.icontheme}/22/actions/list-remove.png)
 #asset(qx/icon/${qx.icontheme}/22/actions/edit-undo.png)
 
+#tag(noPlayground)
+
 ************************************************************************ */
 
 /**
@@ -77,7 +79,7 @@ qx.Class.define("demobrowser.demo.table.Table_Filtered_Model",
     createControls : function()
     {
       var bar = new qx.ui.toolbar.ToolBar();
-      var button, part, checkBox;
+      var part;
 
       part = new qx.ui.toolbar.Part();
       bar.add(part);

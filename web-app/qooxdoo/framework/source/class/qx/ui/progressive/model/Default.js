@@ -24,7 +24,7 @@
 ************************************************************************ */
 
 /**
- * Data Model for Progressive renderer.  EXPERIMENTAL!  INTERFACE MAY CHANGE.
+ * Data Model for Progressive renderer.
  */
 qx.Class.define("qx.ui.progressive.model.Default",
 {
@@ -102,8 +102,7 @@ qx.Class.define("qx.ui.progressive.model.Default",
     }
   },
 
-  destruct : function()
-  {
-    this._disposeFields("__elements");
+  destruct : function() {
+    this.__elements = null;
   }
 });

@@ -37,7 +37,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/widget/iframe' target='_blank'>
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/iframe' target='_blank'>
  * Documentation of this widget in the qooxdoo wiki.</a>
  */
 qx.Class.define("qx.ui.embed.Iframe",
@@ -71,6 +71,16 @@ qx.Class.define("qx.ui.embed.Iframe",
 
     this.__blockerElement = this._createBlockerElement();
     this.getContainerElement().add(this.__blockerElement);
+
+    if (qx.core.Variant.isSet("qx.client", "gecko"))
+    {
+      this.addListenerOnce("appear", function(e)
+      {
+        var element = this.getContainerElement().getDomElement();
+        qx.bom.Event.addNativeListener(element, "DOMNodeInserted", this._onDOMNodeInserted);
+      });
+      this._onDOMNodeInserted = qx.lang.Function.listener(this._syncSourceAfterDOMMove, this);
+    }
   },
 
 
@@ -136,10 +146,12 @@ qx.Class.define("qx.ui.embed.Iframe",
       var pixel = "px";
       var insets = this.getInsets();
 
-      this.__blockerElement.setStyle("left", insets.left + pixel);
-      this.__blockerElement.setStyle("top", insets.top + pixel);
-      this.__blockerElement.setStyle("width", (width - insets.left - insets.right) + pixel);
-      this.__blockerElement.setStyle("height", (height - insets.top - insets.bottom) + pixel);
+      this.__blockerElement.setStyles({
+        "left": insets.left + pixel,
+        "top": insets.top + pixel,
+        "width": (width - insets.left - insets.right) + pixel,
+        "height": (height - insets.top - insets.bottom) + pixel
+      });
     },
 
 
@@ -167,9 +179,11 @@ qx.Class.define("qx.ui.embed.Iframe",
     {
       var el = new qx.html.Element("div");
 
-      el.setStyle("zIndex", 20);
-      el.setStyle("position", "absolute");
-      el.setStyle("display", "none");
+      el.setStyles({
+        "zIndex": 20,
+        "position": "absolute",
+        "display": "none"
+      });
 
       // IE needs some extra love here to convince it to block events.
       if (qx.core.Variant.isSet("qx.client", "mshtml"))
@@ -304,10 +318,32 @@ qx.Class.define("qx.ui.embed.Iframe",
       },
 
       "default" : function() {}
-    })
+    }),
+
+
+    /**
+     * Checks if the iframe element is out of sync. This can happen in Firefox
+     * if the iframe is moved around and the source is changed right after.
+     * The root cause is that Firefox is reloading the iframe when its position
+     * in DOM has changed.
+     */
+    _syncSourceAfterDOMMove : function()
+    {
+      var iframeDomElement = this.getContentElement().getDomElement();
+      var iframeSource = iframeDomElement.src;
+
+      // remove trailing "/"
+      if (iframeSource.charAt(iframeSource.length-1) == "/") {
+        iframeSource = iframeSource.substring(0, iframeSource.length-1);
+      }
+
+      if (iframeSource != this.getSource())
+      {
+        qx.bom.Iframe.getWindow(iframeDomElement).stop();
+        iframeDomElement.src = this.getSource();
+      }
+    }
   },
-
-
 
 
   /*

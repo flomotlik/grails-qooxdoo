@@ -2,7 +2,8 @@
     {
       "let" :
       {
-        "LOCALES" : ["en", "en_US", "de", "de_DE", "fr", "fr_FR"] 
+        "APPLICATION" : "demobrowser.demo",
+        "LOCALES" : ["en", "en_US", "de", "de_DE", "fr", "fr_FR"]
       },
       
       "library" :
@@ -40,66 +41,87 @@
       {
         "qx.application" : "YYY",
         "qx.allowUrlVariants": "true",
-        "qx.allowUrlSettings" : "true",
-        "qx.legacy.theme" : "qx.legacy.theme.ClassicRoyale"
+        "qx.allowUrlSettings" : "true"
       }
     },
 
     "source-XXX" : 
     {
-        "run" : ["source-XXX-Classic", "source-XXX-Modern"]    
+      "compile-options" :
+      {
+        "paths" :
+        {
+          "file"     : "source/script/YYY-${DTHEME}.js",
+          "app-root" : "source/demo/yyy"
+        },
+        "code" :
+        {
+          "locales" : "${LOCALES}"
+        }
+      },
+      
+      "run" : ["source-XXX-Classic", "source-XXX-Modern"]    
     },
 
     "source-XXX-Classic" :
     {
       "extend" : ["common-XXX"],
 
-      "let"    : {"THEME" : "qx.theme.Classic"},
+      "let"    : {"DTHEME" : "qx.theme.Classic"},
 
-      "include" : ["${THEME}"],
+      "include" : ["${DTHEME}"],
 
-      "settings" : {"qx.theme": "${THEME}"},
+      "settings" : {"qx.theme": "${DTHEME}"},
 
-      "compile-source" :
-      {
-        "file" : "source/script/YYY-${THEME}.js",
-        "locales" : "${LOCALES}",
-        "root" : "source/demo/yyy"
-      }
+      "compile" : { "type" : "source" }
     },
 
     "source-XXX-Modern" :
     {
       "extend" : ["common-XXX"],
 
-      "let"    : {"THEME" : "qx.theme.Modern"},
+      "let"    : {"DTHEME" : "qx.theme.Modern"},
 
-      "include" : ["${THEME}"],
+      "include" : ["${DTHEME}"],
 
-      "settings" : {"qx.theme": "${THEME}"},
+      "settings" : {"qx.theme": "${DTHEME}"},
 
-      "compile-source" :
-      {
-        "file" : "source/script/YYY-${THEME}.js",
-        "locales" : "${LOCALES}",
-        "root" : "source/demo/yyy"
-      }
+      "compile" : { "type" : "source" }
     },
 
     "build-XXX" :
     {
-        "run" : ["build-XXX-Classic", "build-XXX-Modern"]
+      "compile-options" :
+      {
+        "paths" :
+        {
+          "file" : "build/script/YYY-${DTHEME}.js"
+        },
+        "uris" :
+        {
+          "script"  : "../../script",
+          "resource" : "../../resource"
+        },
+        "code" :
+        {
+          "format"  : true,
+          "locales" : "${LOCALES}",
+          "optimize" : [ "variables", "basecalls", "strings", "privates" ]
+        }
+      },
+      
+      "run" : ["build-XXX-Classic", "build-XXX-Modern"]
     },
 
     "build-XXX-Classic" :
     {
       "extend" : ["common-XXX"],
 
-      "let"    : {"THEME" : "qx.theme.Classic"},
+      "let"    : {"DTHEME" : "qx.theme.Classic"},
 
-      "include" : ["${THEME}"],
+      "include" : ["${DTHEME}"],
 
-      "settings" : {"qx.theme": "${THEME}"},
+      "settings" : {"qx.theme": "${DTHEME}"},
 
       "variants" :
       {
@@ -107,35 +129,18 @@
         "qx.aspects" : ["off"]
       },
 
-      "compile-dist" :
-      {
-        "paths" :
-        {
-          "file" : "build/script/YYY-${THEME}.js"
-        },
-        "uris" :
-        {
-          "script"  : "../../script",
-          "resource" : "../../resource"
-        },
-        "code" :
-        {
-          "format"  : true,
-          "locales" : "${LOCALES}",
-          "optimize" : [ "variables", "basecalls", "strings", "privates" ]
-        }
-      }
+      "compile" : { "type" : "build" }
     },
 
     "build-XXX-Modern" :
     {
       "extend" : ["common-XXX"],
 
-      "let"    : {"THEME" : "qx.theme.Modern"},
+      "let"    : {"DTHEME" : "qx.theme.Modern"},
 
-      "include" : ["${THEME}"],
+      "include" : ["${DTHEME}"],
 
-      "settings" : {"qx.theme": "${THEME}"},
+      "settings" : {"qx.theme": "${DTHEME}"},
 
       "variants" :
       {
@@ -143,22 +148,5 @@
         "qx.aspects" : ["off"]
       },
 
-      "compile-dist" :
-      {
-        "paths" :
-        {
-          "file" : "build/script/YYY-${THEME}.js"
-        },
-        "uris" :
-        {
-          "script"  : "../../script",
-          "resource" : "../../resource"
-        },
-        "code" :
-        {
-          "format"  : true,
-          "locales" : "${LOCALES}",
-          "optimize" : [ "variables", "basecalls", "strings", "privates" ]
-        }
-      }
+      "compile" : { "type" : "build" }
     }

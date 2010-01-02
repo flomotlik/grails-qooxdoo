@@ -41,7 +41,6 @@ qx.Class.define("qx.ui.splitpane.Pane",
    *
    * @param orientation {String} The orientation of the split pane control.
    * Allowed values are "horizontal" (default) and "vertical".
-   * This is the same type as used in {@link qx.ui.layout.HBox#orientation}.
    */
   construct : function(orientation)
   {
@@ -261,7 +260,7 @@ qx.Class.define("qx.ui.splitpane.Pane",
      *
      * Sets the pane's layout to vertical or horizontal split layout. Depending on the
      * pane's layout the first widget will be the left or top widget, the second one
-     * the bottom or left widget. Adding more than two widgets will overwrite the
+     * the bottom or right widget. Adding more than two widgets will overwrite the
      * existing ones.
      *
      * @param widget {qx.ui.core.Widget} The widget to be inserted into pane.
@@ -292,7 +291,7 @@ qx.Class.define("qx.ui.splitpane.Pane",
     /**
      * Returns an array containing the pane's content.
      *
-     * @return {Object[]} The content array
+     * @return {qx.ui.core.Widget[]} The pane's child widgets
      */
     getChildren : function() {
       return this.__children;
@@ -342,6 +341,8 @@ qx.Class.define("qx.ui.splitpane.Pane",
       // Enable session
       this.__activeDragSession = true;
       e.getCurrentTarget().capture();
+
+      e.stop();
     },
 
 
@@ -352,9 +353,7 @@ qx.Class.define("qx.ui.splitpane.Pane",
      */
     _onMouseMove : function(e)
     {
-      // Update mouse position
-      this.__lastMouseX = e.getDocumentLeft();
-      this.__lastMouseY = e.getDocumentTop();
+      this._setLastMousePosition(e.getDocumentLeft(), e.getDocumentTop());
 
       // Check if slider is already being dragged
       if (this.__activeDragSession)
@@ -371,6 +370,8 @@ qx.Class.define("qx.ui.splitpane.Pane",
         } else {
           slider.setDomTop(pos);
         }
+
+        e.stop();
       }
       else
       {
@@ -386,11 +387,7 @@ qx.Class.define("qx.ui.splitpane.Pane",
      */
     _onMouseOut : function(e)
     {
-      // Force mouse positions to -1
-      this.__lastMouseX = -1;
-      this.__lastMouseY = -1;
-
-      // Update cursor
+      this._setLastMousePosition(-1, -1);
       this.__updateCursor();
     },
 
@@ -423,6 +420,8 @@ qx.Class.define("qx.ui.splitpane.Pane",
       // Update the cursor
       // Needed in cases where the splitter has not been moved
       this.__updateCursor();
+
+      e.stop();
     },
 
 
@@ -436,7 +435,7 @@ qx.Class.define("qx.ui.splitpane.Pane",
 
 
     /**
-     * Helper function for Opera to add an "active" state if the mouse if on
+     * Helper function for Opera to add an "active" state if the mouse is on
      * the splitter.
      *
      */
@@ -452,8 +451,7 @@ qx.Class.define("qx.ui.splitpane.Pane",
     */
 
     /**
-     * Updates widgets' sizes bases on slider position.
-     *
+     * Updates widgets' sizes based on the slider position.
      */
     _finalizeSizes : function()
     {
@@ -635,17 +633,24 @@ qx.Class.define("qx.ui.splitpane.Pane",
      */
     _isActiveDragSession : function() {
       return this.__activeDragSession;
-    }
+    },
+
+
+    /**
+     * Sets the last mouse position.
+     *
+     * @param x {Integer} the x position of the mouse cursor.
+     * @param y {Integer} the y position of the mouse cursor.
+     */
+     _setLastMousePosition : function(x, y)
+     {
+       this.__lastMouseX = x;
+       this.__lastMouseY = y;
+     }
   },
 
-  /*
-   *****************************************************************************
-      DESTRUCT
-   *****************************************************************************
-   */
 
-  destruct : function()
-  {
-    this._disposeFields("__children");
+  destruct : function() {
+    this.__children = null;
   }
 });

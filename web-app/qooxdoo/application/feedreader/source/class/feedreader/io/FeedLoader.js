@@ -70,7 +70,7 @@ qx.Class.define("feedreader.io.FeedLoader",
 
       // Redirect request through proxy (required for cross-domain loading)
       // The proxy also translates the data from XML to JSON
-      proxy = "http://resources.qooxdoo.org/proxy.php?mode=jsonp&proxy=" + encodeURIComponent(feed.getUrl());
+      proxy = "http://resources.qooxdoo.org/proxy_1.php?mode=jsonp&proxy=" + encodeURIComponent(feed.getUrl());
 
       // Create request object
       req = new qx.io.remote.Request(proxy, "GET", "text/plain");
@@ -83,9 +83,22 @@ qx.Class.define("feedreader.io.FeedLoader",
 
       // Add the listener
       req.addListener("completed", this.__createOnLoaded(feed), this);
+      var failHandler = qx.lang.Function.bind(this.__onFail, this, feed);
+      req.addListener("timeout", failHandler, this);
+      req.addListener("failed", failHandler, this);
 
       // And finally send the request
       req.send();
+    },
+
+    
+    /**
+     * Handler for failing requests.
+     * 
+     * @param e {qx.io.request.Response} The failed response.
+     */
+    __onFail : function(feed, e) {
+      feed.setState("error");
     },
 
 

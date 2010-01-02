@@ -251,7 +251,6 @@ qx.Class.define("apiviewer.ui.AbstractViewer",
      */
     _applyDocNode : function(classNode)
     {
-
       this.__classNode = classNode;
 
       if (!this._titleElem)
@@ -308,7 +307,8 @@ qx.Class.define("apiviewer.ui.AbstractViewer",
 
   destruct : function()
   {
-    this._disposeFields("_classDescElem", "_titleElem", "_infoPanelHash");
+    this._classDescElem = this._titleElem = this._infoPanelHash =
+      this.__classNode = null;
     this._disposeArray("_infoPanels", 1);
   }
 });

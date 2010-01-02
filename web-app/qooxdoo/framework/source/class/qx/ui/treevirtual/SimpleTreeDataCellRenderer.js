@@ -89,7 +89,7 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataCellRenderer",
 
       var STDCR = qx.ui.treevirtual.SimpleTreeDataCellRenderer;
 
-      var ImageLoader = qx.io2.ImageLoader;
+      var ImageLoader = qx.io.ImageLoader;
 
       var am = qx.util.AliasManager.getInstance();
       var rm = qx.util.ResourceManager.getInstance();
@@ -599,7 +599,7 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataCellRenderer",
      *   If <i>false</i>, then the left-most tree line wiill be displayed
      *   just like all of the other tree lines.
      *
-     * @return {var} TODOC
+     * @return {Map} map of image properties.
      */
     _getIndentSymbol : function(column,
                                 node,
@@ -723,12 +723,7 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataCellRenderer",
     }
   },
 
-  destruct : function()
-  {
-    this._disposeFields(
-      "__am",
-      "__rm",
-      "__tm",
-      "BLANK");
+  destruct : function() {
+    this.__am = this.__rm = this.__tm = null;
   }
 });

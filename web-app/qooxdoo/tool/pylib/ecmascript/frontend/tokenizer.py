@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -268,10 +268,10 @@ def parseStream(content, uniqueId=""):
     try:
         all = R_ALL.findall(content)
     except RuntimeError:
-        print "Could not parse file %s" % uniqueId
-        print "Generally this means that there is a syntactial problem with your source-code."
-        print "Please omit the usage of nested comments like '/* foo /* bar */'."
-        sys.exit(1)
+        msg  = "Could not parse file %s" % uniqueId
+        msg += "\nGenerally this means that there is a syntactial problem with your source-code."
+        msg += "\nPlease omit the usage of nested comments like '/* foo /* bar */'."
+        raise RuntimeError(msg)
 
     # print "      * structuring..."
 

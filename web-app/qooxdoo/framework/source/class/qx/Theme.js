@@ -25,8 +25,6 @@
  * Supported themes are: colors, decorations, fonts, icons, appearances.
  * The additional meta theme allows for grouping of the individual
  * themes.
- *
- * The following themes are deprecated in 0.8: borders, widgets
  */
 qx.Class.define("qx.Theme",
 {
@@ -101,7 +99,6 @@ qx.Class.define("qx.Theme",
       // Convert theme entry from Object to Function (for prototype inheritance)
       this.__convert(theme, config);
 
-      this.__initializeResources(theme, config);
       this.__initializeAliases(theme, config);
 
       // Store class reference in global class registry
@@ -136,38 +133,6 @@ qx.Class.define("qx.Theme",
         return objectOrArray;
       } else {
         return [objectOrArray];
-      }
-    },
-
-
-    /**
-     * Initialize resource inheritance
-     *
-     * @deprecated 'resources' will be replaced by 'aliases'
-     * @param theme {Map} The theme
-     * @param config {Map} config structure
-     */
-    __initializeResources : function(theme, config)
-    {
-      if (qx.core.Variant.isSet("qx.debug", "on"))
-      {
-        if (config.resource)
-        {
-          var aliasKey = theme.type == "icons" ? "icon" : "decoration";
-          qx.log.Logger.warn(
-            "The configuration key 'resource' in the " + aliasKey + " theme" +
-            " '" + theme.name + "' is deprecated. Please replace " +
-            "'resource: \"" + config.resource + "\"' with " +
-            "'aliases : { " + aliasKey + ": \"" + config.resource + "\"}'"
-          );
-          qx.log.Logger.trace();
-        }
-      }
-
-      if (config.resource) {
-        theme.resource = config.resource;
-      } else if (config.extend && config.extend.resource) {
-        theme.resource = config.extend.resource;
       }
     },
 
@@ -344,7 +309,6 @@ qx.Class.define("qx.Theme",
       "on":
       {
         "title"       : "string", // String
-        "resource"    : "string", // String, @deprecated
         "aliases"     : "object", // Map
         "type"        : "string", // String
         "extend"      : "object", // Theme
@@ -465,6 +429,24 @@ qx.Class.define("qx.Theme",
         // Validate extend
         if (config.extend && config.extend.$$type !== "Theme") {
           throw new Error('Invalid extend in theme "' + name + '": ' + config.extend);
+        }
+
+        // Validate include
+        if (config.include) {
+          for (var i=0,l=config.include.length; i<l; i++) {
+            if (typeof(config.include[i]) == "undefined" || config.include[i].$$type !== "Theme") {
+              throw new Error('Invalid include in theme "' + name + '": ' + config.include[i]);
+            }
+          }
+        }
+
+        // Validate patch
+        if (config.patch) {
+          for (var i=0,l=config.patch.length; i<l; i++) {
+            if (typeof(config.patch[i])  == "undefined" || config.patch[i].$$type !== "Theme") {
+              throw new Error('Invalid patch in theme "' + name + '": ' + config.patch[i]);
+            }
+          }
         }
       },
 

@@ -220,5 +220,18 @@ qx.Class.define("apiviewer.dao.ClassItem",
       return true;
     }
 
+  },
+  
+  
+  /*
+   *****************************************************************************
+      DESTRUCTOR
+   *****************************************************************************
+   */
+
+  destruct : function()
+  {
+    this._class = this._itemDocNode = this._requiredBy = this._see = 
+      this._types = null;
   }
 });

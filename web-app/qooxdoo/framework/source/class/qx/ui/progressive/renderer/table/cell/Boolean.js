@@ -27,7 +27,7 @@
 ************************************************************************ */
 
 /**
- * Table Cell Boolean Renderer.  EXPERIMENTAL!  INTERFACE MAY CHANGE.
+ * Table Cell Boolean Renderer.
  */
 qx.Class.define("qx.ui.progressive.renderer.table.cell.Boolean",
 {
@@ -59,6 +59,7 @@ qx.Class.define("qx.ui.progressive.renderer.table.cell.Boolean",
      */
     allowToggle :
     {
+      check : "Boolean",
       init : false
     }
   },
@@ -178,9 +179,7 @@ qx.Class.define("qx.ui.progressive.renderer.table.cell.Boolean",
     }
   },
 
-  destruct : function()
-  {
-    this._disposeFields("__iconUrlTrue",
-                        "__iconUrlFalse");
+  destruct : function() {
+    this.__iconUrlTrue = this.__iconUrlFalse = null;
   }
 });

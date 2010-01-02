@@ -26,7 +26,7 @@
 ************************************************************************ */
 
 /**
- * Table Cell Boolean Renderer.  EXPERIMENTAL!  INTERFACE MAY CHANGE.
+ * Table Cell Boolean Renderer.
  */
 qx.Class.define("qx.ui.progressive.renderer.table.cell.Image",
 {
@@ -115,11 +115,5 @@ qx.Class.define("qx.ui.progressive.renderer.table.cell.Image",
 
       return imageData;
     }
-  },
-
-  destruct : function()
-  {
-    this._disposeFields("__imageWidth",
-                        "__imageHeight");
   }
 });

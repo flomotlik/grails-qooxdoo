@@ -28,6 +28,8 @@
 #asset(qx/icon/${qx.icontheme}/16/emotes/face-smile.png)
 #asset(qx/icon/${qx.icontheme}/16/emotes/face-sad.png)
 
+#tag(noPlayground)
+
 ************************************************************************ */
 
 qx.Class.define("demobrowser.demo.test.Table_CellRenderer",
@@ -223,12 +225,14 @@ qx.Class.define("demobrowser.demo.test.Table_CellRenderer",
           "icon/16/actions/go-down.png",
           "icon/16/actions/go-up.png",
           "icon/16/actions/go-previous.png",
-          "icon/16/actions/go-next.png"
+          "icon/16/actions/go-next.png",
+          "http://resources.qooxdoo.org/images/logo.gif"
         ],
         styleLeft : [0],
         styleWidth : [width],
         styleHeight : [20],
-        style: [""]
+        style: [""],
+        tooltip: ["", "tooltip"]
       }
 
       var container = this._getNewTableDiv(width)
@@ -471,8 +475,7 @@ qx.Class.define("demobrowser.demo.test.Table_CellRenderer",
    *****************************************************************************
    */
 
-  destruct : function()
-  {
-    this._disposeFields("tableMock");
+  destruct : function() {
+    this.tableMock = null;
   }
 });

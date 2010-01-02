@@ -18,8 +18,6 @@
 ************************************************************************ */
 
 /**
- * EXPERIMENTAL!
- *
  * The data array is a special array used in the data binding context of
  * qooxdoo. It does not extend the native array of JavaScript but its a wrapper
  * for it. All the native methods are included in the implementation and it
@@ -236,7 +234,8 @@ qx.Class.define("qx.data.Array",
      * Returns a new array with the values specified by the parameter.
      *
      * @param from {Number} The start index.
-     * @param to {Number} The end index.
+     * @param to {Number?null} The end index. If omitted, slice extracts to the
+     *   end of the array.
      *
      * @return {qx.data.Array} A new array containing the given range of values.
      */
@@ -520,8 +519,24 @@ qx.Class.define("qx.data.Array",
       for (var i = 0; i < this.__array.length; i++) {
         this._applyEventPropagation(null, this.__array[i], i);
       }
+
+      // store the old data
+      var oldLength = this.getLength();
+      var items = this.__array.concat();
+
+      // change the length
       this.__array.length = 0;
       this.__updateLength();
+
+      // fire the change event
+      this.fireDataEvent("change",
+        {
+          start: 0,
+          end: oldLength - 1,
+          type: "remove",
+          items: items
+        }, null
+      );
     },
 
 
@@ -650,6 +665,21 @@ qx.Class.define("qx.data.Array",
     },
 
 
+    /**
+     * Invokes the given function for every item in the array.
+     *
+     * @param callback {Function} The function which will be call for every
+     *   item in the array.
+     * @param context {var} The context in which the callback will be invoked.
+     */
+    forEach : function(callback, context)
+    {
+      for (var i = 0; i < this.__array.length; i++) {
+        callback.call(context, this.__array[i]);
+      }
+    },
+
+
     /*
     ---------------------------------------------------------------------------
       INTERNAL HELPERS
@@ -674,8 +704,7 @@ qx.Class.define("qx.data.Array",
    *****************************************************************************
   */
 
-  destruct : function()
-  {
-    this._disposeFields("__array");
+  destruct : function() {
+    this.__array = null;
   }
 });

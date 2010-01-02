@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -20,6 +20,7 @@
 
 import sys, string, re, optparse, codecs
 import filetool
+from ecmascript.frontend import lang
 
 
 
@@ -42,6 +43,11 @@ def convertUnix2Mac(content):
     return content.replace("\n", "\r")
 
 
+unicode_white_space_regex = re.compile(lang.UNICODE_CATEGORY_Zs)
+
+def normalizeWhiteSpace(content):
+    #return content.replace(ur"\u00A0", " ")
+    return unicode_white_space_regex.sub(" ", content)
 
 
 def any2Unix(content):
@@ -107,17 +113,8 @@ def toRegExp(text):
     return re.compile("^(" + text.replace('.', '\\.').replace('*', '.*').replace('?', '.?') + ")$")
 
 
-
-
-
-
-
-
-
-
-
 def main():
-    allowed = ["any2Dos", "any2Mac", "any2Unix", "convertDos2Mac", "convertDos2Unix", "convertMac2Dos", "convertMac2Unix", "convertUnix2Dos", "convertUnix2Mac", "spaces2Tab", "tab2Space"]
+    allowed = ["any2Dos", "any2Mac", "any2Unix", "convertDos2Mac", "convertDos2Unix", "convertMac2Dos", "convertMac2Unix", "convertUnix2Dos", "convertUnix2Mac", "spaces2Tab", "tab2Space", "removeTrailingSpaces", "normalizeWhiteSpace"]
     
     parser = optparse.OptionParser()
 

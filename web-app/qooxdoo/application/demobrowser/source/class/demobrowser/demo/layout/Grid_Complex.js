@@ -18,6 +18,12 @@
 
 ************************************************************************ */
 
+/* ************************************************************************
+
+#tag(noPlayground)
+
+************************************************************************ */
+
 qx.Class.define("demobrowser.demo.layout.Grid_Complex",
 {
   extend : demobrowser.demo.util.LayoutApplication,
@@ -154,7 +160,6 @@ qx.Class.define("demobrowser.demo.layout.Grid_Complex",
       innerBox.add(new qx.ui.core.Widget().set({
         decorator: "main",
         backgroundColor: "green",
-        allowGrowX: false,
         height: 70,
         allowGrowX: false
       }), {row: 0, column: 1});

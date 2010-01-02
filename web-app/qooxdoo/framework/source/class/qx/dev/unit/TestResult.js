@@ -113,23 +113,35 @@ qx.Class.define("qx.dev.unit.TestResult",
      * @param test {TestSuite|TestFunction} The test
      * @param testFunction {Function} The test function
      * @param self {Object?} The context in which to run the test function
+     * @param resume {Boolean?} Resume a currently waiting test
      */
-    run : function(test, testFunction, self)
+    run : function(test, testFunction, self, resume)
     {
-      this.fireDataEvent("startTest", test);
-
       if(!this.__timeout) {
         this.__timeout = {};
       }
-      if (this.__timeout[test.getFullName()]) {
+
+      if (resume && !this.__timeout[test.getFullName()]) {
+        this.__timeout[test.getFullName()] = "failed";
+        var qxEx = new qx.type.BaseError("Error in asynchronous test", "resume() called before wait()");
+        this.__createError("failure", qxEx, test);
+        return;
+      }
+
+      this.fireDataEvent("startTest", test);
+
+      if (this.__timeout[test.getFullName()])
+      {
         this.__timeout[test.getFullName()].stop();
         delete this.__timeout[test.getFullName()];
       }
-      else {
+      else
+      {
         try {
           test.setUp();
         }
-        catch(ex) {
+        catch(ex)
+        {
           try {
             test.tearDown();
           }
@@ -144,18 +156,19 @@ qx.Class.define("qx.dev.unit.TestResult",
       }
 
       try {
-        if (self) {
-          testFunction.call(self);
-        }
-        else {
-          testFunction();
-        }
+        testFunction.call(self || window);
       }
       catch(ex)
       {
         var error = true;
         if (ex instanceof qx.dev.unit.AsyncWrapper)
         {
+
+          if (this.__timeout[test.getFullName()]) {
+            // Do nothing if there's already a timeout for this test
+            return;
+          }
+
           if (ex.getDelay()) {
             var that = this;
             var defaultTimeoutFunction = function() {
@@ -180,7 +193,8 @@ qx.Class.define("qx.dev.unit.TestResult",
         }
       }
 
-      if (!error) {
+      if (!error)
+      {
         test.tearDown();
         this.fireDataEvent("endTest", test);
       }
@@ -210,6 +224,6 @@ qx.Class.define("qx.dev.unit.TestResult",
   },
 
   destruct : function() {
-    this._disposeFields("__timeout");
+    this.__timeout = null;
   }
 });

@@ -8,7 +8,8 @@
     "QOOXDOO_PATH" : "../..",
     "TESTRUNNER_ROOT" : ".",
     "TESTRUNNER"   : "testrunner",
-    "TEST_INCLUDE"   : "${APPLICATION}.test.*",
+    "TEST_INCLUDE" : "${APPLICATION}.test.*",
+    "TESTS_SCRIPT" : "tests.js",         // output script name
     "BUILD_PATH"   : "build",
     "THEME"        : "qx.theme.Modern"
   },
@@ -96,11 +97,16 @@
     {
       "extend" : ["common"],
 
-      "compile-source" :
+      "compile-options" :
       {
-        "file" : "./source/script/${APPLICATION}.js",
-        "root" : "source"  // the root dir of your app, where the HTML lives
-      }
+        "paths" :
+        {
+          "file" : "./source/script/${APPLICATION}.js",
+          "app-root" : "source"  // the root dir of your app, where the HTML lives
+        }
+      },
+      
+      "compile" : { "type" : "source" }
     },
 
 
@@ -108,12 +114,20 @@
     {
       "extend" : ["common-tests"],
 
-      "compile-source" :
+      "compile-options" :
       {
-        "file" : "./source/script/tests.js",
-        "locales" : "${LOCALES}",
-        "root" : "source/html"
-      }
+        "paths" : 
+        {
+          "file" : "./source/script/${TESTS_SCRIPT}",
+          "app-root" : "source/html"
+        },
+        "code" : 
+        {
+          "locales" : "${LOCALES}"
+        }
+      },
+
+      "compile" : { "type" : "source" }
     },
 
 
@@ -139,6 +153,8 @@
         [
           "index.html",
           "index-source.html",
+          "index-inline.html",
+          "index-native.html",
           "html"
         ],
 
@@ -169,7 +185,7 @@
     {
       "extend" : ["common"],
 
-      "compile-dist" :
+      "compile-options" :
       {
         "paths" :
         {
@@ -179,7 +195,9 @@
         {
           "optimize" : ["variables", "basecalls", "privates", "strings"]
         }
-      }
+      },
+      
+      "compile" : { "type" : "build" }
     },
 
 
@@ -192,11 +210,11 @@
         "qx.debug" : ["off"]
       },
 
-      "compile-dist" :
+      "compile-options" :
       {
         "paths" :
         {
-          "file" : "${BUILD_PATH}/script/tests.js"
+          "file" : "${BUILD_PATH}/script/${TESTS_SCRIPT}"
         },
         "uris" :
         {
@@ -209,7 +227,10 @@
           ,"optimize" : ["variables", "basecalls", "privates", "strings"]
           ,"format" : true
         }
-      }
+      },
+      
+      "compile" : { "type" : "build" }
+      
     },
 
 
@@ -230,12 +251,20 @@
     {
       "extend" : ["common-tests"],
 
-      "compile-source" :
+      "compile-options" :
       {
-        "file"    : "${BUILD_PATH}/script/tests-source.js",
-        "locales" : "${LOCALES}",
-        "root"    : "${BUILD_PATH}/html"
-      }
+        "paths" :
+        {
+          "file"    : "${BUILD_PATH}/script/tests-source.js",
+          "app-root"    : "${BUILD_PATH}/html"
+        },
+        "code" :
+        {
+          "locales" : "${LOCALES}"
+        }
+      },
+      
+      "compile" : { "type" : "source" }
     },
 
     "build-with-tests-source" :

@@ -37,7 +37,7 @@ qx.Class.define("qx.event.type.Native",
      * @param relatedTarget {Object?null} The related event target
      * @param canBubble {Boolean?false} Whether or not the event is a bubbling event.
      *     If the event is bubbling, the bubbling can be stopped using
-     *     {@link #stopPropagation}
+     *     {@link qx.event.type.Event#stopPropagation}
      * @param cancelable {Boolean?false} Whether or not an event can have its default
      *     action prevented. The default action can either be the browser's
      *     default action of a native event (e.g. open the context menu on a
@@ -58,6 +58,7 @@ qx.Class.define("qx.event.type.Native",
       }
 
       this._native = nativeEvent;
+      this._returnValue = null;
 
       return this;
     },
@@ -68,9 +69,25 @@ qx.Class.define("qx.event.type.Native",
     {
       var clone = this.base(arguments, embryo);
 
-      clone._native = this._native;
+      var nativeClone = {};
+      clone._native = this._cloneNativeEvent(this._native, nativeClone);
+
       clone._returnValue = this._returnValue;
 
+      return clone;
+    },
+
+
+    /**
+     * Clone the native browser event
+     *
+     * @param nativeEvent {Event} The native browser event
+     * @param clone {Object} The initialized clone.
+     * @return {Object} The cloned event
+     */
+    _cloneNativeEvent : function(nativeEvent, clone)
+    {
+      clone.preventDefault = qx.lang.Function.empty;
       return clone;
     },
 
@@ -82,18 +99,6 @@ qx.Class.define("qx.event.type.Native",
     {
       this.base(arguments);
       qx.bom.Event.preventDefault(this._native);
-    },
-
-
-    /**
-     * Stops event from all further processing. Execute this when the
-     * current handler should have "exclusive rights" to the event
-     * and no further reaction by anyone else should happen.
-     */
-    stop : function()
-    {
-      this.stopPropagation();
-      this.preventDefault();
     },
 
 
@@ -140,6 +145,6 @@ qx.Class.define("qx.event.type.Native",
   */
 
   destruct : function() {
-    this._disposeFields("_native", "_returnValue");
+    this._native = this._returnValue = null;
   }
 });

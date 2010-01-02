@@ -18,21 +18,19 @@
 ************************************************************************ */
 
 /**
- * EXPERIMENTAL!!!
- *
  * The data binding package is still under development so there will be changes
- * to the API. This Features is for texting purpose only.
+ * to the API. This Features is for testing purpose only.
  */
 qx.Class.define("qx.data.SingleValueBinding",
 {
 
   statics :
   {
-    /* Static debug flag to enable log messages on every invoke of a listener */
+    /** Static debug flag to enable log messages on every invoke of a listener */
     DEBUG_ON: false,
 
 
-    /* internal reference for all bindings */
+    /** internal reference for all bindings */
     __bindings: {},
 
 
@@ -80,7 +78,8 @@ qx.Class.define("qx.data.SingleValueBinding",
      *   the source property.
      * @param targetObject {qx.core.Object} The object which the source should
      *   be bind to.
-     * @param targetProperty {String} The property name of the target object.
+     * @param targetPropertyChain {String} The property chain to the target
+     *   object.
      * @param options {Map} A map containing the options.
      *   <li>converter: A converter function which takes two parameters
      *       and should return the converted value. The first parameter ist the
@@ -103,10 +102,15 @@ qx.Class.define("qx.data.SingleValueBinding",
      *   there is no property definition for object and property (source and
      *   target).
      */
-    bind: function(
-      sourceObject, sourcePropertyChain, targetObject, targetProperty, options
+    bind : function(
+      sourceObject, sourcePropertyChain, targetObject, targetPropertyChain, options
     )
     {
+      // set up the target binding
+      var targetListenerMap = this.__setUpTargetBinding(
+        sourceObject, sourcePropertyChain, targetObject, targetPropertyChain, options
+      );
+
       // get the property names
       var propertyNames = sourcePropertyChain.split(".");
 
@@ -142,21 +146,21 @@ qx.Class.define("qx.data.SingleValueBinding",
             var currentValue = source.getItem(itemIndex);
 
             // set the initial value
-            this.__setInitialValue(currentValue, targetObject, targetProperty, options, sourceObject);
+            this.__setInitialValue(currentValue, targetObject, targetPropertyChain, options, sourceObject);
 
             // bind the event
             listenerIds[i] = this.__bindEventToProperty(
-              source, eventNames[i], targetObject, targetProperty, options, arrayIndexValues[i]
+              source, eventNames[i], targetObject, targetPropertyChain, options, arrayIndexValues[i]
             );
           } else {
             // try to set the initial value
             if (propertyNames[i] != null && source["get" + qx.lang.String.firstUp(propertyNames[i])] != null) {
               var currentValue = source["get" + qx.lang.String.firstUp(propertyNames[i])]();
-              this.__setInitialValue(currentValue, targetObject, targetProperty, options, sourceObject);
+              this.__setInitialValue(currentValue, targetObject, targetPropertyChain, options, sourceObject);
             }
             // bind the property
             listenerIds[i] = this.__bindEventToProperty(
-              source, eventNames[i], targetObject, targetProperty, options
+              source, eventNames[i], targetObject, targetPropertyChain, options
             );
           }
 
@@ -171,7 +175,7 @@ qx.Class.define("qx.data.SingleValueBinding",
             listenerIds: listenerIds,
             arrayIndexValues: arrayIndexValues,
             targetObject: targetObject,
-            targetProperty: targetProperty,
+            targetPropertyChain: targetPropertyChain,
             options: options,
             listeners: listeners
           };
@@ -200,10 +204,16 @@ qx.Class.define("qx.data.SingleValueBinding",
       }
 
       // create the id map
-      var id = {type: "deepBinding", listenerIds: listenerIds, sources: sources};
+      var id = {
+        type: "deepBinding",
+        listenerIds: listenerIds,
+        sources: sources,
+        targetListenerIds: targetListenerMap.listenerIds,
+        targets: targetListenerMap.targets
+      };
       // store the bindings
       this.__storeBinding(
-        id, sourceObject, sourcePropertyChain, targetObject, targetProperty
+        id, sourceObject, sourcePropertyChain, targetObject, targetPropertyChain
       );
 
       return id;
@@ -215,7 +225,8 @@ qx.Class.define("qx.data.SingleValueBinding",
      *
      * @param context {Map} The current context for the listener.
      */
-    __chainListener: function(context) {
+    __chainListener : function(context)
+    {
 
       // invoke the onUpdate method
       if (context.options && context.options.onUpdate) {
@@ -250,7 +261,7 @@ qx.Class.define("qx.data.SingleValueBinding",
         context.sources[j] = source;
         // reset the target object if no new source could be found
         if (!source) {
-          this.__resetTargetValue(context.targetObject, context.targetProperty);
+          this.__resetTargetValue(context.targetObject, context.targetPropertyChain);
           break;
         }
 
@@ -263,23 +274,23 @@ qx.Class.define("qx.data.SingleValueBinding",
               source.length - 1 : context.arrayIndexValues[j];
             var currentValue = source.getItem(itemIndex);
             this.__setInitialValue(
-              currentValue, context.targetObject, context.targetProperty, context.options, context.sources[context.index]
+              currentValue, context.targetObject, context.targetPropertyChain, context.options, context.sources[context.index]
             );
 
             // bind the item event to the new target
             context.listenerIds[j] = this.__bindEventToProperty(
-              source, "change", context.targetObject, context.targetProperty, context.options, context.arrayIndexValues[j]
+              source, "change", context.targetObject, context.targetPropertyChain, context.options, context.arrayIndexValues[j]
             );
 
           } else {
             if (context.propertyNames[j] != null && source["get" + qx.lang.String.firstUp(context.propertyNames[j])] != null) {
               var currentValue = source["get" + qx.lang.String.firstUp(context.propertyNames[j])]();
-              this.__setInitialValue(currentValue, context.targetObject, context.targetProperty, context.options, context.sources[context.index]);
+              this.__setInitialValue(currentValue, context.targetObject, context.targetPropertyChain, context.options, context.sources[context.index]);
             }
             var eventName = this.__getEventNameForProperty(source, context.propertyNames[j]);
             // bind the last property to the new target
             context.listenerIds[j] = this.__bindEventToProperty(
-              source, eventName, context.targetObject, context.targetProperty, context.options
+              source, eventName, context.targetObject, context.targetPropertyChain, context.options
             );
           }
         } else {
@@ -302,6 +313,192 @@ qx.Class.define("qx.data.SingleValueBinding",
 
 
     /**
+     * Internal helper for setting up the listening to the changes on the
+     * target side of the binding. Only works if the target property is a
+     * property chain
+     *
+     * @param sourceObject {qx.core.Object} The source of the binding.
+     * @param sourcePropertyChain {String} The property chain which represents
+     *   the source property.
+     * @param targetObject {qx.core.Object} The object which the source should
+     *   be bind to.
+     * @param targetPropertyChain {String} The property name of the target
+     *   object.
+     * @param options {Map} The options map perhaps containing the user defined
+     *   converter.
+     * @return {var} A map containing the listener ids and the targets.
+     */
+    __setUpTargetBinding : function(
+      sourceObject, sourcePropertyChain, targetObject, targetPropertyChain, options
+    ) {
+      // get the property names
+      var propertyNames = targetPropertyChain.split(".");
+
+      var arrayIndexValues =
+        this.__checkForArrayInPropertyChain(propertyNames);
+      var targets = [];
+      var listeners = [];
+      var listenerIds = [];
+      var eventNames = [];
+      var target = targetObject;
+
+      // go through all property names
+      for (var i = 0; i < propertyNames.length - 1; i++) {
+        // check for the array
+        if (arrayIndexValues[i] !== "") {
+          // push the array change event
+          eventNames.push("change");
+        } else {
+          try {
+            eventNames.push(
+              this.__getEventNameForProperty(target, propertyNames[i])
+            );
+          } catch (e) {
+            // if the event names could not be terminated,
+            // just ignore the target chain listening
+            break;
+          }
+        }
+
+        // save the current source
+        targets[i] = target;
+
+        // create a listener
+        var listener = function() {
+          // delete all listener after the current one
+          for (var j = i + 1; j < propertyNames.length - 1; j++) {
+            // remove the old sources
+            var target = targets[j];
+            targets[j] = null;
+            if (!target) {
+              continue;
+            }
+
+            // remove the listeners
+            target.removeListenerById(listenerIds[j]);
+          }
+
+          // get the current target
+          var target = targets[i];
+          // add new once after the current one
+          for (var j = i + 1; j < propertyNames.length - 1; j++) {
+
+            var firstUpPropName = qx.lang.String.firstUp(propertyNames[j - 1]);
+            // get and store the new target
+            if (arrayIndexValues[j - 1] !== "") {
+              var currentIndex = arrayIndexValues[j - 1] === "last" ?
+                target.getLength() - 1 : arrayIndexValues[j - 1];
+              target = target["get" + firstUpPropName](currentIndex);
+            } else {
+              target = target["get" + firstUpPropName]();
+            }
+            targets[j] = target;
+
+            // check if a listener already created
+            if (listeners[j] == null) {
+              // store the listener for further processing
+              listeners.push(listener);
+            }
+
+            // add a new listener
+            if (qx.Class.implementsInterface(target, qx.data.IListData)) {
+              var eventName = "change";
+            } else {
+              try {
+                var eventName =
+                  qx.data.SingleValueBinding.__getEventNameForProperty(
+                    target, propertyNames[j]
+                  );
+              } catch (e) {
+                // if the event name could not be terminated,
+                // ignore the rest
+                break;
+              }
+            }
+
+            listenerIds[j] = target.addListener(eventName, listeners[j]);
+           }
+
+          qx.data.SingleValueBinding.__updateTarget(
+            sourceObject, sourcePropertyChain, targetObject, targetPropertyChain
+          );
+        };
+
+        // store the listener for further processing
+        listeners.push(listener);
+
+        // add the chaining listener
+        listenerIds[i] = target.addListener(eventNames[i], listener);
+
+        var firstUpPropName = qx.lang.String.firstUp(propertyNames[i]);
+        // get and store the next target
+        if (target["get" + firstUpPropName] == null) {
+          target = null;
+        } else if (arrayIndexValues[i] !== "") {
+          target = target["get" + firstUpPropName](arrayIndexValues[i]);
+        } else {
+          target = target["get" + firstUpPropName]();
+        }
+        if (!target) {
+          break;
+        }
+      }
+
+      return {listenerIds: listenerIds, targets: targets};
+    },
+
+
+    /**
+     * Helper for updating the target. Gets the current set data from the soure
+     * and set that on the target.
+     *
+     * @param sourceObject {qx.core.Object} The source of the binding.
+     * @param sourcePropertyChain {String} The property chain which represents
+     *   the source property.
+     * @param targetObject {qx.core.Object} The object which the source should
+     *   be bind to.
+     * @param targetPropertyChain {String} The property name of the target
+     *   object.
+     */
+    __updateTarget : function(
+      sourceObject, sourcePropertyChain, targetObject, targetPropertyChain
+    )
+    {
+      var source = this.__getTargetFromChain(sourceObject, sourcePropertyChain);
+
+      if (source != null) {
+        // geht the name of the last property
+        var lastProperty = sourcePropertyChain.substring(
+          sourcePropertyChain.lastIndexOf(".") + 1, sourcePropertyChain.length
+        );
+
+        // check for arrays
+        if (lastProperty.charAt(lastProperty.length - 1) == "]") {
+          // split up the chain into property and index
+          var index = lastProperty.substring(
+            lastProperty.lastIndexOf("[") + 1, lastProperty.length - 1
+          );
+          var prop = lastProperty.substring(0, lastProperty.lastIndexOf("["));
+
+          // get the array
+          var sourceArray = source["get" + qx.lang.String.firstUp(prop)]();
+          if (index == "last") {
+            index = sourceArray.length - 1;
+          }
+          if (sourceArray != null) {
+            var value = sourceArray.getItem(index);
+          }
+
+        } else {
+          // set the given value
+          var value = source["get" + qx.lang.String.firstUp(lastProperty)]();
+        }
+      }
+      this.__setTargetValue(targetObject, targetPropertyChain, value);
+    },
+
+
+    /**
      * Tries to return a fitting event name to the given source object and
      * property name. First, it assumes that the propertyname is a real property
      * and therefore it checks the property definition for the event. The second
@@ -314,7 +511,8 @@ qx.Class.define("qx.data.SingleValueBinding",
      * @param propertyname {String} The name of the property.
      * @return {String} The name of the corresponding property.
      */
-    __getEventNameForProperty: function(source, propertyname) {
+    __getEventNameForProperty : function(source, propertyname)
+    {
       // get the current event Name from the property definition
       var eventName = this.__getEventForProperty(source, propertyname);
       // if no event name could be found
@@ -346,7 +544,8 @@ qx.Class.define("qx.data.SingleValueBinding",
      * @param targetPropertyChain {String} The names of the properties,
      *   separated with a dot.
      */
-    __resetTargetValue: function(targetObject, targetPropertyChain) {
+    __resetTargetValue : function(targetObject, targetPropertyChain)
+    {
       // get the last target object of the chain
       var target = this.__getTargetFromChain(targetObject, targetPropertyChain);
       if (target != null) {
@@ -380,7 +579,8 @@ qx.Class.define("qx.data.SingleValueBinding",
      *   separated with a dot.
      * @param value {var} The value to set.
      */
-    __setTargetValue: function(targetObject, targetPropertyChain, value) {
+    __setTargetValue : function(targetObject, targetPropertyChain, value)
+    {
       // get the last target object of the chain
       var target = this.__getTargetFromChain(targetObject, targetPropertyChain);
       if (target != null) {
@@ -423,7 +623,8 @@ qx.Class.define("qx.data.SingleValueBinding",
      * @return {qx.core.Object | null} The object on which the last property
      *   should be set.
      */
-    __getTargetFromChain: function(targetObject, targetPropertyChain) {
+    __getTargetFromChain : function(targetObject, targetPropertyChain)
+    {
       var properties = targetPropertyChain.split(".");
       var target = targetObject;
       // ignore the last property
@@ -469,7 +670,7 @@ qx.Class.define("qx.data.SingleValueBinding",
      * @param sourceObject {qx.core.Object} The shource object of the binding (
      *   used for the onUpdate callback).
      */
-    __setInitialValue: function(value, targetObject, targetPropertyChain, options, sourceObject)
+    __setInitialValue : function(value, targetObject, targetPropertyChain, options, sourceObject)
     {
       // first convert the initial value
       value = this.__convertValue(
@@ -837,11 +1038,18 @@ qx.Class.define("qx.data.SingleValueBinding",
     removeBindingFromObject : function(sourceObject, id) {
       // check for a deep binding
       if (id.type == "deepBinding") {
-        // go threw all added listeners
+        // go threw all added listeners (source)
         for (var i = 0; i < id.sources.length; i++) {
           // check if a source is available
           if (id.sources[i]) {
             id.sources[i].removeListenerById(id.listenerIds[i]);
+          }
+        }
+        // go threw all added listeners (target)
+        for (var i = 0; i < id.targets.length; i++) {
+          // check if a target is available
+          if (id.targets[i]) {
+            id.targets[i].removeListenerById(id.targetListenerIds[i]);
           }
         }
       } else {
@@ -869,7 +1077,7 @@ qx.Class.define("qx.data.SingleValueBinding",
      *
      * @param object {qx.core.Object} The object of which the bindings should be
      *   removed.
-     * @throws {qx.core.AssertionErrro} If the object is not in the internal
+     * @throws {qx.core.AssertionError} If the object is not in the internal
      *   registry of the bindings.
      * @throws {Error} If one of the bindings listed internally can not be
      *   removed.
@@ -884,9 +1092,12 @@ qx.Class.define("qx.data.SingleValueBinding",
 
       // get the bindings
       var bindings = this.__bindings[object.toHashCode()];
-      // remove every binding with the removeBindingFromObject function
-      for (var i = bindings.length - 1; i >= 0; i--) {
-        this.removeBindingFromObject(object, bindings[i][0]);
+      if (bindings != undefined)
+      {
+        // remove every binding with the removeBindingFromObject function
+        for (var i = bindings.length - 1; i >= 0; i--) {
+          this.removeBindingFromObject(object, bindings[i][0]);
+        }
       }
     },
 

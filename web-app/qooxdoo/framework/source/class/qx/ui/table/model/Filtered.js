@@ -83,7 +83,8 @@ qx.Class.define("qx.ui.table.model.Filtered",
      *
      * @return {void}
      *
-     * @throws TODOC
+     * @throws {Error} If the filter can not recognized or one of the values
+     * is null.
      */
     addBetweenFilter : function(filter, value1, value2, target)
     {
@@ -118,7 +119,7 @@ qx.Class.define("qx.ui.table.model.Filtered",
      *
      * @return {void}
      *
-     * @throws TODOC
+     * @throws {Error} If the filter can not recognized or the target is null.
      */
     addNumericFilter : function(filter, value1, target)
     {
@@ -154,7 +155,7 @@ qx.Class.define("qx.ui.table.model.Filtered",
      *
      * @return {void}
      *
-     * @throws TODOC
+     * @throws {Error} If the regex is not valid.
      */
     addRegex : function(regex, target, ignorecase)
     {
@@ -187,7 +188,7 @@ qx.Class.define("qx.ui.table.model.Filtered",
      *
      * @return {void}
      *
-     * @throws TODOC
+     * @throws {Error} If the regex is null.
      */
     addNotRegex : function(regex, target, ignorecase)
     {
@@ -353,7 +354,7 @@ qx.Class.define("qx.ui.table.model.Filtered",
 
       dispatchEvent = (dispatchEvent != null ? dispatchEvent : true);
       if (!this.__applyingFilters) {
-        this.__fullArr = rowArr.slice();
+        this.__fullArr = rowArr.slice(0);
         this.__applyingFilters = true;
       }
 
@@ -414,11 +415,7 @@ qx.Class.define("qx.ui.table.model.Filtered",
 
   destruct : function()
   {
-    this._disposeFields(
-      "__fullArr",
-      "numericAllowed",
-      "betweenAllowed",
-      "Filters"
-    );
+    this.__fullArr = this.numericAllowed = this.betweenAllowed =
+      this.Filters = null;
   }
 });

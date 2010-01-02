@@ -149,8 +149,8 @@ qx.Bootstrap.define("qx.core.Setting",
     {
       if (window.qxsettings)
       {
-        for (var key in qxsettings) {
-          this.set(key, qxsettings[key]);
+        for (var key in window.qxsettings) {
+          this.set(key, window.qxsettings[key]);
         }
 
         window.qxsettings = undefined;
@@ -201,6 +201,7 @@ qx.Bootstrap.define("qx.core.Setting",
   {
     statics.define("qx.allowUrlSettings", false);
     statics.define("qx.allowUrlVariants", false);
+    statics.define("qx.propertyDebugLevel", 0);
 
     statics.__init();
   }

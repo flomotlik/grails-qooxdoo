@@ -40,7 +40,7 @@ qx.Class.define("qx.test.data.controller.List",
       this.__controller = null;
       this.__model = null;
       this.__data = null;
-      this.__list.dispose();
+      this.__list.destroy();
     },
 
     __setUpString: function(attribute) {
@@ -326,6 +326,30 @@ qx.Class.define("qx.test.data.controller.List",
     },
 
 
+    testSelectionArrayReverse: function() {
+      this.__setUpString();
+
+      // set the selection in the array
+      this.__controller.getSelection().push(this.__model.getItem(0));
+
+      // test the selection
+      this.assertEquals(this.__model.getItem(0), this.__list.getSelection()[0].getLabel(), "Change the selection array does not work.");
+
+      // reverse the model
+      this.__model.reverse();
+
+      // test the selection (the selection is async in that case)
+      var self = this;
+      this.wait(100, function() {
+        self.assertEquals(
+          self.__model.getItem(self.__model.getLength() - 1),
+          self.__list.getSelection()[0].getLabel(),
+          "Can not handle reverse."
+        );
+      });
+    },
+
+
     testSelectionAfterDelete: function() {
       this.__setUpString();
 
@@ -345,7 +369,11 @@ qx.Class.define("qx.test.data.controller.List",
       // check if the selected item in the list is "b"
       this.assertTrue(this.__controller.getSelection().contains("b"), "Selection array wrong!");
 
-      this.assertEquals("b", this.__list.getSelection()[0].getLabel(), "Remove from selection does not work!");
+      // selection updates work with the widget pool and can be async
+      var self = this;
+      this.wait(100, function() {
+        self.assertEquals("b", self.__list.getSelection()[0].getLabel(), "Remove from selection does not work!");
+      });
     },
 
 
@@ -477,6 +505,39 @@ qx.Class.define("qx.test.data.controller.List",
     },
 
 
+    testSelectionWithModelChangeSelectBox: function() {
+      this.__data = ["a", "b", "c", "d", "e"];
+      // create a new array
+      this.__model = new qx.data.Array(this.__data);
+
+      var selectBox = new qx.ui.form.SelectBox();
+      // create the controller
+      this.__controller = new qx.data.controller.List(this.__model, selectBox);
+
+      // first object is selected (one selection mode)
+
+      // test the selection
+      this.assertEquals(this.__model.getItem(0), selectBox.getSelection()[0].getModel());
+      this.assertEquals(this.__model.getItem(0), this.__controller.getSelection().getItem(0), "Selection does not work.");
+
+      // change the model
+      this.__controller.setModel(new qx.data.Array(["x", "y", "z"]));
+
+      // test for the first selected item (one selection)
+      this.assertEquals(1, this.__controller.getSelection().length, "Selection has a wrong length.");
+      this.assertEquals("x", this.__controller.getSelection().getItem(0), "Selection does not work.");
+
+      // select an item
+      this.__controller.getSelection().push("y");
+
+      // test for the selection
+      this.assertEquals(1, this.__controller.getSelection().length, "Selection has a wrong length.");
+      this.assertEquals("y", this.__controller.getSelection().getItem(0), "Selection is wrong.");
+
+      selectBox.dispose();
+    },
+
+
     testFilterApply: function() {
       this.__setUpString();
 
@@ -539,6 +600,66 @@ qx.Class.define("qx.test.data.controller.List",
       this.assertEquals("B", this.__list.getChildren()[0].getLabel(), "Binding is wrong!");
       this.assertEquals("C", this.__list.getChildren()[1].getLabel(), "Binding is wrong!");
       this.assertEquals("D", this.__list.getChildren()[2].getLabel(), "Binding is wrong!");
+    },
+
+
+    testFilterReverseModel: function() {
+      this.__setUpString();
+
+      var delegate = {};
+      delegate.filter = function(data) {
+        return data == "a" || data == "b" || data == "c";
+      };
+
+      this.__controller.setDelegate(delegate);
+
+      // check for the right length
+      this.assertEquals(3, this.__list.getChildren().length, "Some list items created.");
+      // check the labels
+      this.assertEquals("a", this.__list.getChildren()[0].getLabel(), "Binding is wrong!");
+      this.assertEquals("b", this.__list.getChildren()[1].getLabel(), "Binding is wrong!");
+      this.assertEquals("c", this.__list.getChildren()[2].getLabel(), "Binding is wrong!");
+
+      // reverse the order of the model
+      this.__model.reverse();
+
+      // check for the right length
+      this.assertEquals(3, this.__list.getChildren().length, "Some list items created.");
+      // check the labels
+      this.assertEquals("c", this.__list.getChildren()[0].getLabel(), "Binding is wrong!");
+      this.assertEquals("b", this.__list.getChildren()[1].getLabel(), "Binding is wrong!");
+      this.assertEquals("a", this.__list.getChildren()[2].getLabel(), "Binding is wrong!");
+    },
+
+
+    testFilterRemove: function() {
+      this.__setUpString();
+
+      var delegate = {};
+      delegate.filter = function(data) {
+        return data == "a" || data == "b" || data == "c";
+      };
+
+      this.__controller.setDelegate(delegate);
+
+      // check for the right length
+      this.assertEquals(3, this.__list.getChildren().length, "Some list items created.");
+      // check the labels
+      this.assertEquals("a", this.__list.getChildren()[0].getLabel(), "Binding is wrong!");
+      this.assertEquals("b", this.__list.getChildren()[1].getLabel(), "Binding is wrong!");
+      this.assertEquals("c", this.__list.getChildren()[2].getLabel(), "Binding is wrong!");
+
+      // remove the filter
+      this.__controller.setDelegate(null);
+
+      // check for the right length
+      this.assertEquals(5, this.__list.getChildren().length, "Some list items created.");
+      // check the labels
+      this.assertEquals("a", this.__list.getChildren()[0].getLabel(), "Binding is wrong!");
+      this.assertEquals("b", this.__list.getChildren()[1].getLabel(), "Binding is wrong!");
+      this.assertEquals("c", this.__list.getChildren()[2].getLabel(), "Binding is wrong!");
+      this.assertEquals("d", this.__list.getChildren()[3].getLabel(), "Binding is wrong!");
+      this.assertEquals("e", this.__list.getChildren()[4].getLabel(), "Binding is wrong!");
     },
 
 
@@ -722,6 +843,46 @@ qx.Class.define("qx.test.data.controller.List",
     },
 
 
+    testDelegateBindDefaultProperties : function()
+    {
+      this.__setUpString();
+      this.__controller.setModel(null);
+
+      var delegate = {};
+      delegate.bindItem = function(controller, item, id) {
+        controller.bindDefaultProperties(item, id);
+      }
+      this.__controller.setDelegate(delegate);
+
+      this.__controller.setModel(this.__model);
+
+      // check the binding
+      for (var i = 0; i < this.__data.length; i++) {
+        var label = this.__list.getChildren()[i].getLabel();
+        this.assertEquals(this.__data[i], label, "Binding " + i + " is wrong!");
+      }
+    },
+
+
+    testDelegateBindDefaultPropertiesLate : function()
+    {
+      this.__setUpString();
+
+      var delegate = {};
+      delegate.bindItem = function(controller, item, id) {
+        controller.bindDefaultProperties(item, id);
+      }
+      this.__controller.setDelegate(delegate);
+
+      // check the binding
+      for (var i = 0; i < this.__data.length; i++) {
+        this.__model.setItem(i, i + "")
+        var label = this.__list.getChildren()[i].getLabel();
+        this.assertEquals(i + "", label, "Binding " + i + " is wrong!");
+      }
+    },
+
+
     testSelectionSequence: function() {
       // "a", "b", "c", "d", "e"
       this.__setUpString();
@@ -753,6 +914,220 @@ qx.Class.define("qx.test.data.controller.List",
       this.flush();
       selList.dispose();
       selController.dispose();
+    },
+
+
+    testGetVisibleModels : function()
+    {
+      this.__setUpString();
+
+      var delegate = {};
+      delegate.filter = function(data) {
+        return data == "b" || data == "c" || data == "d";
+      };
+
+      this.__controller.setDelegate(delegate);
+
+      var visibleModels = this.__controller.getVisibleModels();
+
+      this.assertEquals(visibleModels.classname, "qx.data.Array");
+      this.assertEquals(3, visibleModels.getLength());
+      this.assertEquals("b", visibleModels.getItem(0));
+      this.assertEquals("c", visibleModels.getItem(1));
+      this.assertEquals("d", visibleModels.getItem(2));
+    },
+
+
+    testBindIconWithStringArray : function()
+    {
+      this.__setUpString();
+      this.__controller.setIconPath("");
+
+      // check the binding
+      for (var i = 0; i < this.__data.length; i++) {
+        var icon = this.__list.getChildren()[i].getIcon();
+        this.assertEquals(this.__data[i], icon, "Binding " + i + " is wrong!");
+      }
+    },
+
+
+    testScrollBySelection : function()
+    {
+      this.__setUpString();
+      // set a smal hight (list hast to scroll)
+      this.__list.setHeight(40);
+      this.getRoot().add(this.__list);
+      var selectables = this.__list.getSelectables();
+
+      // select the first item
+      this.__list.setSelection([selectables[0]]);
+      // scroll a bit down (scrollY is 40)
+      this.__list.scrollByY(40);
+
+      // select the current visible item
+      this.__list.setSelection([selectables[2]]);
+
+      // check that it has not been scrolled
+      this.assertEquals(40, this.__list.getScrollY());
+    },
+
+
+    testScrollBySelectionMulti : function()
+    {
+      this.__setUpString();
+      // set a smal hight (list hast to scroll)
+      this.__list.setHeight(40);
+      this.__list.setSelectionMode("multi");
+      this.getRoot().add(this.__list);
+      var selectables = this.__list.getSelectables();
+
+      // select the first item
+      this.__list.setSelection([selectables[0]]);
+      // scroll a bit down (scrollY is 40)
+      this.__list.scrollByY(40);
+
+      // select the current visible item
+      this.__list.addToSelection(selectables[2]);
+
+      // check that it has not been scrolled
+      this.assertEquals(40, this.__list.getScrollY());
+    },
+
+
+    testBug1947: function() {
+      qx.Class.define("qx.demo.Kid",
+      {
+        extend : qx.core.Object,
+
+        properties :
+        {
+          name :
+          {
+            check : "String",
+            event : "changeName",
+            init : null
+          }
+        }
+      });
+
+      qx.Class.define("qx.demo.Parent",
+      {
+        extend : qx.core.Object,
+        construct : function()
+        {
+          this.base(arguments);
+          this.setKid(new qx.demo.Kid());
+        },
+
+        properties :
+        {
+          name :
+          {
+            check : "String",
+            event : "changeName",
+            init : null
+          },
+          kid :
+          {
+            check : "qx.demo.Kid",
+            event : "changeKid"
+          }
+        }
+      });
+
+      var parentA = new qx.demo.Parent()
+      parentA.setName("parentA");
+      parentA.getKid().setName("kidA");
+      var parentB = new qx.demo.Parent();
+      parentB.setName("parentB");
+      parentB.getKid().setName("kidB");
+      var parents = new qx.data.Array();
+      parents.push(parentA);
+      parents.push(parentB);
+
+      var list = new qx.ui.form.List();
+      var ctrl = new qx.data.controller.List(parents, list, "name");
+
+      var label = new qx.ui.basic.Label();
+      label.setDecorator("main");
+
+      ctrl.bind("selection[0].Kid.Name", label, "value");
+
+      ctrl.getSelection().push(parentA);
+    },
+
+
+    testBug1988: function() {
+      qx.Class.define("qx.demo.Kid",
+      {
+        extend : qx.core.Object,
+
+        properties :
+        {
+          name :
+          {
+            check : "String",
+            event : "changeName",
+            init : null,
+            nullable : true
+          }
+        }
+      });
+
+      qx.Class.define("qx.demo.Parent",
+      {
+        extend : qx.core.Object,
+        construct : function()
+        {
+          this.base(arguments);
+          this.setKid(new qx.demo.Kid());
+        },
+
+        properties :
+        {
+          name :
+          {
+            check : "String",
+            event : "changeName",
+            init : null
+          },
+          kid :
+          {
+            check : "qx.demo.Kid",
+            event : "changeKid"
+          }
+        }
+      });
+
+      var parentA = new qx.demo.Parent()
+      parentA.setName("parentA");
+      parentA.getKid().setName("kidA");
+
+
+      var parentB = new qx.demo.Parent();
+      parentB.setName("parentB");
+      //parentB.getKid().setName("kidB");
+
+
+      var parents = new qx.data.Array();
+      parents.push(parentA);
+      parents.push(parentB);
+
+      var list = new qx.ui.form.List();
+      var ctrl = new qx.data.controller.List(parents, list, "name");
+
+      var label = new qx.ui.basic.Label();
+
+      ctrl.bind("selection[0].kid.name", label, "value");
+
+      // select the first child of the list
+      list.addToSelection(list.getChildren()[0]);
+      // check the label
+      this.assertEquals("kidA", label.getValue(), "Wrong name in the label.");
+
+      // select the second label
+      list.addToSelection(list.getChildren()[1]);
+      this.assertNull(label.getValue(), "Label has not been reseted.");
     }
   }
 });

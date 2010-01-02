@@ -17,6 +17,12 @@
 
 ************************************************************************ */
 
+/* ************************************************************************
+
+#tag(noPlayground)
+
+************************************************************************ */
+
 /**
  * This table example shows how to use a modal window for a cell editor.
  * Although this is a very simple one, cell editors using modal windows
@@ -69,7 +75,7 @@ qx.Class.define("demobrowser.demo.table.Table_Window_Editor",
       // Obtain the behavior object to manipulate
       var resizeBehavior = tcm.getBehavior();
 
-      // This uses the set() method to set all attriutes at once; uses flex
+      // This uses the set() method to set all attributes at once; uses flex
       resizeBehavior.set(0, { width:"1*", minWidth:40, maxWidth:80  });
 
       // We could also set them individually:
@@ -91,19 +97,20 @@ qx.Class.define("demobrowser.demo.table.Table_Window_Editor",
       // We'll instead use a modal cell editor.  Its cell editor factory
       // class, ModalCellEditorFactory(), is declared towards the end of
       // this file.
-      tcm.setCellEditorFactory(1, new ModalCellEditorFactory());
+      tcm.setCellEditorFactory(1, new demobrowser.demo.table.ModalCellEditorFactory());
 
       return table;
     }
   }
 });
 
-/**
+/*
+ * PLEASE NOTE:
  * For demonstration purposes the following class is added to the same file as
  * the application class. For a regular qooxdoo application each class must live
  * in a file of its own. You may neglect any warnings when generating this demo.
  */
-qx.Class.define("ModalCellEditorFactory",
+qx.Class.define("demobrowser.demo.table.ModalCellEditorFactory",
 {
   extend : qx.core.Object,
   implement : qx.ui.table.ICellEditorFactory,
@@ -131,7 +138,7 @@ qx.Class.define("ModalCellEditorFactory",
       cellEditor.addListener("appear", function(e)
       {
         cellEditor.__cellEditor.focus();
-        cellEditor.__cellEditor.setSelection(0, cellEditor.__cellEditor.getValue().length);
+        cellEditor.__cellEditor.setTextSelection(0, cellEditor.__cellEditor.getValue().length);
       });
 
 
@@ -149,7 +156,7 @@ qx.Class.define("ModalCellEditorFactory",
       cellEditor.add(save);
 
       // Let them press Enter from the cell editor text field to finish.
-      var command = new qx.event.Command("Enter");
+      var command = new qx.ui.core.Command("Enter");
       command.addListener("execute", function(e)
       {
         save.execute();

@@ -14,6 +14,7 @@
 
    Authors:
      * Sebastian Werner (wpbasti)
+     * Alexander Steitz (aback)
 
 ************************************************************************ */
 
@@ -37,23 +38,28 @@ qx.Class.define("qx.bom.element.Decoration",
     /** {Boolean} Whether clipping hints should be logged */
     DEBUG : false,
 
+    /** {Map} Collect warnings for potential clipped images */
+    __warnings : {},
 
     /**
-     * {Boolean} Whether the alpha image loader is needed
-     * We enable this for IE7 as well because of issues reported by Maria
+     * {Boolean} Whether the alpha image loader is needed.
+     * We enable this for all IE browser because of issues reported by Maria
      * Siebert and others in combination with the opacity filter applied
      * to e.g. disabled icons. Thanks Maria.
      *
+     * To prevent these issues use the "disabled" images. This is done by adding
+     * a special second image which is already in a disabled state. In order to
+     * make use of this feature the image has to follow the convention "-disabled".
+     * (e.g. "button.png" -> "button-disabled.png")
+     *
      * The situation for IE8 is that running in "IE8 Standards Mode" IE8 has a
-     * runtime performance issue. The updates are compared to IE7 (and IE8 in
-     * "IE7 Standards Mode" as well) really slow. The cause for this is the
-     * dynamic adding/removing of the IMG elements which are part of the
-     * decorator. Using the alpha image loader does change this DOM structure
-     * to only use DIV elements which do not have a negative performance impact.
-     * See Bug #2185 for details.
+     * runtime performance issue. The updates are compared to IE7 really slow.
+     * The cause for this is the dynamic adding/removing of the IMG elements
+     * which are part of the decorator. Using the alpha image loader does change
+     * this DOM structure to only use DIV elements which do not have a negative
+     * performance impact. See Bug #2185 for details.
      */
-    __enableAlphaFix : qx.core.Variant.isSet("qx.client", "mshtml") &&
-      qx.bom.client.Engine.VERSION < 9,
+    __enableAlphaFix : qx.core.Variant.isSet("qx.client", "mshtml"),
 
 
     /** {Map} List of repeat modes which supports the IE AlphaImageLoader */
@@ -182,10 +188,6 @@ qx.Class.define("qx.bom.element.Decoration",
      */
     getAttributes : function(source, repeat, style)
     {
-      var ResourceManager = qx.util.ResourceManager.getInstance();
-      var ImageLoader = qx.io2.ImageLoader;
-      var Background = qx.bom.element.Background;
-
       if (!style) {
         style = {};
       }
@@ -207,42 +209,284 @@ qx.Class.define("qx.bom.element.Decoration",
         style.WebkitUserDrag = "none";
       }
 
-      // Cache image sizes
-      var width = ResourceManager.getImageWidth(source) || ImageLoader.getWidth(source);
-      var height = ResourceManager.getImageHeight(source) || ImageLoader.getHeight(source);
-      var format = ResourceManager.getImageFormat(source) || ImageLoader.getFormat(source);
-
+      var format = qx.util.ResourceManager.getInstance().getImageFormat(source) ||
+                   qx.io.ImageLoader.getFormat(source);
       if (qx.core.Variant.isSet("qx.debug", "on"))
       {
-        if (source != null && format == null)
-        {
+        if (source != null && format == null) {
           qx.log.Logger.warn("ImageLoader: Not recognized format of external image '" + source + "'!");
         }
       }
 
+      var result;
+
       // Enable AlphaImageLoader in IE6/IE7/IE8
-      if (this.__enableAlphaFix && this.__alphaFixRepeats[repeat] && format === "png")
+      if (this.__enableAlphaFix && this.__alphaFixRepeats[repeat] && format === "png") {
+        result = this.__processAlphaFix(style, repeat, source);
+      }
+      else
       {
-        if (style.width == null && width != null) {
-          style.width = width + "px";
+        if (repeat === "scale") {
+          result = this.__processScale(style, repeat, source);
+        } else  if (repeat === "scale-x" || repeat === "scale-y") {
+          result = this.__processScaleXScaleY(style, repeat, source);
+        } else {
+          // Native repeats or "no-repeat"
+          result = this.__processRepeats(style, repeat, source);
+        }
+      }
+
+      return result;
+    },
+
+
+    /**
+     * Normalize the given width and height values
+     *
+     * @param style {Map} style information
+     * @param width {Integer?null} width as number or null
+     * @param height {Integer?null} height as number or null
+     */
+    __normalizeWidthHeight : function(style, width, height)
+    {
+      if (style.width == null && width != null) {
+        style.width = width + "px";
+      }
+
+      if (style.height == null && height != null) {
+        style.height = height + "px";
+      }
+
+      return style;
+    },
+
+
+    /**
+     * Returns the dimension of the image by calling
+     * {@link qx.util.ResourceManager} or {@link qx.io.ImageLoader}
+     * depending on if the image is a managed one.
+     *
+     * @param source {String} image source
+     * @return {Map} dimension of image
+     */
+    __getDimension : function(source)
+    {
+      var width = qx.util.ResourceManager.getInstance().getImageWidth(source) ||
+                  qx.io.ImageLoader.getWidth(source);
+      var height = qx.util.ResourceManager.getInstance().getImageHeight(source) ||
+                   qx.io.ImageLoader.getHeight(source);
+
+      return {
+        width: width,
+        height: height
+      };
+    },
+
+
+    /**
+     * Get all styles for IE browser which need to load the image
+     * with the help of the AlphaImageLoader
+     *
+     * @param style {Map} style information
+     * @param repeat {String} repeat mode
+     * @param source {String} image source
+     *
+     * @return {Map} style infos
+     */
+    __processAlphaFix : function(style, repeat, source)
+    {
+      var dimension = this.__getDimension(source);
+      style = this.__normalizeWidthHeight(style, dimension.width, dimension.height);
+
+      var sizingMethod = repeat == "no-repeat" ? "crop" : "scale";
+      var filter = "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='" +
+                   qx.util.ResourceManager.getInstance().toUri(source) +
+                   "', sizingMethod='" + sizingMethod + "')";
+
+      style.filter = filter;
+      style.backgroundImage = style.backgroundRepeat = "";
+
+      return {
+        style : style
+      };
+    },
+
+
+    /**
+     * Process scaled images.
+     *
+     * @param style {Map} style information
+     * @param repeat {String} repeat mode
+     * @param source {String} image source
+     *
+     * @return {Map} image URI and style infos
+     */
+    __processScale : function(style, repeat, source)
+    {
+      var uri = qx.util.ResourceManager.getInstance().toUri(source);
+      var dimension = this.__getDimension(source);
+
+      style = this.__normalizeWidthHeight(style, dimension.width, dimension.height);
+
+      return {
+        src : uri,
+        style : style
+      };
+    },
+
+
+    /**
+     * Process images which are either scaled horizontally or
+     * vertically.
+     *
+     * @param style {Map} style information
+     * @param repeat {String} repeat mode
+     * @param source {String} image source
+     *
+     * @return {Map} image URI and style infos
+     */
+    __processScaleXScaleY : function(style, repeat, source)
+    {
+      var ResourceManager = qx.util.ResourceManager.getInstance();
+      var clipped = ResourceManager.isClippedImage(source);
+      var dimension = this.__getDimension(source);
+
+      if (clipped)
+      {
+        var data = ResourceManager.getData(source);
+        var uri = ResourceManager.toUri(data[4]);
+
+        if (repeat === "scale-x") {
+          style = this.__getStylesForClippedScaleX(style, data, dimension.height);
+        } else {
+          style = this.__getStylesForClippedScaleY(style, data, dimension.width);
         }
 
-        if (style.height == null && height != null) {
-          style.height = height + "px";
+        return {
+          src : uri,
+          style : style
+        };
+      }
+
+      // No clipped image available
+      else
+      {
+        if (qx.core.Variant.isSet("qx.debug", "on")) {
+          this.__checkForPotentialClippedImage(source);
         }
 
-        if (repeat == "no-repeat")
+        if (repeat == "scale-x")
         {
-          style.filter = "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='"
-            + ResourceManager.toUri(source) + "', sizingMethod='crop')";
+          style.height = dimension.height == null ? null : dimension.height + "px";
+          // note: width is given by the user
         }
-        else
+        else if (repeat == "scale-y")
         {
-          style.filter = "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='"
-            + ResourceManager.toUri(source) + "', sizingMethod='scale')";
+          style.width = dimension.width == null ? null : dimension.width + "px";
+          // note: height is given by the user
         }
 
-        style.backgroundImage = style.backgroundRepeat = "";
+        var uri = ResourceManager.toUri(source);
+        return {
+          src : uri,
+          style : style
+        };
+      }
+    },
+
+
+    /**
+     * Generates the style infos for horizontally scaled clipped images.
+     *
+     * @param style {Map} style infos
+     * @param data {Array} image data retrieved from the {@link qx.util.ResourceManager}
+     * @param height {Integer} image height
+     *
+     * @return {Map} style infos and image URI
+     */
+    __getStylesForClippedScaleX : function(style, data, height)
+    {
+      // Use clipped image (multi-images on x-axis)
+      var imageHeight = qx.util.ResourceManager.getInstance().getImageHeight(data[4]);
+
+      // Add size and clipping
+      style.clip = {top: -data[6], height: height};
+      style.height = imageHeight + "px";
+
+      // note: width is given by the user
+
+      // Fix user given y-coordinate to include the combined image offset
+      if (style.top != null) {
+        style.top = (parseInt(style.top, 10) + data[6]) + "px";
+      } else if (style.bottom != null) {
+        style.bottom = (parseInt(style.bottom, 10) + height - imageHeight - data[6]) + "px";
+      }
+
+      return style;
+    },
+
+
+    /**
+     * Generates the style infos for vertically scaled clipped images.
+     *
+     * @param style {Map} style infos
+     * @param data {Array} image data retrieved from the {@link qx.util.ResourceManager}
+     * @param width {Integer} image width
+     *
+     * @return {Map} style infos and image URI
+     */
+    __getStylesForClippedScaleY : function(style, data, width)
+    {
+      // Use clipped image (multi-images on x-axis)
+      var imageWidth = qx.util.ResourceManager.getInstance().getImageWidth(data[4]);
+
+      // Add size and clipping
+      style.clip = {left: -data[5], width: width};
+      style.width = imageWidth + "px";
+
+      // note: height is given by the user
+
+      // Fix user given x-coordinate to include the combined image offset
+      if (style.left != null) {
+        style.left = (parseInt(style.left, 10) + data[5]) + "px";
+      } else if (style.right != null) {
+        style.right = (parseInt(style.right, 10) + width - imageWidth - data[5]) + "px";
+      }
+
+      return style;
+    },
+
+
+    /**
+     * Process repeated images.
+     *
+     * @param style {Map} style information
+     * @param repeat {String} repeat mode
+     * @param source {String} image source
+     *
+     * @return {Map} image URI and style infos
+     */
+    __processRepeats : function(style, repeat, source)
+    {
+      var clipped = qx.util.ResourceManager.getInstance().isClippedImage(source);
+      var dimension = this.__getDimension(source);
+
+      // Double axis repeats cannot be clipped
+      if (clipped && repeat !== "repeat")
+      {
+        var data = qx.util.ResourceManager.getInstance().getData(source);
+        var bg = qx.bom.element.Background.getStyles(data[4], repeat, data[5], data[6]);
+        for (var key in bg) {
+          style[key] = bg[key];
+        }
+
+        if (dimension.width != null && style.width == null && (repeat == "repeat-y" || repeat === "no-repeat")) {
+          style.width = dimension.width + "px";
+        }
+
+        if (dimension.height != null && style.height == null && (repeat == "repeat-x" || repeat === "no-repeat")) {
+          style.height = dimension.height + "px";
+        }
 
         return {
           style : style
@@ -250,192 +494,102 @@ qx.Class.define("qx.bom.element.Decoration",
       }
       else
       {
-        if (repeat === "scale")
+        if (qx.core.Variant.isSet("qx.debug", "on"))
         {
-          var uri = ResourceManager.toUri(source);
-
-          if (style.width == null && width != null) {
-            style.width = width + "px";
-          }
-
-          if (style.height == null && height != null) {
-            style.height = height + "px";
-          }
-
-          return {
-            src : uri,
-            style : style
-          };
-        }
-
-        var clipped = ResourceManager.isClippedImage(source);
-
-        if (repeat === "scale-x" || repeat === "scale-y")
-        {
-          if (clipped)
-          {
-            // Scale on x-axis
-            if (repeat === "scale-x")
-            {
-              // Use clipped image (multi-images on x-axis)
-              var data = ResourceManager.getData(source);
-              var imageHeight = ResourceManager.getImageHeight(data[4]);
-              var uri = ResourceManager.toUri(data[4]);
-
-              // Add size and clipping
-              style.clip = {top: -data[6], height: height};
-              style.height = imageHeight + "px";
-
-              // note: width is given by the user
-
-              // Fix user given y-coordinate to include the combined image offset
-              if (style.top != null) {
-                style.top = (parseInt(style.top, 10) + data[6]) + "px";
-              } else if (style.bottom != null) {
-                style.bottom = (parseInt(style.bottom, 10) + height - imageHeight - data[6]) + "px";
-              }
-
-              return {
-                src : uri,
-                style : style
-              };
-            }
-
-            // Scale on y-axis
-            else
-            {
-              // Use clipped image (multi-images on x-axis)
-              var data = ResourceManager.getData(source);
-              var imageWidth = ResourceManager.getImageWidth(data[4]);
-              var uri = ResourceManager.toUri(data[4]);
-
-              // Add size and clipping
-              style.clip = {left: -data[5], width: width};
-              style.width = imageWidth + "px";
-
-              // note: height is given by the user
-
-              // Fix user given x-coordinate to include the combined image offset
-              if (style.left != null) {
-                style.left = (parseInt(style.left, 10) + data[5]) + "px";
-              } else if (style.right != null) {
-                style.right = (parseInt(style.right, 10) + width - imageWidth - data[5]) + "px";
-              }
-
-              return {
-                src : uri,
-                style : style
-              };
-            }
-          }
-
-          // No clipped image available
-          else
-          {
-            if (qx.core.Variant.isSet("qx.debug", "on"))
-            {
-              if (this.DEBUG && ResourceManager.has(source) && source.indexOf("qx/icon") == -1)
-              {
-                if (!this.__warnings) {
-                  this.__warnings = {};
-                }
-
-                if (!this.__warnings[source])
-                {
-                  qx.log.Logger.debug("Potential clipped image candidate: " + source);
-                  this.__warnings[source] = true;
-                }
-              }
-            }
-
-            if (repeat == "scale-x")
-            {
-              style.height = height == null ? null : height + "px";
-              // note: width is given by the user
-            }
-            else if (repeat == "scale-y")
-            {
-              style.width = width == null ? null : width + "px";
-              // note: height is given by the user
-            }
-
-            var uri = ResourceManager.toUri(source);
-            return {
-              src : uri,
-              style : style
-            };
+          if (repeat !== "repeat") {
+            this.__checkForPotentialClippedImage(source);
           }
         }
 
-        // Native repeats or "no-repeat"
-        else
-        {
-          // Double axis repeats cannot be clipped
-          if (clipped && repeat !== "repeat")
-          {
-            var data = ResourceManager.getData(source);
-            var bg = Background.getStyles(data[4], repeat, data[5], data[6]);
-            for (var key in bg) {
-              style[key] = bg[key];
-            }
+        style = this.__normalizeWidthHeight(style, dimension.width, dimension.height);
+        style = this.__getStylesForSingleRepeat(style, source, repeat);
 
-            if (width != null && style.width == null && (repeat == "repeat-y" || repeat === "no-repeat")) {
-              style.width = width + "px";
-            }
+        return {
+          style : style
+        };
+      }
+    },
 
-            if (height != null && style.height == null && (repeat == "repeat-x" || repeat === "no-repeat")) {
-              style.height = height + "px";
-            }
 
-            return {
-              style : style
-            };
-          }
-          else
-          {
-            if (qx.core.Variant.isSet("qx.debug", "on"))
-            {
-              if (this.DEBUG && ResourceManager.has(source) && repeat !== "repeat" && source.indexOf("qx/icon") == -1)
-              {
-                if (!this.__warnings) {
-                  this.__warnings = {};
-                }
+    /**
+     * Generate all style infos for single repeated images
+     *
+     * @param style {Map} style information
+     * @param repeat {String} repeat mode
+     * @param source {String} image source
+     *
+     * @return {Map} style infos
+     */
+    __getStylesForSingleRepeat : function(style, source, repeat)
+    {
+      // retrieve the "backgroundPosition" style if available to prevent
+      // overwriting with default values
+      var top = null;
+      var left = null;
+      if (style.backgroundPosition)
+      {
+        var backgroundPosition = style.backgroundPosition.split(" ");
 
-                if (!this.__warnings[source])
-                {
-                  qx.log.Logger.debug("Potential clipped image candidate: " + source);
-                  this.__warnings[source] = true;
-                }
-              }
-            }
+        left = parseInt(backgroundPosition[0]);
+        if (isNaN(left)) {
+          left = backgroundPosition[0];
+        }
 
-            var bg = Background.getStyles(source, repeat);
-            for (var key in bg) {
-              style[key] = bg[key];
-            }
-
-            if (width != null && style.width == null) {
-              style.width = width + "px";
-            }
-
-            if (height != null && style.height == null) {
-              style.height = height + "px";
-            }
-
-            // Reset the AlphaImageLoader filter if applied
-            // This prevents IE from setting BOTH CSS filter AND backgroundImage
-            // This is only a fallback if the image is not recognized as PNG
-            // If it's a Alpha-PNG file it *may* result in display problems
-            if (style.filter) {
-              style.filter = "";
-            }
-
-            return {
-              style : style
-            };
-          }
+        top = parseInt(backgroundPosition[1]);
+        if (isNaN(top)) {
+          top = backgroundPosition[1];
         }
       }
-    }
+
+      var bg = qx.bom.element.Background.getStyles(source, repeat, left, top);
+      for (var key in bg) {
+        style[key] = bg[key];
+      }
+
+      // Reset the AlphaImageLoader filter if applied
+      // This prevents IE from setting BOTH CSS filter AND backgroundImage
+      // This is only a fallback if the image is not recognized as PNG
+      // If it's a Alpha-PNG file it *may* result in display problems
+      if (style.filter) {
+        style.filter = "";
+      }
+
+      return style;
+    },
+
+
+    /**
+     * Output a warning if the image can be clipped.
+     *
+     * @param source {String} image source
+     */
+    __checkForPotentialClippedImage : function(source)
+    {
+      if (this.DEBUG && qx.util.ResourceManager.getInstance().has(source) && source.indexOf("qx/icon") == -1)
+      {
+        if (!this.__warnings[source])
+        {
+          qx.log.Logger.debug("Potential clipped image candidate: " + source);
+          this.__warnings[source] = true;
+        }
+      }
+    },
+
+
+    /**
+     * For IE browsers the alpha image loader might be necessary. This accessor
+     * method provides an API for high-level classes to check if the alpha image
+     * loader is enabled.
+     */
+    isAlphaImageLoaderEnabled : qx.core.Variant.select("qx.client",
+    {
+      "mshtml" : function() {
+        return qx.bom.element.Decoration.__enableAlphaFix;
+      },
+
+      "default" : function() {
+        return false;
+      }
+    })
   }
 });

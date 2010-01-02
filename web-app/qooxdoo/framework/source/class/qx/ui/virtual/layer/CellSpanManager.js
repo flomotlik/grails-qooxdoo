@@ -225,6 +225,14 @@ qx.Class.define("qx.ui.virtual.layer.CellSpanManager",
     },
 
 
+    /**
+     * Return the intersection of two maps as an array. The objects intersect if
+     * they have the same keys.
+     *
+     * @param setA {Object} The first map
+     * @param setB {Object} The second map
+     * @return {String[]} An array keys found in both maps
+     */
     __intersectionAsArray : function(setA, setB)
     {
       var intersection = [];
@@ -344,7 +352,7 @@ qx.Class.define("qx.ui.virtual.layer.CellSpanManager",
 
 
     /**
-     * Get the bounds of a list of cells as returned by {@link findCellsInWindow}
+     * Get the bounds of a list of cells as returned by {@link #findCellsInWindow}
      *
      * @param cells {Map[]} Array of cell descriptions
      * @param firstVisibleRow {Map} The pane's first visible row
@@ -369,9 +377,8 @@ qx.Class.define("qx.ui.virtual.layer.CellSpanManager",
      * is covered by a spanning cell.
      *
      * @param cells {Map[]} Array of cell descriptions as returned by
-     *     {@link findCellsInWindow}.
+     *     {@link #findCellsInWindow}.
      * @param firstRow {PositiveInteger} first visible row
-     * @param lastRow {PositiveInteger} last visible row
      * @param firstColumn {PositiveInteger} first visible column
      * @param rowCount {PositiveInteger} number of rows in the window
      * @param columnCount {PositiveInteger} number of columns in the window
@@ -427,9 +434,7 @@ qx.Class.define("qx.ui.virtual.layer.CellSpanManager",
     this._rowConfig.removeListener("change", this._onRowConfigChange, this);
     this._columnConfig.removeListener("change", this._onColumnConfigChange, this);
 
-    this._disposeFields(
-      "_cells", "_sorted", "_rowPos", "_columnPos",
-      "_rowConfig", "_columnConfig"
-    );
+    this._cells = this._sorted = this._rowPos = this._columnPos =
+      this._rowConfig = this._columnConfig = null;
   }
 });

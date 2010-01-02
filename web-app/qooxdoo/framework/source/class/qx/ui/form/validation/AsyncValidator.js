@@ -17,8 +17,6 @@
 
 ************************************************************************ */
 /**
- * <h3>EXPERIMENTAL!</h3>
- *
  * This class is responsible for validation in all asynchronous cases and
  * should always be used with {@link qx.ui.form.validation.Manager}.
  *
@@ -140,6 +138,6 @@ qx.Class.define("qx.ui.form.validation.AsyncValidator",
    */
 
   destruct : function() {
-    this._disposeFields("__manager", "__item");
+    this.__manager = this.__item = null;
   }
 });

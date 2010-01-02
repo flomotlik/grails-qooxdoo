@@ -150,6 +150,11 @@ qx.Class.define("qx.ui.virtual.layer.WidgetCellSpan",
     },
 
 
+    /**
+     * Get the cell provider for the non spanning cells
+     *
+     * @return {qx.ui.virtual.core.IWidgetCellProvider} the cell provider
+     */
     __getCellProviderForNonSpanningCells : function()
     {
       var self = this;
@@ -196,6 +201,8 @@ qx.Class.define("qx.ui.virtual.layer.WidgetCellSpan",
      *
      * @param firstRow {PositiveInteger} first visible row
      * @param firstColumn {PositiveInteger} first visible column
+     * @param rowCount {PositiveInteger} number of rows to update
+     * @param columnCount {PositiveInteger} number columns to update
      */
     __updateCellSpanData : function(firstRow, firstColumn, rowCount, columnCount)
     {
@@ -302,7 +309,7 @@ qx.Class.define("qx.ui.virtual.layer.WidgetCellSpan",
     }
 
     this._disposeObjects("_spanManager", "_cellLayer");
-    this._disposeFields("_cellProvider", "__spacerPool", "_cells", "_bounds",
-      "_spanMap");
+    this._cellProvider = this.__spacerPool = this._cells =
+      this._bounds = this._spanMap = null;
   }
 });

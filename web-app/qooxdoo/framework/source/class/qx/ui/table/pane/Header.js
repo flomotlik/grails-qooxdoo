@@ -233,7 +233,8 @@ qx.Class.define("qx.ui.table.pane.Header",
     /**
      * Returns whether the column move feedback is currently shown.
      *
-     * @return {var} TODOC
+     * @return {Boolean} <code>true</code> whether the column move feedback is
+     *    currently shown, <code>false</code> otherwise.
      */
     isShowingColumnMoveFeedback : function() {
       return this.__moveFeedback != null;
@@ -256,11 +257,7 @@ qx.Class.define("qx.ui.table.pane.Header",
       var children = this._getChildren();
       var colCount = paneModel.getColumnCount();
 
-      var sortedColum = 0;
-
-      if (tableModel != null) {
-        sortedColum = tableModel.getSortColumnIndex();
-      }
+      var sortedColum = tableModel.getSortColumnIndex();
 
       // Remove all widgets on the complete update
       if (completeUpdate) {
@@ -269,15 +266,14 @@ qx.Class.define("qx.ui.table.pane.Header",
 
       // Update the header
       var cellInfo = {};
-      cellInfo.sortedAscending = false;
-
-      if(tableModel != null) {
-       cellInfo.sortedAscending = tableModel.isSortAscending();
-      }
+      cellInfo.sortedAscending = tableModel.isSortAscending();
 
       for (var x=0; x<colCount; x++)
       {
         var col = paneModel.getColumnAtX(x);
+        if (col === undefined) {
+          continue;
+        }
 
         var colWidth = columnModel.getColumnWidth(col);
 

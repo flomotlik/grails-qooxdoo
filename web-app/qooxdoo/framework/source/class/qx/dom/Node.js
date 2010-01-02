@@ -20,7 +20,7 @@
 /**
  * Basic node creation and type detection
  */
-qx.Class.define("qx.dom.Node",
+qx.Bootstrap.define("qx.dom.Node",
 {
   /*
   *****************************************************************************
@@ -227,7 +227,21 @@ qx.Class.define("qx.dom.Node",
     },
 
 
+    /**
+     * Whether the node has the given node name
+     *
+     * @param node {Node} the node
+     * @param nodeName {String} the node name to check for
+     * @return {Boolean} Whether the node has the given node name
+     */
+    isNodeName : function (node, nodeName)
+    {
+      if(!nodeName || !node || !node.nodeName) {
+        return false;
+      }
 
+      return nodeName.toLowerCase() == qx.dom.Node.getName(node);
+    },
 
 
 
@@ -236,6 +250,23 @@ qx.Class.define("qx.dom.Node",
       UTILITIES
     ---------------------------------------------------------------------------
     */
+
+
+    /**
+     * Get the node name as lower case string
+     *
+     * @param node {Node} the node
+     * @return {String} the node name
+     */
+    getName : function (node)
+    {
+      if(!node || !node.nodeName) {
+        return null;
+      }
+
+      return node.nodeName.toLowerCase();
+    },
+
 
     /**
      * Returns the text content of an node where the node may be of node type NODE_ELEMENT, NODE_ATTRIBUTE or NODE_TEXT

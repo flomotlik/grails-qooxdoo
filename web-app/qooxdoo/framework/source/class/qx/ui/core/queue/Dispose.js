@@ -54,7 +54,7 @@ qx.Class.define("qx.ui.core.queue.Dispose",
     /**
      * Flushes the dispose queue.
      *
-     * This is used exclusively by the {@link qx.ui.core.QueueManager}.
+     * This is used exclusively by the {@link qx.ui.core.queue.Manager}.
      *
      * @return {void}
      */
@@ -64,8 +64,9 @@ qx.Class.define("qx.ui.core.queue.Dispose",
       var queue = this.__queue;
       for (var hash in queue)
       {
-        queue[hash].dispose();
+        var widget = queue[hash];
         delete queue[hash];
+        widget.dispose();
       }
 
       // Empty check

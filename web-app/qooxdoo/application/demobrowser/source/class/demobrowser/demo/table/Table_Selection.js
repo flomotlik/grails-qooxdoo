@@ -24,6 +24,8 @@
 #asset(qx/icon/${qx.icontheme}/22/actions/edit-undo.png)
 #asset(qx/icon/${qx.icontheme}/22/status/dialog-information.png)
 #asset(qx/icon/${qx.icontheme}/16/apps/office-calendar.png)
+ 
+#tag(noPlayground)
 
 ************************************************************************ */
 
@@ -134,9 +136,9 @@ qx.Class.define("demobrowser.demo.table.Table_Selection",
       part = new qx.ui.toolbar.Part();
       bar.add(part);
 
-      button = new qx.ui.toolbar.Button("Clear Selection");
+      button = new qx.ui.toolbar.Button("Reset Selection");
       button.addListener("execute", function(evt) {
-        this._table.clearSelection();
+        this._table.resetSelection();
       }, this);
       part.add(button);
 

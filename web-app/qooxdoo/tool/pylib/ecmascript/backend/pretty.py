@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -1530,7 +1530,7 @@ def _prettyNode(node,optns, result):
     if node.hasParent() and not node.type in ["comment", "commentsBefore", "commentsAfter"]:
 
         # Add comma dividers between statements in these parents
-        if node.parent.type in ["array", "params", "statementList"]:
+        if node.parent.type in ["array", "params", "expressionList"]:
             if not node.isLastChild(True):
                 comma()
 

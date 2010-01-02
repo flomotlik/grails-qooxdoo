@@ -19,7 +19,8 @@
 ************************************************************************ */
 
 /**
- * A formatter and parser for dates
+ * A formatter and parser for dates, see
+ * http://search.cpan.org/~drolsky/DateTime-0.50/lib/DateTime.pm#CLDR_Patterns
  */
 qx.Class.define("qx.util.format.DateFormat",
 {
@@ -35,8 +36,7 @@ qx.Class.define("qx.util.format.DateFormat",
   */
 
   /**
-   * @param format {String} The format to use. If null, the
-   *    {@link #DEFAULT_DATE_TIME__format} is used.
+   * @param format {String} The format to use. If null, the format is used.
    * @param locale {String} optional locale to be used
    */
   construct : function(format, locale)
@@ -69,7 +69,7 @@ qx.Class.define("qx.util.format.DateFormat",
   {
     /**
      * Returns a <code>DateFomat</code> instance that uses the
-     * {@link #DEFAULT_DATE_TIME__format}.
+     * format.
      *
      * @return {String} the date/time instance.
      */
@@ -79,7 +79,7 @@ qx.Class.define("qx.util.format.DateFormat",
 
       var format = qx.locale.Date.getDateFormat("long") + " " + qx.locale.Date.getDateTimeFormat("HHmmss", "HH:mm:ss");
 
-      if (DateFormat._dateInstance == null || DateFormat.__format != format) {
+      if (DateFormat._dateInstance == null || DateFormat._dateInstance.__format != format) {
         DateFormat._dateTimeInstance = new DateFormat();
       }
 
@@ -88,8 +88,7 @@ qx.Class.define("qx.util.format.DateFormat",
 
 
     /**
-     * Returns a <code>DateFomat</code> instance that uses the
-     * {@link #DEFAULT_DATE__format}.
+     * Returns a <code>DateFomat</code> instance that uses the format.
      *
      * @return {String} the date instance.
      */
@@ -99,7 +98,7 @@ qx.Class.define("qx.util.format.DateFormat",
 
       var format = qx.locale.Date.getDateFormat("short") + "";
 
-      if (DateFormat._dateInstance == null || DateFormat.__format != format) {
+      if (DateFormat._dateInstance == null || DateFormat._dateInstance.__format != format) {
         DateFormat._dateInstance = new DateFormat(format);
       }
 
@@ -294,8 +293,13 @@ qx.Class.define("qx.util.format.DateFormat",
             case 'Y': // Year (which must be 4 digits)
               if (wildcardSize == 2) {
                 replacement = this.__fillNumber(fullYear % 100, 2);
-              } else if (wildcardSize == 4) {
-                replacement = fullYear;
+              } else {
+                replacement = fullYear + "";
+                if (wildcardSize > replacement.length) {
+                  for (var i = replacement.length; i < wildcardSize; i++) {
+                    replacement = "0" + replacement;
+                  };
+                }
               }
 
               break;
@@ -434,7 +438,7 @@ qx.Class.define("qx.util.format.DateFormat",
      *
      * @param dateStr {String} the date to parse.
      * @return {Date} the parsed date.
-     * @throws If the format is not well formed or if the date string does not
+     * @throws {Error} If the format is not well formed or if the date string does not
      *       match to the format.
      */
     parse : function(dateStr)
@@ -671,7 +675,7 @@ qx.Class.define("qx.util.format.DateFormat",
      * (in compiled and uncompiled form) and the used rules.
      *
      * @return {Map} the parse feed.
-     * @throws TODOC
+     * @throws {Error} If the date format is malformed.
      */
     __initParseFeed : function()
     {
@@ -769,6 +773,7 @@ qx.Class.define("qx.util.format.DateFormat",
     __initParseRules : function()
     {
       var DateFormat = qx.util.format.DateFormat;
+      var LString = qx.lang.String;
 
       if (this.__parseRules != null)
       {
@@ -776,7 +781,7 @@ qx.Class.define("qx.util.format.DateFormat",
         return ;
       }
 
-      this.__parseRules = [];
+      var rules = this.__parseRules = [];
 
       var yearManipulator = function(dateValues, value)
       {
@@ -813,261 +818,288 @@ qx.Class.define("qx.util.format.DateFormat",
 
       var shortMonthNames = qx.locale.Date.getMonthNames("abbreviated", this.__locale, "format");
       for (var i=0; i<shortMonthNames.length; i++) {
-        shortMonthNames[i] = qx.lang.String.escapeRegexpChars(shortMonthNames[i].toString());
+        shortMonthNames[i] = LString.escapeRegexpChars(shortMonthNames[i].toString());
       }
 
       var shortMonthNamesManipulator = function(dateValues, value) {
-        value = qx.lang.String.escapeRegexpChars(value);
+        value = LString.escapeRegexpChars(value);
         dateValues.month = shortMonthNames.indexOf(value);
       }
 
       var fullMonthNames = qx.locale.Date.getMonthNames("wide", this.__locale, "format");
       for (var i=0; i<fullMonthNames.length; i++) {
-        fullMonthNames[i] = qx.lang.String.escapeRegexpChars(fullMonthNames[i].toString());
+        fullMonthNames[i] = LString.escapeRegexpChars(fullMonthNames[i].toString());
       }
 
       var fullMonthNamesManipulator = function(dateValues, value) {
-        value = qx.lang.String.escapeRegexpChars(value);
+        value = LString.escapeRegexpChars(value);
         dateValues.month = fullMonthNames.indexOf(value);
       }
 
       var narrowDayNames = qx.locale.Date.getDayNames("narrow", this.__locale, "format");
       for (var i=0; i<narrowDayNames.length; i++) {
-        narrowDayNames[i] = qx.lang.String.escapeRegexpChars(narrowDayNames[i].toString());
+        narrowDayNames[i] = LString.escapeRegexpChars(narrowDayNames[i].toString());
       }
 
       var narrowDayNamesManipulator = function(dateValues, value) {
-        value = qx.lang.String.escapeRegexpChars(value);
+        value = LString.escapeRegexpChars(value);
         dateValues.month = narrowDayNames.indexOf(value);
       }
 
       var abbrDayNames = qx.locale.Date.getDayNames("abbreviated", this.__locale, "format");
       for (var i=0; i<abbrDayNames.length; i++) {
-        abbrDayNames[i] = qx.lang.String.escapeRegexpChars(abbrDayNames[i].toString());
+        abbrDayNames[i] = LString.escapeRegexpChars(abbrDayNames[i].toString());
       }
 
       var abbrDayNamesManipulator = function(dateValues, value) {
-        value = qx.lang.String.escapeRegexpChars(value);
+        value = LString.escapeRegexpChars(value);
         dateValues.month = abbrDayNames.indexOf(value);
       }
 
       var fullDayNames = qx.locale.Date.getDayNames("wide", this.__locale, "format");
       for (var i=0; i<fullDayNames.length; i++) {
-        fullDayNames[i] = qx.lang.String.escapeRegexpChars(fullDayNames[i].toString());
+        fullDayNames[i] = LString.escapeRegexpChars(fullDayNames[i].toString());
       }
 
       var fullDayNamesManipulator = function(dateValues, value) {
-        value = qx.lang.String.escapeRegexpChars(value);
+        value = LString.escapeRegexpChars(value);
         dateValues.month = fullDayNames.indexOf(value);
       }
 
       // Unsupported: w (Week in year), W (Week in month), D (Day in year),
       // F (Day of week in month)
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "YYYY", //Year (must be 4 digits)
         regex       : "(\\d\\d\\d\\d)",
         manipulator : yearManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
-        pattern     : "yyyy", //Year (2 or 4 digits)
-        regex       : "(\\d\\d(\\d\\d)?)",
-        groups      : 2,
+        pattern     : "y",
+        regex       : "(\\d+)",
         manipulator : yearManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "yy",
-        regex       : "(\\d\\d)",
+        regex       : "(\\d\\d+)",
         manipulator : yearManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
+      {
+        pattern     : "yyy",
+        regex       : "(\\d\\d\\d+)",
+        manipulator : yearManipulator
+      });
+
+      rules.push(
+      {
+        pattern     : "yyyy",
+        regex       : "(\\d\\d\\d\\d+)",
+        manipulator : yearManipulator
+      });
+
+      rules.push(
+      {
+        pattern     : "yyyyy",
+        regex       : "(\\d\\d\\d\\d\\d+)",
+        manipulator : yearManipulator
+      });
+
+      rules.push(
+      {
+        pattern     : "yyyyyy",
+        regex       : "(\\d\\d\\d\\d\\d\\d+)",
+        manipulator : yearManipulator
+      });
+
+      rules.push(
       {
         pattern     : "M",
         regex       : "(\\d\\d?)",
         manipulator : monthManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "MM",
         regex       : "(\\d\\d?)",
         manipulator : monthManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "MMM",
         regex       : "(" + shortMonthNames.join("|") + ")",
         manipulator : shortMonthNamesManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "MMMM",
         regex       : "(" + fullMonthNames.join("|") + ")",
         manipulator : fullMonthNamesManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "dd",
         regex   : "(\\d\\d?)",
         field   : "day"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "d",
         regex   : "(\\d\\d?)",
         field   : "day"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "EE",
         regex       : "(" + narrowDayNames.join("|") + ")",
         manipulator : narrowDayNamesManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "EEE",
         regex       : "(" + abbrDayNames.join("|") + ")",
         manipulator : abbrDayNamesManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "EEEE",
         regex       : "(" + fullDayNames.join("|") + ")",
         manipulator : fullDayNamesManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "a",
         regex       : "(" + DateFormat.AM_MARKER + "|" + DateFormat.PM_MARKER + ")",
         manipulator : ampmManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "HH",
         regex   : "(\\d\\d?)",
         field   : "hour"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "H",
         regex   : "(\\d\\d?)",
         field   : "hour"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "kk",
         regex       : "(\\d\\d?)",
         manipulator : noZeroHourManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "k",
         regex       : "(\\d\\d?)",
         manipulator : noZeroHourManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "KK",
         regex   : "(\\d\\d?)",
         field   : "hour"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "K",
         regex   : "(\\d\\d?)",
         field   : "hour"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "hh",
         regex       : "(\\d\\d?)",
         manipulator : noZeroAmPmHourManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "h",
         regex       : "(\\d\\d?)",
         manipulator : noZeroAmPmHourManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "mm",
         regex   : "(\\d\\d?)",
         field   : "min"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "m",
         regex   : "(\\d\\d?)",
         field   : "min"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "ss",
         regex   : "(\\d\\d?)",
         field   : "sec"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "s",
         regex   : "(\\d\\d?)",
         field   : "sec"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "SSS",
         regex   : "(\\d\\d?\\d?)",
         field   : "ms"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "SS",
         regex   : "(\\d\\d?\\d?)",
         field   : "ms"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern : "S",
         regex   : "(\\d\\d?\\d?)",
         field   : "ms"
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "Z",
         regex       : "([\\+\\-]\\d\\d:?\\d\\d)",
         manipulator : ignoreManipulator
       });
 
-      this.__parseRules.push(
+      rules.push(
       {
         pattern     : "z",
         regex       : "([a-zA-Z]+)",
@@ -1086,6 +1118,6 @@ qx.Class.define("qx.util.format.DateFormat",
   */
 
   destruct : function() {
-    this._disposeFields("__format", "__locale", "__formatTree", "__parseFeed", "__parseRules");
+    this.__formatTree = this.__parseFeed = this.__parseRules = null;
   }
 });

@@ -89,32 +89,6 @@ qx.Class.define("qx.ui.menubar.Button",
     */
 
     /**
-     * Inspects the parent chain to find a ToolBar instance.
-     *
-     * @return {qx.ui.toolbar.ToolBar} Toolbar instance or <code>null</code>.
-     * @deprecated
-     */
-    getToolBar : function()
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee, "Please use 'getMenuBar' to access the connected menubar widget"
-      );
-
-      var parent = this;
-      while (parent)
-      {
-        if (parent instanceof qx.ui.toolbar.ToolBar) {
-          return parent;
-        }
-
-        parent = parent.getLayoutParent();
-      }
-
-      return null;
-    },
-
-
-    /**
      * Inspects the parent chain to find the MenuBar
      *
      * @return {qx.ui.menubar.MenuBar} MenuBar instance or <code>null</code>.
@@ -137,7 +111,13 @@ qx.Class.define("qx.ui.menubar.Button",
     },
 
 
+    // overridden
+    open : function(selectFirst) {
+      this.base(arguments, selectFirst);
 
+      var menubar = this.getMenuBar();
+      menubar._setAllowMenuOpenHover(true);
+    },
 
 
     /*
@@ -172,10 +152,22 @@ qx.Class.define("qx.ui.menubar.Button",
         // Sync with open menu property
         if (menubar && menubar.getOpenMenu() == menu) {
           menubar.resetOpenMenu();
+          menubar._setAllowMenuOpenHover(false);
         }
       }
     },
 
+    // overridden
+    _onMouseUp : function(e)
+    {
+      this.base(arguments, e);
+
+      // Set state 'pressed' to visualize that the menu is open.
+      var menu = this.getMenu();
+      if (menu && menu.isVisible() && !this.hasState("pressed")) {
+        this.addState("pressed");
+      }
+    },
 
     /**
      * Event listener for mouseover event
@@ -191,15 +183,19 @@ qx.Class.define("qx.ui.menubar.Button",
       if (this.getMenu())
       {
         var menubar = this.getMenuBar();
-        var open = menubar.getOpenMenu();
 
-        if (open && open != this.getMenu())
+        if (menubar._isAllowMenuOpenHover())
         {
           // Hide all open menus
           qx.ui.menu.Manager.getInstance().hideAll();
 
+          // Set it again, because hideAll remove it.
+          menubar._setAllowMenuOpenHover(true);
+
           // Then show the attached menu
-          this.open();
+          if (this.isEnabled()) {
+            this.open();
+          }
         }
       }
     }

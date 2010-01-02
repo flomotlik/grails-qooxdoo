@@ -24,19 +24,17 @@
  * {@link TextArea} and {@link TextField}.
  *
  * On every keystroke the value is synchronized with the
- * {@link #value} property. Value changes can be monitored by listening to the
+ * value of the textfield. Value changes can be monitored by listening to the
  * {@link #input} or {@link #changeValue} events, respectively.
  */
 qx.Class.define("qx.ui.form.AbstractField",
 {
   extend : qx.ui.core.Widget,
   implement : [
-    qx.ui.form.IFormElement,
     qx.ui.form.IStringForm,
     qx.ui.form.IForm
   ],
   include : [
-    qx.ui.form.MFormElement,
     qx.ui.form.MForm
   ],
   type : "abstract",
@@ -50,7 +48,7 @@ qx.Class.define("qx.ui.form.AbstractField",
   */
 
   /**
-   * @param value {String} initial text value of the input field ({@link #value}).
+   * @param value {String} initial text value of the input field ({@link #setValue}).
    */
   construct : function(value)
   {
@@ -60,14 +58,12 @@ qx.Class.define("qx.ui.form.AbstractField",
       this.setValue(value);
     }
 
-    this.getContentElement().addListener("change", this._onChangeContent, this);
+    this.getContentElement().addListener(
+      "change", this._onChangeContent, this
+    );
 
     // assign the placeholder text after the appearance has been applied
-    this.addListener("syncAppearance", function(e) {
-      if (this.hasState("showingPlaceholder")) {
-        this.getContentElement().setValue(this.getPlaceholder());
-      }
-    }, this);
+    this.addListener("syncAppearance", this._syncPlaceholder, this);
   },
 
 
@@ -206,6 +202,7 @@ qx.Class.define("qx.ui.form.AbstractField",
   members :
   {
     __nullValue : true,
+    __placeholder : null,
 
     /*
     ---------------------------------------------------------------------------
@@ -215,7 +212,10 @@ qx.Class.define("qx.ui.form.AbstractField",
 
     // overridden
     getFocusElement : function() {
-      return this.getContentElement();
+      var el = this.getContentElement();
+      if (el) {
+        return el;
+      }
     },
 
 
@@ -231,9 +231,74 @@ qx.Class.define("qx.ui.form.AbstractField",
 
 
     // overridden
+    renderLayout : function(left, top, width, height)
+    {
+      var updateInsets = this._updateInsets;
+      var changes = this.base(arguments, left, top, width, height);
+
+      // Directly return if superclass has detected that no
+      // changes needs to be applied
+      if (!changes) {
+        return;
+      }
+
+      var inner = changes.size || updateInsets;
+      var pixel = "px";
+
+      if (inner || changes.local || changes.margin)
+      {
+        var insets = this.getInsets();
+        var innerWidth = width - insets.left - insets.right;
+        var innerHeight = height - insets.top - insets.bottom;
+        // ensure that the width and height never get negative
+        innerWidth = innerWidth < 0 ? 0 : innerWidth;
+        innerHeight = innerHeight < 0 ? 0 : innerHeight;
+      }
+
+      var input = this.getContentElement();
+
+      if (updateInsets)
+      {
+        // render the placeholder
+        this.__getPlaceholderElement().setStyles({
+          "left": insets.left + pixel,
+          "top": insets.top + pixel
+        });
+      }
+
+      if (inner)
+      {
+        this.__getPlaceholderElement().setStyles({
+          "width": innerWidth + pixel,
+          "height": innerHeight + pixel
+        });
+        input.setStyles({
+          "width": innerWidth + pixel,
+          "height": innerHeight + pixel
+        });
+      }
+    },
+
+
+    // overridden
     _createContentElement : function()
     {
+      // create and add the input element
       var el = this._createInputElement();
+
+      // Apply styles
+      el.setStyles(
+      {
+        "border": "none",
+        "padding": 0,
+        "margin": 0,
+        "display" : "block",
+        "background" : "transparent",
+        "outline": "none",
+        "appearance": "none",
+        "position": "absolute",
+        "autoComplete": "off"
+      });
 
       // initialize the html input
       el.setSelectable(this.getSelectable());
@@ -247,22 +312,17 @@ qx.Class.define("qx.ui.form.AbstractField",
         el.setAttribute("spellcheck", "false");
       }
 
-      // Apply styles
-      el.setStyles(
-      {
-        "border": "none",
-        "padding": 0,
-        "margin": 0,
-        "display" : "block",
-        "background" : "transparent",
-        "outline": "none",
-        "appearance": "none",
-        "autoComplete": "off"
-      });
-
       // Block resize handle in Safari
       if (qx.core.Variant.isSet("qx.client", "webkit")) {
         el.setStyle("resize", "none");
+      }
+
+      // IE8 in standard mode needs some extra love here to receive events.
+      if (qx.core.Variant.isSet("qx.client", "mshtml"))
+      {
+        el.setStyles({
+          backgroundImage: "url(" + qx.util.ResourceManager.getInstance().toUri("qx/static/blank.gif") + ")"
+        });
       }
 
       return el;
@@ -319,7 +379,10 @@ qx.Class.define("qx.ui.form.AbstractField",
       {
         styles = qx.bom.Font.getDefaultStyles()
       }
+      // apply the font to the content element
       this.getContentElement().setStyles(styles);
+      // apply the font to the placeholder
+      this.__getPlaceholderElement().setStyles(styles);
 
       // Compute text size
       if (value) {
@@ -337,9 +400,15 @@ qx.Class.define("qx.ui.form.AbstractField",
     _applyTextColor : function(value, old)
     {
       if (value) {
-        this.getContentElement().setStyle("color", qx.theme.manager.Color.getInstance().resolve(value));
+        this.getContentElement().setStyle(
+          "color", qx.theme.manager.Color.getInstance().resolve(value)
+        );
+        this.__getPlaceholderElement().setStyle(
+          "color", qx.theme.manager.Color.getInstance().resolve(value)
+        );
       } else {
         this.getContentElement().removeStyle("color");
+        this.__getPlaceholderElement().removeStyle("color");
       }
     },
 
@@ -404,7 +473,9 @@ qx.Class.define("qx.ui.form.AbstractField",
       if (value.length > this.getMaxLength())
       {
         var fireEvents = false;
-        this.getContentElement().setValue(value.substr(0, this.getMaxLength()));
+        this.getContentElement().setValue(
+          value.substr(0, this.getMaxLength())
+        );
       }
 
       // fire the events, if necessary
@@ -473,11 +544,10 @@ qx.Class.define("qx.ui.form.AbstractField",
     /**
      * Returns the current value of the textfield.
      *
-     * @return {String} The current value
+     * @return {String|null} The current value
      */
     getValue : function() {
-      var showingPlaceholder = this.hasState("showingPlaceholder");
-      var value = showingPlaceholder ? "" : this.getContentElement().getValue();
+      var value = this.getContentElement().getValue();
       return this.__nullValue ? null : value;
     },
 
@@ -508,97 +578,6 @@ qx.Class.define("qx.ui.form.AbstractField",
     ---------------------------------------------------------------------------
     */
 
-    /**
-     * Returns the current selection.
-     * This method only works if the widget is already created and
-     * added to the document.
-     *
-     * @deprecated Use public method 'getTextSelection' instead
-     * @return {String|null}
-     */
-    getSelection : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'getTextSelection' instead!"
-      );
-
-      return this.getTextSelection();
-    },
-
-
-    /**
-     * Returns the current selection length.
-     * This method only works if the widget is already created and
-     * added to the document.
-     *
-     * @deprecated Use public method 'getTextSelectionLength' instead
-     * @return {Integer|null}
-     */
-    getSelectionLength : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'getTextSelectionLength' instead!"
-      );
-
-      return this.getTextSelectionLength();
-    },
-
-
-    /**
-     * Set the selection to the given start and end (zero-based).
-     * If no end value is given the selection will extend to the
-     * end of the textfield's content.
-     * This method only works if the widget is already created and
-     * added to the document.
-     *
-     * @deprecated Use public method 'setTextSelection' instead
-     * @param start {Integer} start of the selection (zero-based)
-     * @param end {Integer} end of the selection
-     * @return {void}
-     */
-    setSelection : function(start, end) {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'setTextSelection' instead!"
-      );
-
-      this.setTextSelection(start, end);
-    },
-
-
-    /**
-     * Clears the current selection.
-     * This method only works if the widget is already created and
-     * added to the document.
-     *
-     * @deprecated Use public method 'clearTextSelection' instead
-     * @return {void}
-     */
-    clearSelection : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'clearTextSelection' instead!"
-      );
-
-      this.clearTextSelection();
-    },
-
-
-    /**
-     * Selects the whole content
-     *
-     * @deprecated Use public method 'selectAllText' instead
-     * @return {void}
-     */
-    selectAll : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'selectAllText' instead!"
-      );
-
-      this.selectAllText();
-    },
-
 
     /**
      * Returns the current selection.
@@ -621,6 +600,26 @@ qx.Class.define("qx.ui.form.AbstractField",
      */
     getTextSelectionLength : function() {
       return this.getContentElement().getTextSelectionLength();
+    },
+
+
+    /**
+     * Returns the start of the text selection
+     *
+     * @return {Integer|null} Start of selection or null if not available
+     */
+    getTextSelectionStart : function() {
+      return this.getContentElement().getTextSelectionStart();
+    },
+
+
+    /**
+     * Returns the end of the text selection
+     *
+     * @return {Integer|null} End of selection or null if not available
+     */
+    getTextSelectionEnd : function() {
+      return this.getContentElement().getTextSelectionEnd();
     },
 
 
@@ -678,13 +677,20 @@ qx.Class.define("qx.ui.form.AbstractField",
       var placeholder = this.getPlaceholder();
       if (
         placeholder != null &&
-        !this.hasState("focused") &&
         fieldValue == "" &&
+        !this.hasState("focused") &&
         !this.hasState("disabled")
       )
       {
-        this.addState("showingPlaceholder");
-        // the placeholder will be set as soon as the appearance is applied
+        if (this.hasState("showingPlaceholder"))
+        {
+          this._syncPlaceholder();
+        }
+        else
+        {
+          // the placeholder will be set as soon as the appearance is applied
+          this.addState("showingPlaceholder");
+        }
       }
     },
 
@@ -695,9 +701,39 @@ qx.Class.define("qx.ui.form.AbstractField",
      */
     _removePlaceholder: function() {
       if (this.hasState("showingPlaceholder")) {
-        this.getContentElement().setValue("");
+        this.__getPlaceholderElement().setStyle("visibility", "hidden");
         this.removeState("showingPlaceholder");
       }
+    },
+
+
+    /**
+     * Updates the placeholder text with the DOM
+     */
+    _syncPlaceholder : function ()
+    {
+      if (this.hasState("showingPlaceholder")) {
+        this.__getPlaceholderElement().setStyle("visibility", "visible");
+      }
+    },
+
+
+    /**
+     * Returns the placeholder label and creates it if necessary.
+     */
+    __getPlaceholderElement : function()
+    {
+      if (this.__placeholder == null) {
+        // create the placeholder
+        this.__placeholder = new qx.html.Label();
+        this.__placeholder.setStyles({
+          "visibility" : "hidden",
+          "zIndex" : 6,
+          "position" : "absolute"
+        });
+        this.getContainerElement().add(this.__placeholder);
+      }
+      return this.__placeholder;
     },
 
 
@@ -709,6 +745,7 @@ qx.Class.define("qx.ui.form.AbstractField",
 
     // property apply
     _applyPlaceholder : function(value, old) {
+      this.__getPlaceholderElement().setValue(value);
       if (value != null) {
         this.addListener("focusin", this._removePlaceholder, this);
         this.addListener("focusout", this._showPlaceholder, this);
@@ -746,5 +783,16 @@ qx.Class.define("qx.ui.form.AbstractField",
       }
     }
 
+  },
+
+
+  /*
+  *****************************************************************************
+     DESTRUCTOR
+  *****************************************************************************
+  */
+  destruct : function()
+  {
+    this.__placeholder = null;
   }
 });

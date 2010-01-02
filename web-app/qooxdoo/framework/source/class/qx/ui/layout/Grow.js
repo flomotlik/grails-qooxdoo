@@ -23,7 +23,7 @@
  *
  * It will place all children over each other with the top and left coordinates
  * set to <code>0</code>. The {@link qx.ui.container.Stack} and the
- * {@link qx.ui.core.ScrollPane} are using this layout.
+ * {@link qx.ui.core.scroll.ScrollPane} are using this layout.
  *
  * *Features*
  *
@@ -51,7 +51,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/layout/Grow'>
+ * <a href='http://qooxdoo.org/documentation/1.0/layout/Grow'>
  * Extended documentation</a> and links to demos of this layout in the qooxdoo wiki.
  */
 qx.Class.define("qx.ui.layout.Grow",
@@ -122,6 +122,8 @@ qx.Class.define("qx.ui.layout.Grow",
       var children = this._getLayoutChildren();
       var child, size;
       var neededWidth=0, neededHeight=0;
+      var minWidth=0, minHeight=0;
+      var maxWidth=Infinity, maxHeight=Infinity;
 
       // Iterate over children
       for (var i=0, l=children.length; i<l; i++)
@@ -131,13 +133,25 @@ qx.Class.define("qx.ui.layout.Grow",
 
         neededWidth = Math.max(neededWidth, size.width);
         neededHeight = Math.max(neededHeight, size.height);
+
+        minWidth = Math.max(minWidth, size.minWidth);
+        minHeight = Math.max(minHeight, size.minHeight);
+
+        maxWidth = Math.min(maxWidth, size.maxWidth);
+        maxHeight = Math.min(maxHeight, size.maxHeight);
       }
 
 
       // Return hint
       return {
         width : neededWidth,
-        height : neededHeight
+        height : neededHeight,
+
+        minWidth : minWidth,
+        minHeight : minHeight,
+
+        maxWidth : maxWidth,
+        maxHeight : maxHeight
       };
     }
   }

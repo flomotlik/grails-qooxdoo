@@ -40,12 +40,10 @@ class LibraryPath:
         self._path = self._config.get("path", "")
 
         if self._path == "":
-            self._console.error("Missing path information!")
-            sys.exit(1)
+            raise ValueError("Missing path information!")
 
         if not os.path.exists(self._path):
-            self._console.error("Path does not exist: %s" % self._path)
-            sys.exit(1)
+            raise ValueError("Path does not exist: %s" % self._path)
 
         self._uri = self._config.get("uri", self._path)
         self._encoding = self._config.get("encoding", "utf-8")
@@ -66,9 +64,10 @@ class LibraryPath:
         del d['_console']
         return d
 
-    _codeExpr = re.compile('qx.(Bootstrap|List|Class|Mixin|Interface|Theme).define\s*\(\s*["\'](%s)["\']?' % lang.IDENTIFIER_REGEXP, re.M)
-    _ignoredDirectories = [".svn", "CVS"]
-    _docFilename = "__init__.js"
+    _codeExpr = re.compile(r'''qx.(Bootstrap|List|Class|Mixin|Interface|Theme).define\s*\(\s*["']((?u)[^"']+)["']''', re.M)
+    _illegalIdentifierExpr = re.compile(lang.IDENTIFIER_ILLEGAL_CHARS)
+    _ignoredDirectories    = re.compile(r'%s' % '|'.join(filetool.VERSIONCONTROL_DIR_PATTS), re.I)
+    _docFilename           = "__init__.js"
 
 
     def getClasses(self):
@@ -102,6 +101,9 @@ class LibraryPath:
 
     def _getCodeId(self, fileContent):
         for item in self._codeExpr.findall(fileContent):
+            illegal = self._illegalIdentifierExpr.search(item[1])
+            if illegal:
+                raise ValueError, "Item name '%s' contains illegal character '%s'" % (item[1],illegal.group(0))
             return item[1]
 
         return None
@@ -109,27 +111,24 @@ class LibraryPath:
 
     def _detectNamespace(self, path):
         if not os.path.exists(path):
-            self._console.error("The given path does not contains a class folder: %s" % path)
-            sys.exit(1)
+            raise ValueError("The given path does not contains a class folder: %s" % path)
 
         ns = None
         files = os.listdir(path)
 
         for entry in files:
-            if entry.startswith(".") or entry in self._ignoredDirectories:
+            if entry.startswith(".") or self._ignoredDirectories.match(entry):
                 continue
 
             full = os.path.join(path, entry)
             if os.path.isdir(full):
                 if ns != None:
-                    self._console.error("Multi namespaces per library are not supported!")
-                    sys.exit(1)
+                    raise ValueError("Multi namespaces per library are not supported!")
 
                 ns = entry
 
         if ns == None:
-            self._console.error("Namespace could not be detected!")
-            sys.exit(1)
+            raise ValueError("Namespace could not be detected!")
 
         self._console.debug("Detected namespace: %s" % ns)
         self._namespace = ns
@@ -146,16 +145,15 @@ class LibraryPath:
 
     def _scanClassPath(self, path, uri, encoding):
         if not os.path.exists(path):
-            self._console.error("The given path does not contains a class folder: %s" % path)
-            sys.exit(1)
+            raise ValueError("The given path does not contains a class folder: %s" % path)
 
         self._console.debug("Scanning class folder...")
 
         # Iterate...
         for root, dirs, files in os.walk(path):
             # Filter ignored directories
-            for ignoredDir in self._ignoredDirectories:
-                if ignoredDir in dirs:
+            for ignoredDir in dirs:
+                if self._ignoredDirectories.match(ignoredDir):
                     dirs.remove(ignoredDir)
 
             # Searching for files
@@ -203,7 +201,10 @@ class LibraryPath:
                 fileContent = filetool.read(filePath, encoding)
 
                 # Extract code ID (e.g. class name, mixin name, ...)
-                fileCodeId = self._getCodeId(fileContent)
+                try:
+                    fileCodeId = self._getCodeId(fileContent)
+                except ValueError, e:
+                    raise ValueError, e.message + u' (%s)' % fileName
 
                 # Ignore all data files (e.g. translation, doc files, ...)
                 if fileCodeId == None:
@@ -216,7 +217,7 @@ class LibraryPath:
                     self._console.error("Classname: %s" % fileCodeId)
                     self._console.error("Path: %s" % fileRel)
                     self._console.outdent()
-                    sys.exit(1)
+                    raise RuntimeError()
 
                 # Store file data
                 self._console.debug("Adding class %s" % filePathId)
@@ -239,16 +240,15 @@ class LibraryPath:
 
     def _scanTranslationPath(self, path):
         if not os.path.exists(path):
-            self._console.error("The given path does not contain a translation folder: %s" % path)
-            sys.exit(1)
+            raise ValueError("The given path does not contain a translation folder: %s" % path)
 
         self._console.debug("Scanning translation folder...")
 
         # Iterate...
         for root, dirs, files in os.walk(path):
             # Filter ignored directories
-            for ignoredDir in self._ignoredDirectories:
-                if ignoredDir in dirs:
+            for ignoredDir in dirs:
+                if self._ignoredDirectories.match(ignoredDir):
                     dirs.remove(ignoredDir)
 
             # Searching for files

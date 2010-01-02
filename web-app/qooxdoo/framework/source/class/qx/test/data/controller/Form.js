@@ -305,9 +305,22 @@ qx.Class.define("qx.test.data.controller.Form",
 
 
     testModelCreation : function() {
+      // set some initial values in the form
+      this.__tf1.setValue("A");
+      this.__tf2.setValue("B");
+      this.__cb.setValue(true);
+
       // create the controller
       var c = new qx.data.controller.Form(null, this.__form);
       var model = c.createModel();
+
+      // check if the model and the form still have the initial value
+      this.assertEquals("A", this.__tf1.getValue());
+      this.assertEquals("B", this.__tf2.getValue());
+      this.assertTrue(this.__cb.getValue());
+      this.assertEquals("A", model.getTf1());
+      this.assertEquals("B", model.getTf2());
+      this.assertTrue(model.getCb());
 
       // set values in the form
       this.__tf1.setValue("1");
@@ -354,6 +367,7 @@ qx.Class.define("qx.test.data.controller.Form",
       i2.setModel("2");
       selectBox.add(i1);
       selectBox.add(i2);
+      selectBox.setSelection([i1]);
 
       // add the selectBox to the form
       this.__form.add(selectBox, "sb");
@@ -361,6 +375,9 @@ qx.Class.define("qx.test.data.controller.Form",
       // create the controller
       var c = new qx.data.controller.Form(null, this.__form);
       var model = c.createModel();
+
+      // check the init value of the model selection
+      this.assertEquals("1", model.getSb());
 
       // set the selection
       selectBox.setSelection([i1]);
@@ -450,6 +467,49 @@ qx.Class.define("qx.test.data.controller.Form",
       i2.destroy();
       i1.destroy();
       selectBox.destroy();
+    },
+
+
+    testOptions : function()
+    {
+      // create the controller
+      var c = new qx.data.controller.Form(this.__model, this.__form);
+
+      // add the options
+      var tf2model = {converter : function(data) {
+        return "X" + data;
+      }};
+      var model2tf = {converter : function(data) {
+        return data && data.substring(1);
+      }};
+      c.addBindingOptions("tf1", model2tf, tf2model);
+
+      // set values in the form
+      this.__tf1.setValue("1");
+      this.__tf2.setValue("2");
+
+      // check the binding
+      this.assertEquals("X" + this.__tf1.getValue(), this.__model.getTf1());
+      this.assertEquals(this.__tf2.getValue(), this.__model.getTf2());
+
+      // change the values
+      this.__tf1.setValue("11");
+      this.__tf2.setValue("21");
+
+      // check the binding
+      this.assertEquals("X" + this.__tf1.getValue(), this.__model.getTf1());
+      this.assertEquals(this.__tf2.getValue(), this.__model.getTf2());
+
+      // change the data in the model
+      this.__model.setTf1("Xa");
+      this.__model.setTf2("b");
+
+      // check the binding
+      this.assertEquals(this.__tf1.getValue(), this.__model.getTf1().substring(1));
+      this.assertEquals(this.__tf2.getValue(), this.__model.getTf2());
+
+      // distroy the objects
+      c.dispose();
     }
 
   }

@@ -7,7 +7,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -19,7 +19,7 @@
 #
 ################################################################################
 
-import re, os, sys, types
+import re, os, sys, types, glob
 
 from generator.runtime.ShellCmd import ShellCmd
 
@@ -40,7 +40,9 @@ class ActionLib(object):
             self._console.info(item)
             for file in cleanMap[item]:
                 file = self._config.absPath(file) 
-                # safety first
-                if os.path.splitdrive(file)[1] == os.sep:
-                    raise RuntimeError, "!!! I'm not going to delete '/' recursively !!!"
-                self._shellCmd.rm_rf(file)
+                # resolve file globs
+                for entry in glob.glob(file):
+                    # safety first
+                    if os.path.splitdrive(entry)[1] == os.sep:
+                        raise RuntimeError, "!!! I'm not going to delete '/' recursively !!!"
+                    self._shellCmd.rm_rf(entry)

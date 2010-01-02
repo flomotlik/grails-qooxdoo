@@ -644,7 +644,7 @@ qx.Class.define("qx.io.remote.transport.XmlHttp",
      * be made available to the caller.
      *
      * @return {String} Content of the response as XML
-     * @throws TODOC
+     * @throws {Error} If an error within the response occurs.
      */
     getResponseXml : function()
     {
@@ -772,7 +772,7 @@ qx.Class.define("qx.io.remote.transport.XmlHttp",
           try {
             if (vText && vText.length > 0)
             {
-              var ret = qx.util.Json.parseQx(vText);
+              var ret = qx.util.Json.parse(vText, false);
               return (ret === 0 ? 0 : (ret || null));
             }
             else
@@ -939,6 +939,6 @@ qx.Class.define("qx.io.remote.transport.XmlHttp",
       }
     }
 
-    this._disposeFields("__request");
+    this.__request = null;
   }
 });

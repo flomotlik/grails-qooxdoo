@@ -22,12 +22,12 @@
 
 import os, sys, re, types, string, copy
 import simplejson
-from generator.config.Job import Job
 from generator.config.Manifest import Manifest
 from generator.config.Lang import Lang
 from generator.runtime.ShellCmd import ShellCmd
 from generator.action.ContribLoader import ContribLoader
 from misc.NameSpace import NameSpace
+# see late imports at the bottom of this file
 
 console = None
 
@@ -35,7 +35,7 @@ class Config:
 
     global console
 
-    def __init__(self, console_, data, path=""):
+    def __init__(self, console_, data, path="", **letKwargs):
         global console
         # init members
         self._console  = console_
@@ -60,6 +60,13 @@ class Config:
         # make sure there is at least an empty jobs map (for later filling)
         if isinstance(self._data, types.DictType) and Lang.JOBS_KEY not in self._data:
             self._data[Lang.JOBS_KEY] = {}
+            
+        # incorporate let macros from letkwargs
+        if letKwargs:
+            if not Lang.LET_KEY in self._data:
+                self._data[Lang.LET_KEY] = {}
+            self._data[Lang.LET_KEY].update(letKwargs)
+                
 
         # expand macros for some top-level keys
         if Lang.LET_KEY in self._data:
@@ -92,9 +99,10 @@ class Config:
         jsonstr = self._stripComments(jsonstr)
         try:
             data = simplejson.loads(jsonstr)
-        except ValueError:
-            print "Invalid JSON content: %s" % fname
-            raise
+        except ValueError, e:
+            #e.args = (e.message + "\nFile: %s" % fname,)
+            e.args = (e.args[0] + "\nFile: %s" % fname,) + e.args[1:]
+            raise e
             
         obj.close()
 
@@ -508,6 +516,8 @@ class Config:
                 raise RuntimeError, "No such job: \"%s\"" % job
             else:
                 jobObj = self.getJob(job)
+                console.debug("job '%s'" % jobObj.name)
+                console.indent()
                 if jobObj.hasFeature('library'):
                     newlib = []
                     seen   = []
@@ -551,6 +561,8 @@ class Config:
 
                     jobObj.setFeature('library', newlib)
 
+                console.outdent()
+
         console.outdent()
 
 
@@ -593,21 +605,26 @@ class Config:
 
     def _download_contrib(self, libs, contrib, contribCache):
 
-        self._console.info("Downloading contrib: %s" % contrib)
+        self._console.debug("Checking network-based contrib: %s" % contrib)
         self._console.indent()
 
         dloader = ContribLoader()
-        dloader.download(contrib, contribCache)
+        (updatedP, revNo) = dloader.download(contrib, contribCache)
 
-        self._console.info("done")
+        if updatedP:
+            self._console.info("downloaded contrib: %s" % contrib)
+        else:
+            self._console.debug("using cached version")
         self._console.outdent()
         return
+
 
     def getConfigDir(self):
         if self._fname:
             return os.path.dirname(self._fname)
         else:
             return None
+
 
     def absPath(self, path):
         'Take a path relative to config file location, and return it absolute'
@@ -621,6 +638,33 @@ class Config:
             p = os.path.normpath(os.path.abspath(
                     os.path.join(self.getConfigDir(), path)))
             return p.decode('utf-8')
+
+
+    def findKey(self, keyPatt, mode):
+        '''iterator for keys matching keyPatt; yields key (mode=="rel") or key path (mode=="abs")'''
+        if mode not in ("rel", "abs"):
+            raise ValueError("mode must be one of (rel|abs)")
+        keyRegex = re.compile(keyPatt)
+
+        for path, key in self.walk(self._data, "."):
+            if keyRegex.match(key):    
+                if mode=="rel":
+                    yield key
+                else:
+                    if path:
+                        yield "/".join((path, key))
+                    else:
+                        yield key
+        return
+
+    def walk(self, data, path):
+        if isinstance(data, Job):
+            data = data.getData()
+        if isinstance(data, types.DictType):
+            for child in data.keys():
+                yield path, child
+                for path1, key in self.walk(data[child], "/".join((path, child))):
+                    yield path1, key
 
 
 
@@ -744,3 +788,5 @@ class Let(object):
         return sub
 
 
+# Late imports, for cross-importing
+from generator.config.Job import Job

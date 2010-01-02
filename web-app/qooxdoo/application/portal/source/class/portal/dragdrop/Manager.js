@@ -376,7 +376,12 @@ qx.Class.define("portal.dragdrop.Manager",
     __checkInsert : function(downwards, top, activeBoxElement, nextBox)
     {
       var nextBoxTop    = qx.bom.element.Location.getTop(nextBox);
-      var nextBoxHeight = qx.bom.element.Dimension.getClientHeight(nextBox);
+      
+      var nextBoxPaddingTop = parseInt(qx.bom.element.Style.get(nextBox, "paddingTop"));
+      var nextBoxPaddingBottom = parseInt(qx.bom.element.Style.get(nextBox, "paddingBottom"));
+      var nextBoxHeight = qx.bom.element.Dimension.getContentHeight(nextBox) +
+                          nextBoxPaddingBottom + nextBoxPaddingTop;
+      
       var sibling;
 
       if (downwards) {
@@ -442,6 +447,7 @@ qx.Class.define("portal.dragdrop.Manager",
    * ******************************************************/
   destruct : function()
   {
-    this._disposeFields("__activeBoxInfo", "__positions", "__currentGroupBox", "__currentBoxElement", "__ghost", "__groupBoxInfos");
+    this.__activeBoxInfo = this.__positions = this.__currentGroupBox =
+      this.__currentBoxElement = this.__ghost = this.__groupBoxInfos = null;
   }
 });

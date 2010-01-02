@@ -17,11 +17,6 @@
 
 ************************************************************************ */
 
-/*
-#require qx.locale.data.de_DE
-#require qx.locale.data.fr_FR
-*/
-
 qx.Class.define("qx.test.util.DateFormat",
 {
   extend : qx.dev.unit.TestCase,
@@ -62,6 +57,10 @@ qx.Class.define("qx.test.util.DateFormat",
       var dateFmt = new qx.util.format.DateFormat(formatStr, "fr_FR");
       dateStr = dateFmt.format(date);
 
+      var formatStr = "MMM d, y";
+      var dateFmt = new qx.util.format.DateFormat(formatStr, "en_US");
+      dateStr = dateFmt.format(date);
+
       var parsedDate = dateFmt.parse(dateStr);
       this.assertEquals(date.getTime(), parsedDate.getTime());
     },
@@ -93,7 +92,7 @@ qx.Class.define("qx.test.util.DateFormat",
 
       var formatStr = qx.locale.Date.getDateFormat("medium", "fr_FR");
       var dateFmt = new qx.util.format.DateFormat(formatStr, "fr_FR");
-      dateStr = dateFmt.format(date);
+      var dateStr = dateFmt.format(date);
 
       var parsedDate = dateFmt.parse(dateStr);
       this.assertEquals(date.getTime(), parsedDate.getTime());
@@ -156,6 +155,35 @@ qx.Class.define("qx.test.util.DateFormat",
 
       var parsedDate = dateFmt.parse(dateStr);
       this.assertEquals(date.getTime(), parsedDate.getTime());
+    },
+
+
+    testYear : function()
+    {
+      // case y
+      var df = new qx.util.format.DateFormat("y");
+      this.assertEquals("2009", df.format(new Date(2009,10,30)));
+      df.dispose();
+
+      // case yy
+      var df = new qx.util.format.DateFormat("yy");
+      this.assertEquals("09", df.format(new Date(2009,10,30)));
+      df.dispose();
+
+      // case yyy
+      var df = new qx.util.format.DateFormat("yyy");
+      this.assertEquals("2009", df.format(new Date(2009,10,30)));
+      df.dispose();
+
+      // case yyyy
+      var df = new qx.util.format.DateFormat("yyyy");
+      this.assertEquals("2009", df.format(new Date(2009,10,30)));
+      df.dispose();
+
+      // case yyyyy
+      var df = new qx.util.format.DateFormat("yyyyy");
+      this.assertEquals("02009", df.format(new Date(2009,10,30)));
+      df.dispose();
     }
   }
 });

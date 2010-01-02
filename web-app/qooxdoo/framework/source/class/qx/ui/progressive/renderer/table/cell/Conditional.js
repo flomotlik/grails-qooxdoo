@@ -26,7 +26,7 @@
 ************************************************************************ */
 
 /**
- * Table Cell Renderer for Progressive.  EXPERIMENTAL!  INTERFACE MAY CHANGE.
+ * Table Cell Renderer for Progressive.
  */
 qx.Class.define("qx.ui.progressive.renderer.table.cell.Conditional",
 {
@@ -152,6 +152,9 @@ qx.Class.define("qx.ui.progressive.renderer.table.cell.Conditional",
      * @param target {String}
      *   The text value of the column to compare against. If this is null,
      *   comparisons will be against the contents of this cell.
+     *
+     * @throws {Error} If the condition can not be recognized or the value
+     * is null.
      */
     addNumericCondition : function(condition, value1, align,
                                    color, style, weight, target)
@@ -213,7 +216,8 @@ qx.Class.define("qx.ui.progressive.renderer.table.cell.Conditional",
      *
      * @return {void}
      *
-     * @throws TODOC
+     * @throws {Error} If the condition can not recognized or one of the
+     * values is null.
      */
     addBetweenCondition : function(condition, value1, value2, align,
                                    color, style, weight, target)
@@ -268,6 +272,8 @@ qx.Class.define("qx.ui.progressive.renderer.table.cell.Conditional",
      * @param target {String}
      *   The text value of the column to compare against. If this is null,
      *   comparisons will be against the contents of this cell.
+     *
+     * @throws {Error} If the regex is null.
      */
     addRegex : function(regex, align, color, style, weight, target)
     {
@@ -298,7 +304,7 @@ qx.Class.define("qx.ui.progressive.renderer.table.cell.Conditional",
      *
      *
      * @param cellInfo {Map}
-     *   The information about the cell.  See {@link #createDataCellHtml}.
+     *   The information about the cell.  See {@link qx.ui.table.cellrenderer.Abstract#createDataCellHtml}.
      *
      * @return {Map}
      */
@@ -457,14 +463,7 @@ qx.Class.define("qx.ui.progressive.renderer.table.cell.Conditional",
     }
   },
 
-  destruct : function()
-  {
-    this._disposeFields("__numericAllowed",
-                        "__betweenAllowed",
-                        "__conditions",
-                        "__defaultTextAlign",
-                        "__defaultColor",
-                        "__defaultFontStyle",
-                        "__defaultFontWeight");
+  destruct : function() {
+    this.__numericAllowed = this.__betweenAllowed = this.__conditions = null;
   }
 });

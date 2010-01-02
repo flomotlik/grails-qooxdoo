@@ -44,13 +44,13 @@ qx.Class.define("qx.event.type.Drag",
      *     default action of a native event (e.g. open the context menu on a
      *     right click) or the default action of a qooxdoo class (e.g. close
      *     the window widget). The default action can be prevented by calling
-     *     {@link #preventDefault}
+     *     {@link qx.event.type.Event#preventDefault}
      * @param originalEvent {qx.event.type.Mouse} The original (mouse) event to use
      * @return {qx.event.type.Event} The initialized event instance
      */
     init : function(cancelable, originalEvent)
     {
-      this.base(arguments, false, cancelable);
+      this.base(arguments, true, cancelable);
 
       if (originalEvent)
       {

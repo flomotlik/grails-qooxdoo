@@ -32,7 +32,8 @@
       {
         "qx.application"  : "${APIVIEWER}.Application",
         "qx.theme"        : "${APIVIEWER}.Theme",
-        "qx.version"      : "${QOOXDOO_VERSION}"
+        "qx.version"      : "${QOOXDOO_VERSION}",
+        "qx.nativeScrollBars" : true
       },
 
       "cache" :
@@ -47,11 +48,16 @@
       "extend" : ["common"],
       "include" : ["${APIVIEWER}.*"],
 
-      "compile-source" :
+      "compile-options" :
       {
-        "file" : "./source/script/${APIVIEWER}.js",
-        "root" : "source"
-      }
+        "paths" :
+        {
+          "file" : "./source/script/${APIVIEWER}.js",
+          "app-root" : "source"
+        }
+      },
+      
+      "compile" : { "type" : "source" }
     },
 
 
@@ -76,7 +82,7 @@
         "qx.debug" : ["off"]
       },
 
-      "compile-dist" :
+      "compile-options" :
       {
         "paths" :
         {
@@ -87,7 +93,9 @@
           "format"   : false,
           "optimize" : ["strings", "basecalls", "variables", "privates"]
         }
-      }
+      },
+        
+      "compile" : { "type" : "build" }
     },
 
 

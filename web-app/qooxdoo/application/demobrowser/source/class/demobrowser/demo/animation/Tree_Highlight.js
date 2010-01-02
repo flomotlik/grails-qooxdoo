@@ -332,12 +332,9 @@ qx.Class.define("demobrowser.demo.animation.Tree_Highlight",
         return;
       }
 
-      var parent = current.getParent();
       var level = current.getLevel();
       var isTopLevel = level == -1;
       var isFolder = current instanceof qx.ui.tree.TreeFolder;
-      var isLastItem = this._tree.getNextSiblingOf(current) == null;
-      var isFirstItem = this._tree.getPreviousSiblingOf(current) == null;
 
       this.btnAddFolder.setEnabled(isFolder);
       this.btnAddFile.setEnabled(isFolder);
@@ -360,9 +357,10 @@ qx.Class.define("demobrowser.demo.animation.Tree_Highlight",
 
   destruct : function()
   {
-    this._disposeFields("_container", "_treeGroup", "_tree", "inputItemName",
-      "btnAddFolder", "btnAddFile", "btnAddAfter", "btnAddBefore", "btnAddBegin",
-      "btnRemove", "btnRemoveAll", "btnMoveToParent", "showOpenButtons",
-      "mgrShowRootOpen", "btnReset");
+    this._container = this._treeGroup = this._tree = this.inputItemName =
+      this.btnAddFolder = this.btnAddFile = this.btnAddAfter = 
+      this.btnAddBefore = this.btnAddBegin = this.btnRemove = 
+      this.btnRemoveAll = this.btnMoveToParent = this.showOpenButtons = 
+      this.mgrShowRootOpen = this.btnReset = null;
   }
 });

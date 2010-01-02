@@ -53,7 +53,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/widget/Label' target='_blank'>
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/Label' target='_blank'>
  * Documentation of this widget in the qooxdoo wiki.</a>
  */
 qx.Class.define("qx.ui.basic.Label",
@@ -86,23 +86,6 @@ qx.Class.define("qx.ui.basic.Label",
   },
 
 
-
-
-  /*
-  *****************************************************************************
-     EVENTS
-  *****************************************************************************
-  */
-  events : {
-    /**
-     * The old content change event. Please use the value property instead.
-     * @deprecated
-     */
-    "changeContent" : "qx.event.type.Data"
-  },
-
-
-
   /*
   *****************************************************************************
      PROPERTIES
@@ -123,6 +106,20 @@ qx.Class.define("qx.ui.basic.Label",
       init : false,
       event : "changeRich",
       apply : "_applyRich"
+    },
+
+
+    /**
+     * Controls whether text wrap is activated or not. But please note, that
+     * this property works only in combination with the property {@link #rich}.
+     * The {@link #wrap} has only an effect if the {@link #rich} property is
+     * set to <code>true</code>, otherwise {@link #wrap} has no effect.
+     */
+    wrap :
+    {
+      check : "Boolean",
+      init : true,
+      apply : "_applyWrap"
     },
 
 
@@ -256,13 +253,27 @@ qx.Class.define("qx.ui.basic.Label",
 
     // overridden
     _hasHeightForWidth : function() {
-      return this.getRich();
+      return this.getRich() && this.getWrap();
     },
 
 
     // overridden
     _applySelectable : function(value)
     {
+
+      // This is needed until text-overflow:ellipsis is implemented in Gecko.
+      // https://bugzilla.mozilla.org/show_bug.cgi?id=312156
+      if (qx.core.Variant.isSet("qx.client", "gecko"))
+      {
+        if (value && !this.isRich())
+        {
+          if (qx.core.Variant.isSet("qx.debug", "on")) {
+            this.warn("Only rich labels are selectable in browsers with Gecko engine!");
+          }
+          return;
+        }
+      }
+
       this.base(arguments, value);
 
       /*
@@ -280,7 +291,7 @@ qx.Class.define("qx.ui.basic.Label",
     // overridden
     _getContentHeightForWidth : function(width)
     {
-      if (!this.getRich()) {
+      if (!this.getRich() && !this.getWrap()) {
         return null;
       }
       return this.__computeContentSize(width).height;
@@ -318,7 +329,11 @@ qx.Class.define("qx.ui.basic.Label",
     ---------------------------------------------------------------------------
     */
 
-    /** {Map} Internal fallback of label size when no font is defined */
+    /**
+     * {Map} Internal fallback of label size when no font is defined
+     *
+     * @lint ignoreReferenceField(__contentSize)
+     */
     __contentSize :
     {
       width : 0,
@@ -414,6 +429,18 @@ qx.Class.define("qx.ui.basic.Label",
     },
 
 
+    // property apply
+     _applyWrap : function(value, old)
+    {
+      if (value && !this.isRich())
+      {
+        if (qx.core.Variant.isSet("qx.debug", "on")) {
+          this.warn("Only rich labels support wrap.");
+        }
+      }
+    },
+
+
     /**
      * Locale change event handler
      *
@@ -438,7 +465,7 @@ qx.Class.define("qx.ui.basic.Label",
     _applyValue : function(value, old)
     {
       // Sync with content element
-      this.getContentElement().setContent(value);
+      this.getContentElement().setValue(value);
 
       // Mark text size cache as invalid
       this.__invalidContentSize = true;
@@ -447,78 +474,7 @@ qx.Class.define("qx.ui.basic.Label",
       qx.ui.core.queue.Layout.add(this);
 
       this.fireDataEvent("changeContent", value, old);
-    },
-
-
-
-
-    /*
-    ---------------------------------------------------------------------------
-      DEPRECATED STUFF
-    ---------------------------------------------------------------------------
-    */
-    /**
-     * Old set method for the content property. Please use the value
-     * property instead.
-     *
-     * @param value {String} The value of the label.
-     * @deprecated
-     */
-    setContent: function(value)
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee, "Please use the value property instead."
-      );
-
-      this.setValue(value);
-    },
-
-
-    /**
-     * Old get method for the content property. Please use the value
-     * property instead.
-     *
-     * @deprecated
-     */
-    getContent: function()
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee, "Please use the value property instead."
-      );
-
-      return this.getValue();
-    },
-
-
-    /**
-     * Old reset method for the content property. Please use the value
-     * property instead.
-     *
-     * @deprecated
-     */
-    resetContent: function()
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee, "Please use the value property instead."
-      );
-
-      this.resetValue();
-    },
-
-
-    // overridden
-    addListener: function(type, listener, self, capture) {
-      if (type == "changeContent") {
-        qx.log.Logger.deprecatedEventWarning(
-          arguments.callee,
-          "changeContent",
-          "Please use the changeValue event instead."
-        );
-      }
-      return this.base(arguments, type, listener, self, capture);
     }
-
-
   },
 
 
@@ -543,6 +499,6 @@ qx.Class.define("qx.ui.basic.Label",
       }
     }
 
-    this._disposeFields("__font", "__buddyEnabledBinding");
+    this.__font = this.__buddyEnabledBinding = null;
   }
 });

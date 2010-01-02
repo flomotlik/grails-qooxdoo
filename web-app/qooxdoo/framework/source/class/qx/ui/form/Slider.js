@@ -26,11 +26,10 @@
  * groove and translates the handle's position into an integer value
  * within the defined range.
  *
- * The Slider has very few of its own functions; most of the functionality
- * is in {@link BaseSlider}. The most useful functions are slideTo()
- * to set the slider directly to some value; setSingleStep(), setPageStep()
- * to set the steps; and setMinimum() and setMaximum() to define the
- * range of the slider.
+ * The Slider has very few of its own functions.
+ * The most useful functions are slideTo() to set the slider directly to some
+ * value; setSingleStep(), setPageStep() to set the steps; and setMinimum()
+ * and setMaximum() to define the range of the slider.
  *
  * A slider accepts focus on Tab and provides both a mouse wheel and
  * a keyboard interface. The keyboard interface is the following:
@@ -44,22 +43,25 @@
  *
  * Here are the main properties of the class:
  *
- * # <code>value</code>: The bounded integer that BaseSlider maintains.
+ * # <code>value</code>: The bounded integer that {@link qx.ui.form.INumberForm}
+ * maintains.
  * # <code>minimum</code>: The lowest possible value.
  * # <code>maximum</code>: The highest possible value.
- * # <code>singleStep</code>: The smaller of two natural steps that an abstract sliders provides and typically corresponds to the user pressing an arrow key.
- * # <code>pageStep</code>: The larger of two natural steps that an abstract slider provides and typically corresponds to the user pressing PageUp or PageDown.
+ * # <code>singleStep</code>: The smaller of two natural steps that an abstract
+ * sliders provides and typically corresponds to the user pressing an arrow key.
+ * # <code>pageStep</code>: The larger of two natural steps that an abstract
+ * slider provides and typically corresponds to the user pressing PageUp or
+ * PageDown.
  */
 qx.Class.define("qx.ui.form.Slider",
 {
   extend : qx.ui.core.Widget,
   implement : [
-    qx.ui.form.IFormElement,
     qx.ui.form.IForm,
     qx.ui.form.INumberForm,
     qx.ui.form.IRange
   ],
-  include : [qx.ui.form.MFormElement, qx.ui.form.MForm],
+  include : [qx.ui.form.MForm],
 
 
   /*
@@ -69,7 +71,8 @@ qx.Class.define("qx.ui.form.Slider",
   */
 
   /**
-   * @param orientation {String?"horizontal"} Configure the {@link #orientation} property
+   * @param orientation {String?"horizontal"} Configure the
+   * {@link #orientation} property
    */
   construct : function(orientation)
   {
@@ -154,7 +157,7 @@ qx.Class.define("qx.ui.form.Slider",
 
     /**
      * The minimum slider value (may be negative). This value must be smaller
-     * than {@link #max}.
+     * than {@link #maximum}.
      */
     minimum :
     {
@@ -166,7 +169,7 @@ qx.Class.define("qx.ui.form.Slider",
 
     /**
      * The maximum slider value (may be negative). This value must be larger
-     * than {@link #min}.
+     * than {@link #minimum}.
      */
     maximum :
     {
@@ -277,6 +280,7 @@ qx.Class.define("qx.ui.form.Slider",
     {
       var direction = e.getWheelDelta() > 0 ? 1 : -1;
       this.slideBy(direction * this.getSingleStep());
+
       e.stop();
     },
 
@@ -358,7 +362,8 @@ qx.Class.define("qx.ui.form.Slider",
         // Switch into drag mode
         this.__dragMode = true;
 
-        // Compute dragOffset (includes both: inner position of the widget and cursor position on knob)
+        // Compute dragOffset (includes both: inner position of the widget and
+        // cursor position on knob)
         this.__dragOffset = cursorLocation + sliderLocation - knobLocation;
       }
       else
@@ -535,7 +540,10 @@ qx.Class.define("qx.ui.form.Slider",
     __isHorizontal : false,
 
 
-    /** {Integer} Available space for knob to slide on, computed on resize of the widget */
+    /**
+     * {Integer} Available space for knob to slide on, computed on resize of
+     * the widget
+     */
     __slidingSpace : 0,
 
 

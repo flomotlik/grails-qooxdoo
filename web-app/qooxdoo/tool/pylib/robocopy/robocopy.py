@@ -94,9 +94,9 @@ class PyRobocopier:
         
         import getopt
 
-        shortargs = "supncmx:"
+        shortargs = "supnfcmx:"
         longargs = ["synchronize=", "update=", "purge=", "nodirection=", 
-                    "create=", "modtime=", "excludeList="]
+                    "force=", "create=", "modtime=", "excludeList="]
 
         try:
             optlist, args = getopt.getopt( arguments, shortargs, longargs )
@@ -298,6 +298,13 @@ class PyRobocopier:
                         
                     if self.__forcecopy:
                         os.chmod(dir2, 0777)
+                        if os.path.exists(os.path.join(dir2, filename)):
+                            os.chmod(os.path.join(dir2, filename), 0777)
+
+                    targetfile = os.path.join(dir2, filename)
+                    # the next is sort of 'soft-forcing' file copies of read-only files
+                    if os.path.exists(targetfile) and not os.access(targetfile, os.W_OK):
+                        os.unlink(targetfile)
 
                     sourcefile = os.path.join(dir1, filename)
                     try:

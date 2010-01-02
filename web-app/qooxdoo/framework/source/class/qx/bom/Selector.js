@@ -14,6 +14,7 @@
 
    Authors:
      * Sebastian Werner (wpbasti)
+     * Fabian Jakobs (fjakobs)
 
    ======================================================================
 
@@ -25,10 +26,8 @@
      http://groups.google.com/group/sizzlejs
      http://github.com/jeresig/sizzle/tree
 
-     Snapshot from July 23, 2009
-       commit  ee45e59cdbdae1b60971a620ce5d15487ac1f9bf
-       tree    5ba840431c2909e0e7b84737212a126468e853ae
-       parent  3a163323c6391eb9c36dedfd39eac6026894ec09
+     Snapshot from Oct 29 2009
+       commit  b363fde6c7b55d43777b28eeb7ede5827e899ec9
      Copyright:
        (c) 2009, The Dojo Foundation
 
@@ -148,12 +147,30 @@ qx.Bootstrap.define("qx.bom.Selector",
  * Below is the original Sizzle code. Snapshot date is mentioned in the head of
  * this file.
  */
+
+/*!
+ * Sizzle CSS Selector Engine - v1.0
+ *  Copyright 2009, The Dojo Foundation
+ *  Released under the MIT, BSD, and GPL Licenses.
+ *  More information: http://sizzlejs.com/
+ */
 (function(){
 
-var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^[\]'"]+)+\]|\\.|[^ >+~,(\[\\]+)+|[>+~])(\s*,\s*)?/g,
+var chunker = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^[\]'"]+)+\]|\\.|[^ >+~,(\[\\]+)+|[>+~])(\s*,\s*)?((?:.|\r|\n)*)/g,
   done = 0,
   toString = Object.prototype.toString,
-  hasDuplicate = false;
+  hasDuplicate = false,
+  baseHasDuplicate = true;
+
+// Here we check if the JavaScript engine is using some sort of
+// optimization where it does not always call our comparision
+// function. If that is the case, discard the hasDuplicate value.
+//   Thus far that includes Google Chrome.
+var arr = [0, 0];
+arr.sort(function(){
+  baseHasDuplicate = false;
+  return 0;
+});
 
 var Sizzle = function(selector, context, results, seed) {
   results = results || [];
@@ -167,16 +184,17 @@ var Sizzle = function(selector, context, results, seed) {
     return results;
   }
 
-  var parts = [], m, set, checkSet, check, mode, extra, prune = true, contextXML = isXML(context);
+  var parts = [], m, set, checkSet, check, extra, prune = true, contextXML = isXML(context),
+    soFar = selector;
 
   // Reset the position of the chunker regexp (start from head)
-  chunker.lastIndex = 0;
+  while ( (chunker.exec(""), m = chunker.exec(soFar)) !== null ) {
+    soFar = m[3];
 
-  while ( (m = chunker.exec(selector)) !== null ) {
     parts.push( m[1] );
 
     if ( m[2] ) {
-      extra = RegExp.rightContext;
+      extra = m[3];
       break;
     }
   }
@@ -277,7 +295,7 @@ var Sizzle = function(selector, context, results, seed) {
 
 Sizzle.uniqueSort = function(results){
   if ( sortOrder ) {
-    hasDuplicate = false;
+    hasDuplicate = baseHasDuplicate;
     results.sort(sortOrder);
 
     if ( hasDuplicate ) {
@@ -288,6 +306,8 @@ Sizzle.uniqueSort = function(results){
       }
     }
   }
+
+  return results;
 };
 
 Sizzle.matches = function(expr, set){
@@ -304,8 +324,9 @@ Sizzle.find = function(expr, context, isXML){
   for ( var i = 0, l = Expr.order.length; i < l; i++ ) {
     var type = Expr.order[i], match;
 
-    if ( (match = Expr.match[ type ].exec( expr )) ) {
-      var left = RegExp.leftContext;
+    if ( (match = Expr.leftMatch[ type ].exec( expr )) ) {
+      var left = match[1];
+      match.splice(1,1);
 
       if ( left.substr( left.length - 1 ) !== "\\" ) {
         match[1] = (match[1] || "").replace(/\\/g, "");
@@ -403,15 +424,16 @@ Sizzle.filter = function(expr, set, inplace, not){
 var Expr = Sizzle.selectors = {
   order: [ "ID", "NAME", "TAG" ],
   match: {
-    ID: /#((?:[\w\u00c0-\uFFFF_-]|\\.)+)/,
-    CLASS: /\.((?:[\w\u00c0-\uFFFF_-]|\\.)+)/,
-    NAME: /\[name=['"]*((?:[\w\u00c0-\uFFFF_-]|\\.)+)['"]*\]/,
-    ATTR: /\[\s*((?:[\w\u00c0-\uFFFF_-]|\\.)+)\s*(?:(\S?=)\s*(['"]*)(.*?)\3|)\s*\]/,
-    TAG: /^((?:[\w\u00c0-\uFFFF\*_-]|\\.)+)/,
+    ID: /#((?:[\w\u00c0-\uFFFF-]|\\.)+)/,
+    CLASS: /\.((?:[\w\u00c0-\uFFFF-]|\\.)+)/,
+    NAME: /\[name=['"]*((?:[\w\u00c0-\uFFFF-]|\\.)+)['"]*\]/,
+    ATTR: /\[\s*((?:[\w\u00c0-\uFFFF-]|\\.)+)\s*(?:(\S?=)\s*(['"]*)(.*?)\3|)\s*\]/,
+    TAG: /^((?:[\w\u00c0-\uFFFF\*-]|\\.)+)/,
     CHILD: /:(only|nth|last|first)-child(?:\((even|odd|[\dn+-]*)\))?/,
     POS: /:(nth|eq|gt|lt|first|last|even|odd)(?:\((\d*)\))?(?=[^-]|$)/,
-    PSEUDO: /:((?:[\w\u00c0-\uFFFF_-]|\\.)+)(?:\((['"]*)((?:\([^\)]+\)|[^\2\(\)]*)+)\2\))?/
+    PSEUDO: /:((?:[\w\u00c0-\uFFFF-]|\\.)+)(?:\((['"]*)((?:\([^\)]+\)|[^\2\(\)]*)+)\2\))?/
   },
+  leftMatch: {},
   attrMap: {
     "class": "className",
     "for": "htmlFor"
@@ -579,7 +601,7 @@ var Expr = Sizzle.selectors = {
     PSEUDO: function(match, curLoop, inplace, result, not){
       if ( match[1] === "not" ) {
         // If we're dealing with a complex expression, or a simple one
-        if ( chunker.exec(match[3]).length > 1 || /^\w/.test(match[3]) ) {
+        if ( ( chunker.exec(match[3]) || "" ).length > 1 || /^\w/.test(match[3]) ) {
           match[3] = Sizzle(match[3], null, null, curLoop);
         } else {
           var ret = Sizzle.filter(match[3], curLoop, inplace, true ^ not);
@@ -695,7 +717,7 @@ var Expr = Sizzle.selectors = {
       } else if ( name === "not" ) {
         var not = match[3];
 
-        for ( i = 0, l = not.length; i < l; i++ ) {
+        for ( var i = 0, l = not.length; i < l; i++ ) {
           if ( not[i] === elem ) {
             return false;
           }
@@ -802,6 +824,7 @@ var origPOS = Expr.match.POS;
 
 for ( var type in Expr.match ) {
   Expr.match[ type ] = new RegExp( Expr.match[ type ].source + /(?![^\[]*\])(?![^\(]*\))/.source );
+  Expr.leftMatch[ type ] = new RegExp( /(^(?:.|\r|\n)*?)/.source + Expr.match[ type ].source );
 }
 
 var makeArray = function(array, results) {
@@ -847,6 +870,13 @@ var sortOrder;
 
 if ( document.documentElement.compareDocumentPosition ) {
   sortOrder = function( a, b ) {
+    if ( !a.compareDocumentPosition || !b.compareDocumentPosition ) {
+      if ( a == b ) {
+        hasDuplicate = true;
+      }
+      return 0;
+    }
+
     var ret = a.compareDocumentPosition(b) & 4 ? -1 : a === b ? 0 : 1;
     if ( ret === 0 ) {
       hasDuplicate = true;
@@ -855,6 +885,13 @@ if ( document.documentElement.compareDocumentPosition ) {
   };
 } else if ( "sourceIndex" in document.documentElement ) {
   sortOrder = function( a, b ) {
+    if ( !a.sourceIndex || !b.sourceIndex ) {
+      if ( a == b ) {
+        hasDuplicate = true;
+      }
+      return 0;
+    }
+
     var ret = a.sourceIndex - b.sourceIndex;
     if ( ret === 0 ) {
       hasDuplicate = true;
@@ -863,11 +900,18 @@ if ( document.documentElement.compareDocumentPosition ) {
   };
 } else if ( document.createRange ) {
   sortOrder = function( a, b ) {
+    if ( !a.ownerDocument || !b.ownerDocument ) {
+      if ( a == b ) {
+        hasDuplicate = true;
+      }
+      return 0;
+    }
+
     var aRange = a.ownerDocument.createRange(), bRange = b.ownerDocument.createRange();
-    aRange.selectNode(a);
-    aRange.collapse(true);
-    bRange.selectNode(b);
-    bRange.collapse(true);
+    aRange.setStart(a, 0);
+    aRange.setEnd(a, 0);
+    bRange.setStart(b, 0);
+    bRange.setEnd(b, 0);
     var ret = aRange.compareBoundaryPoints(Range.START_TO_END, bRange);
     if ( ret === 0 ) {
       hasDuplicate = true;
@@ -1114,10 +1158,6 @@ var posProcess = function(selector, context){
 
   return Sizzle.filter( later, tmpSet );
 };
-
-// EXPOSE
-
-// window.Sizzle = Sizzle;
 
 // EXPOSE qooxdoo variant
 

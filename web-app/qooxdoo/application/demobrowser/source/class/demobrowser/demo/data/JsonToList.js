@@ -21,6 +21,9 @@
 
 #asset(demobrowser/demo/data/list.json)
 #asset(qx/icon/${qx.icontheme}/16/mimetypes/*)
+#tag(databinding)
+#tag(store)
+#tag(list controller)
 
 ************************************************************************ */
 

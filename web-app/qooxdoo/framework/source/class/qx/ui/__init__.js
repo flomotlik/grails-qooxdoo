@@ -30,7 +30,7 @@
  * }, this);
  * </pre>
  *
- * Make sure you also check the <a href="http://qooxdoo.org/documentation/0.8/helloworld">
+ * Make sure you also check the <a href="http://qooxdoo.org/documentation/1.0/helloworld">
  * "hello world" tutorial</a> for a minimal working application with GUI elements.
  *
  * Here is a *topical grouping* of useful widgets and packages for GUI creation:
@@ -50,7 +50,7 @@
  *     {@link qx.ui.tree.Tree}); {@link qx.ui.table}
  *
  *   * <b>Effects:</b>
- *     {@link qx.fx qx.fx (outside this package)}; {@link popup} (containing {@link qx.ui.popup.ToolTip ToolTips});
+ *     {@link qx.fx qx.fx (outside this package)}; {@link popup}; {@link qx.ui.tooltip.ToolTip ToolTips}
  *
  *   * <b>Making it all work:</b>
  *     {@link qx.event};

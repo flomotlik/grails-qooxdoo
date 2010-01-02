@@ -40,7 +40,6 @@ qx.Class.define("qx.event.type.Mouse",
 
   members :
   {
-
     // overridden
     init : function(nativeEvent, target, relatedTarget, canBubble, cancelable)
     {
@@ -52,6 +51,27 @@ qx.Class.define("qx.event.type.Mouse",
 
       return this;
     },
+
+
+    // overridden
+    _cloneNativeEvent : function(nativeEvent, clone)
+    {
+      var clone = this.base(arguments, nativeEvent, clone);
+
+      clone.button = nativeEvent.button;
+      clone.clientX = nativeEvent.clientX;
+      clone.clientY = nativeEvent.clientY;
+      clone.pageX = nativeEvent.pageX;
+      clone.pageY = nativeEvent.pageY;
+      clone.screenX = nativeEvent.screenX;
+      clone.screenY = nativeEvent.screenY;
+      clone.wheelDelta = nativeEvent.wheelDelta;
+      clone.detail = nativeEvent.detail;
+      clone.srcElement = nativeEvent.srcElement;
+
+      return clone;
+    },
+
 
 
     /** {Map} Contains the button ID to identifier data. */
@@ -224,7 +244,7 @@ qx.Class.define("qx.event.type.Mouse",
      * the origin of the screen coordinate system.
      *
      * Note: This value is usually not very useful unless you want to
-     * position a native popup window at this coordiante.
+     * position a native popup window at this coordinate.
      *
      * @return {Integer} The horizontal mouse position on the screen.
      */
@@ -238,40 +258,12 @@ qx.Class.define("qx.event.type.Mouse",
      * the origin of the screen coordinate system.
      *
      * Note: This value is usually not very useful unless you want to
-     * position a native popup window at this coordiante.
+     * position a native popup window at this coordinate.
      *
      * @return {Integer} The vertical mouse position on the screen.
      */
     getScreenTop : function() {
       return this._native.screenY;
-    },
-
-
-    /**
-     * Get the amount the wheel has been scrolled
-     *
-     * @return {Integer} Scroll wheel movement
-     */
-    getWheelDelta : qx.core.Variant.select("qx.client",
-    {
-      "default" : function() {
-        return -(this._native.wheelDelta / 40);
-      },
-
-      "gecko" : function() {
-        return this._native.detail;
-      },
-
-      "webkit" : function()
-      {
-        // TODO: Change this line as soon as bug #2274 is fixed!
-        if (window.navigator.userAgent.indexOf("Chrome") !== -1) {
-          return -(this._native.wheelDelta / 120);
-        } else {
-          return -(this._native.wheelDelta / 40);
-        }
-      }
-
-    })
+    }
   }
 });

@@ -242,6 +242,20 @@ qx.Theme.define("qx.theme.modern.Appearance",
       }
     },
 
+    "hover-button" :
+    {
+      alias : "atom",
+      include : "atom",
+
+      style : function(states)
+      {
+        return {
+          decorator : states.hovered ? "selected" : undefined,
+          textColor : states.hovered ? "text-selected" : undefined
+        }
+      }
+    },
+
     "splitbutton" : {},
     "splitbutton/button" : "button",
     "splitbutton/arrow" :
@@ -616,8 +630,8 @@ qx.Theme.define("qx.theme.modern.Appearance",
           // since the scroll container disregards the min size of the scrollbars
           // we have to set the min size of the scroll area to ensure that the
           // scrollbars always have a usable size.
-          minWidth : 64,
-          minHeight : 64
+          minWidth : 50,
+          minHeight : 50
         };
       }
     },
@@ -651,6 +665,10 @@ qx.Theme.define("qx.theme.modern.Appearance",
     {
       style : function(states)
       {
+        if (states["native"]) {
+          return {};
+        }
+
         return {
           width     : states.horizontal ? undefined : 16,
           height    : states.horizontal ? 16 : undefined,
@@ -687,8 +705,8 @@ qx.Theme.define("qx.theme.modern.Appearance",
 
         return {
           decorator : decorator,
-          minHeight : states.horizontal ? undefined : 14,
-          minWidth  : states.horizontal ? 14 : undefined
+          minHeight : states.horizontal ? undefined : 9,
+          minWidth  : states.horizontal ? 9 : undefined
         };
       }
     },
@@ -838,10 +856,17 @@ qx.Theme.define("qx.theme.modern.Appearance",
 
       style : function(states)
       {
+        var decorator;
+        if (states.dragover) {
+          decorator = states.selected ? "selected-dragover" : "dragover";
+        } else {
+          decorator = states.selected ? "selected" : undefined;
+        }
+
         return {
-          padding   : 4,
+          padding   : states.dragover ? [4, 4, 2, 4] : 4,
           textColor : states.selected ? "text-selected" : undefined,
-          decorator : states.selected ? "selected" : undefined
+          decorator : decorator
         };
       }
     },
@@ -1490,7 +1515,7 @@ qx.Theme.define("qx.theme.modern.Appearance",
         return {
           backgroundColor : "background-tip",
           padding : [ 1, 3, 2, 3 ],
-          offset : [ 5, 5, 20, 5 ]
+          offset : [ 15, 5, 5, 5 ]
         };
       }
     },
@@ -1506,7 +1531,8 @@ qx.Theme.define("qx.theme.modern.Appearance",
         return {
           textColor: "text-selected",
           placeMethod: "widget",
-          offsetRight: 15,
+          offset: [0, 0, 0, 14],
+          marginTop: -2,
           position: "right-top",
           showTimeout: 100,
           hideTimeout: 10000,
@@ -2046,7 +2072,8 @@ qx.Theme.define("qx.theme.modern.Appearance",
           spacingX : 6,
           spacingY : 1,
           iconColumnWidth : 16,
-          arrowColumnWidth : 4
+          arrowColumnWidth : 4,
+          placementModeY : states.submenu || states.contextmenu ? "best-fit" : "keep-align"
         };
 
         if (states.submenu)
@@ -2056,6 +2083,46 @@ qx.Theme.define("qx.theme.modern.Appearance",
         }
 
         return result;
+      }
+    },
+
+    "menu/slidebar" : "menu-slidebar",
+
+    "menu-slidebar" : "widget",
+
+    "menu-slidebar-button" :
+    {
+      style : function(states)
+      {
+        return {
+          decorator : states.hovered  ? "selected" : undefined,
+          padding : 7,
+          center : true
+        };
+      }
+    },
+
+    "menu-slidebar/button-backward" :
+    {
+      include : "menu-slidebar-button",
+
+      style : function(states)
+      {
+        return {
+          icon : states.hovered ? "decoration/arrows/up-invert.png" : "decoration/arrows/up.png"
+        };
+      }
+    },
+
+    "menu-slidebar/button-forward" :
+    {
+      include : "menu-slidebar-button",
+
+      style : function(states)
+      {
+        return {
+          icon : states.hovered ? "decoration/arrows/down-invert.png" : "decoration/arrows/down.png"
+        };
       }
     },
 
@@ -2126,6 +2193,8 @@ qx.Theme.define("qx.theme.modern.Appearance",
 
     "menu-button/arrow" :
     {
+      include : "image",
+
       style : function(states)
       {
         return {
@@ -2498,14 +2567,17 @@ qx.Theme.define("qx.theme.modern.Appearance",
       alias : "atom",
       style : function(states)
       {
+        var fileType = qx.bom.client.Engine.MSHTML ? ".gif" : ".png";
         return {
           minWidth  : 13,
           minHeight : 20,
           padding   : states.hovered ? [ 3, 4, 2, 4 ] : [ 3, 4 ],
           decorator : states.hovered ? "table-header-cell-hovered" : "table-header-cell",
-          sortIcon  : states.sorted ?
-              (states.sortedAscending ? "decoration/table/ascending.png" : "decoration/table/descending.png")
-              : undefined
+          sortIcon  : states.sorted
+            ? (states.sortedAscending  
+              ? "decoration/table/ascending" + fileType
+              : "decoration/table/descending" + fileType)
+            : undefined
         }
       }
     },
@@ -2702,7 +2774,26 @@ qx.Theme.define("qx.theme.modern.Appearance",
     },
     "cell-atom" : "cell",
     "cell-date" : "cell",
-    "cell-html" : "cell"
+    "cell-html" : "cell",
 
+
+
+    /*
+    ---------------------------------------------------------------------------
+      HTMLAREA
+    ---------------------------------------------------------------------------
+    */
+
+    "htmlarea" :
+    {
+      "include" : "widget",
+
+      style : function(states)
+      {
+        return {
+          backgroundColor : "white"
+        }
+      }
+    }
   }
 });

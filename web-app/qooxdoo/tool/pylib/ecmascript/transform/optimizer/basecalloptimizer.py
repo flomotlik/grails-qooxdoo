@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -61,5 +61,24 @@ def patch(node):
             patchCount += 1
 
     return patchCount
+
+
+if __name__ == "__main__":
+    cls = """qx.Class.define("qx.Car", {
+      extend: qx.core.Object,
+      construct : function() {
+        this.base(arguments, "2")
+      },
+      members : {
+        foo : function() {
+          return this.base(arguments)
+        }
+      }
+    })"""
+    
+    node = treeutil.compileString(cls)
+    patch(node)
+    
+    print node.toJavascript()
 
 

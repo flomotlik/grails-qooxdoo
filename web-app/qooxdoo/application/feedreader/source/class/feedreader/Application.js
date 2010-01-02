@@ -85,7 +85,7 @@ qx.Class.define("feedreader.Application",
         qx.log.appender.Console;
       }
 
-      qx.io2.PartLoader.getInstance().addListener("partLoaded", function(e) {
+      qx.io.PartLoader.getInstance().addListener("partLoaded", function(e) {
         this.debug("part loaded: " + e.getData().getName());
       }, this);
 
@@ -106,6 +106,11 @@ qx.Class.define("feedreader.Application",
       this.__treeView.getRoot().getChildren()[0].setOpen(true);
       this.__treeView.getRoot().getChildren()[1].setOpen(true);
       this.__treeView.setHideRoot(true);
+      
+      // preselect the qooxdoo feed      
+      this.__treeController.getSelection().push(
+        this.__staticFeedFolder.getFeeds().getItem(0)
+      );      
     },
 
 
@@ -145,6 +150,11 @@ qx.Class.define("feedreader.Application",
       this.__staticFeedFolder.getFeeds().push(
         new feedreader.model.Feed(
           "JScript Team Blog", "http://blogs.msdn.com/jscript/rss.xml", "static"
+        )
+      );
+      this.__staticFeedFolder.getFeeds().push(
+        new feedreader.model.Feed(
+          "Daring Fireball", "http://daringfireball.net/index.xml", "static"
         )
       );
       this.__staticFeedFolder.getFeeds().push(
@@ -236,9 +246,9 @@ qx.Class.define("feedreader.Application",
       this.__listController.getSelection().addListener(
         "change" , this._listControllerChange, this
       );
-      // register a handler for the change of the trr selection
-      this.__treeController.getSelection().addListener(
-        "change", this._treeControllerChange, this
+      // register a handler for the change of the model of the list
+      this.__listController.addListener(
+        "changeModel", this._treeControllerChange, this
       );
 
       // binding for showing the loading image in the list
@@ -252,7 +262,6 @@ qx.Class.define("feedreader.Application",
       this.__treeController.bind(
         "selection[0].category", this.__toolBarView.getRemoveButton(), "enabled", options
       );
-
     },
 
 
@@ -315,10 +324,6 @@ qx.Class.define("feedreader.Application",
      * Event handler for a change of the selection of the tree.
      */
     _treeControllerChange : function(ev) {
-      // only act if something new is selected
-      if (ev.getData().type != "add") {
-        return;
-      }
       // get the selected feed
       var feed = this.__treeController.getSelection().getItem(0);
       // restore the last selected feed
@@ -407,19 +412,19 @@ qx.Class.define("feedreader.Application",
     {
       var commands = {};
 
-      commands.reload = new qx.event.Command("Control+R");
+      commands.reload = new qx.ui.core.Command("Control+R");
       commands.reload.addListener("execute", this.reload, this);
 
-      commands.about = new qx.event.Command("F1");
+      commands.about = new qx.ui.core.Command("F1");
       commands.about.addListener("execute", this.showAbout, this);
 
-      commands.preferences = new qx.event.Command("Control+P");
+      commands.preferences = new qx.ui.core.Command("Control+P");
       commands.preferences.addListener("execute", this.showPreferences, this);
 
-      commands.addFeed = new qx.event.Command("Control+A");
+      commands.addFeed = new qx.ui.core.Command("Control+A");
       commands.addFeed.addListener("execute", this.showAddFeed, this);
 
-      commands.removeFeed = new qx.event.Command("Control+D");
+      commands.removeFeed = new qx.ui.core.Command("Control+D");
       commands.removeFeed.addListener("execute", this.removeFeed, this);
 
       this.__commands = commands;
@@ -430,7 +435,7 @@ qx.Class.define("feedreader.Application",
      * Get the command with the given command id
      *
      * @param commandId {String} the command's command id
-     * @return {qx.event.Command} The command
+     * @return {qx.ui.core.Command} The command
      */
     getCommand : function(commandId) {
       return this.__commands[commandId];
@@ -499,7 +504,7 @@ qx.Class.define("feedreader.Application",
      */
     showPreferences : function()
     {
-      qx.io2.PartLoader.require(["settings"], function()
+      qx.io.PartLoader.require(["settings"], function()
       {
         // if the window is not created
         if (!this.__prefWindow)
@@ -531,7 +536,7 @@ qx.Class.define("feedreader.Application",
      */
     showAddFeed : function()
     {
-      qx.io2.PartLoader.require(["addfeed"], function()
+      qx.io.PartLoader.require(["addfeed"], function()
       {
         // if the window is not created
         if (!this.__addFeedWindow)
@@ -559,9 +564,10 @@ qx.Class.define("feedreader.Application",
 
   destruct : function()
   {
-    this._disposeFields("__commands");
+    this.__commands = null;
     this._disposeObjects("__toolBarView", "__listView", "__articleView", "__treeView",
         "__feedFolder", "__horizontalSplitPane", "__verticalSplitPane", "__header",
-        "__staticFeedFolder", "__userFeedFolder", "__treeController", "__listController");
+        "__staticFeedFolder", "__userFeedFolder", "__treeController", "__listController",
+        "__prefWindow", "__addFeedWindow");
   }
 });

@@ -54,17 +54,6 @@ qx.Class.define("qx.theme.manager.Appearance",
 
   properties :
   {
-    /** currently used appearance theme
-     * Deprecated - use the property {@link #theme} instead.
-     * @deprecated
-     */
-    appearanceTheme :
-    {
-      check : "Theme",
-      nullable : true,
-      event : "changeAppearanceTheme"
-    },
-
     /** currently used appearance theme */
     theme :
     {
@@ -86,7 +75,9 @@ qx.Class.define("qx.theme.manager.Appearance",
 
   members :
   {
-
+    /**
+     * @lint ignoreReferenceField(__defaultStates)
+     */
     __defaultStates : {},
     __styleCache : null,
     __aliasMap : null,
@@ -328,6 +319,6 @@ qx.Class.define("qx.theme.manager.Appearance",
   */
 
   destruct : function() {
-    this._disposeFields("__styleCache", "__aliasMap");
+    this.__styleCache = this.__aliasMap = null;
   }
 });

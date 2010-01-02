@@ -143,7 +143,7 @@ qx.Class.define("qx.ui.table.selection.Model",
 
     // selectionMode property modifier
     _applySelectionMode : function(selectionMode) {
-      this.clearSelection();
+      this.resetSelection();
     },
 
 
@@ -253,17 +253,31 @@ qx.Class.define("qx.ui.table.selection.Model",
 
 
     /**
-     * Clears the selection.
-     *
-     * @return {void}
+     * Resets (clears) the selection.
      */
-    clearSelection : function()
+    resetSelection : function()
     {
       if (!this.isSelectionEmpty())
       {
-        this._clearSelection();
+        this._resetSelection();
         this._fireChangeSelection();
       }
+    },
+
+
+    /**
+     * Clears the selection.
+     *
+     * @deprecated Use 'resetSelection' instead.
+     */
+    clearSelection : function()
+    {
+      qx.log.Logger.deprecatedMethodWarning(
+        arguments.callee,
+        "Use 'resetSelection' instead"
+      );
+
+      this.resetSelection();
     },
 
 
@@ -411,6 +425,11 @@ qx.Class.define("qx.ui.table.selection.Model",
               }
             }
           }
+          catch (e)
+          {
+            // IE doesn't execute the "finally" block if no "catch" block is present
+            throw e;
+          }
           finally
           {
             this.setBatchMode(false);
@@ -419,7 +438,7 @@ qx.Class.define("qx.ui.table.selection.Model",
           return;
       }
 
-      this._clearSelection();
+      this._resetSelection();
       this._addSelectionInterval(fromIndex, toIndex);
 
       this._fireChangeSelection();
@@ -529,15 +548,29 @@ qx.Class.define("qx.ui.table.selection.Model",
 
 
     /**
-     * Clears the selection, but doesn't inform the listeners.
-     *
-     * @return {void}
+     * Resets (clears) the selection, but doesn't inform the listeners.
      */
-    _clearSelection : function()
+    _resetSelection : function()
     {
       this.__selectedRangeArr = [];
       this.__anchorSelectionIndex = -1;
       this.__leadSelectionIndex = -1;
+    },
+
+
+    /**
+     * Clears the selection, but doesn't inform the listeners.
+     *
+     * @deprecated Use '_resetSelection' instead.
+     */
+    _clearSelection : function()
+    {
+      qx.log.Logger.deprecatedMethodWarning(
+        arguments.callee,
+        "Use '_resetSelection' instead."
+      );
+
+      this._resetSelection();
     },
 
 
@@ -652,6 +685,6 @@ qx.Class.define("qx.ui.table.selection.Model",
   */
 
   destruct : function() {
-    this._disposeFields("__selectedRangeArr");
+    this.__selectedRangeArr = null;
   }
 });

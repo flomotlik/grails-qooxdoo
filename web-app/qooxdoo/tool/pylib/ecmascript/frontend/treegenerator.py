@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -20,6 +20,7 @@
 
 from ecmascript.frontend import tree
 
+ATOMS = ["string", "number", "identifier"]
 
 SINGLE_LEFT_OPERATORS = ["NOT", "BITNOT", "ADD", "SUB", "INC", "DEC"]
 
@@ -310,8 +311,10 @@ def createSyntaxTree (tokenArr):
 
 
 
-def readExpression (stream):
-    return readStatement(stream, True)
+def readExpression (stream, **kwargs):
+    if not 'inStatementList' in kwargs:
+        kwargs['inStatementList'] = True  # this means: allow list expressions .. , ..
+    return readStatement(stream, True, **kwargs)
 
 
 
@@ -350,6 +353,7 @@ def readStatement (stream, expressionMode = False, overrunSemicolon = True, inSt
         if item and commentsChild != None:
             variable.removeChild(commentsChild)
             item.addChild(commentsChild, 0)
+
     elif stream.currIsType("reserved", "FUNCTION"):
         item = createItemNode("function", stream)
         stream.next(item)
@@ -371,14 +375,6 @@ def readStatement (stream, expressionMode = False, overrunSemicolon = True, inSt
             readParamList(item, stream)
             item = readObjectOperation(stream, item)
     elif stream.currIsType("reserved", "VOID"):
-        #stream.next(item)
-        #item = createItemNode("void", stream)
-        #stream.next(item)
-        #item.addChild(readStatement(stream, expressionMode))
-        #stream.expectCurrType("token", "RP")
-        #stream.next(item, True)
-        #item = readObjectOperation(stream, item)
-        ## [BUG #2599] ported this from TYPEOF operator
         item = createItemNode("void", stream)
         item.set("left", True)
         stream.next(item)
@@ -387,6 +383,7 @@ def readStatement (stream, expressionMode = False, overrunSemicolon = True, inSt
         igroup = createItemNode("group", stream)
         stream.next(igroup)
         igroup.addChild(readStatement(stream, expressionMode))
+        #igroup.addChild(readExpression(stream, ))   # -- should be like this, but it doesn't work!?
         stream.expectCurrType("token", "RP")
         stream.next(igroup, True)
         oper = readObjectOperation(stream, igroup)
@@ -439,9 +436,10 @@ def readStatement (stream, expressionMode = False, overrunSemicolon = True, inSt
         stream.next(item, True)
     elif expressionMode and stream.currIsType("token", "LC"):
         item = readMap(stream)
-        if stream.currIsType("token", "LB"):
+        if stream.currIsType("token", "LB") or stream.currIsType("token", "DOT"):  # {...}[] or {...}.___
             item = readObjectOperation(stream, item)
-    elif expressionMode and stream.currIsType("token", "LB"):
+    #elif expressionMode and stream.currIsType("token", "LB"):
+    elif stream.currIsType("token", "LB"):
         item = readArray(stream)
         if stream.currIsType("token", "LB"):
             item = readObjectOperation(stream, item)
@@ -545,8 +543,12 @@ def readStatement (stream, expressionMode = False, overrunSemicolon = True, inSt
                 expectedDesc = "statement"
             raiseSyntaxException(stream.curr(), expectedDesc)
 
+    advanced = False # currently unused - I wanted to use this to detect recursive processing, but it somehow doesn't work
     # check whether this is an operation
-    if stream.currIsType("token", MULTI_TOKEN_OPERATORS) or stream.currIsType("reserved", MULTI_PROTECTED_OPERATORS) or (stream.currIsType("token", SINGLE_RIGHT_OPERATORS) and not stream.hadEolBefore()):
+    if (stream.currIsType("token", MULTI_TOKEN_OPERATORS) 
+    or stream.currIsType("reserved", MULTI_PROTECTED_OPERATORS) 
+    or (stream.currIsType("token", SINGLE_RIGHT_OPERATORS) and not stream.hadEolBefore())):
+        advanced = True
         # its an operation -> We've already parsed the first operand (in item)
         parsedItem = item
 
@@ -590,18 +592,28 @@ def readStatement (stream, expressionMode = False, overrunSemicolon = True, inSt
 
 
     # check whether this is a combined statement, e.g. "bla(), i++"
-    if not expressionMode and not inStatementList and stream.currIsType("token", "COMMA"):
-    #[BUG #2599] if not inStatementList and stream.currIsType("token", "COMMA"):
-        statementList = createItemNode("statementList", stream)
-        statementList.addChild(item)
-        while stream.currIsType("token", "COMMA"):
-            stream.next(statementList)
-            statementList.addChild(readStatement(stream, False, False, True))
-        item = statementList
+    if stream.currIsType("token", "COMMA"):
+        advanced = True
+        if not inStatementList:  # only create a list node if this is the beginning
+            expressionList = createItemNode("expressionList", stream)
+            expressionList.addChild(item)
+            while stream.currIsType("token", "COMMA"):
+                stream.next(expressionList)
+                if expressionMode:
+                    expressionList.addChild(readStatement(stream, True, False, True))
+                else:
+                    expressionList.addChild(readStatement(stream, False, False, True))
+            item = expressionList
 
     # go over the optional semicolon
-    if not expressionMode and overrunSemicolon and stream.currIsType("token", "SEMICOLON"):
+    if  stream.currIsType("token", "SEMICOLON") and not expressionMode and overrunSemicolon:
+        advanced = True
         stream.next(item, True)
+
+    #if expressionMode and not advanced: # we have an item but couldn't use the next token in stream
+    if expressionMode and stream.currType() in ATOMS : # we have an item but couldn't use the next token in stream
+        # must be an invalid expression
+        raiseSyntaxException(stream.curr(), "operator or terminator")
 
 
     item.set("eolBefore", eolBefore)
@@ -725,6 +737,8 @@ def readParamList (node, stream):
     # This means that all comments following are after item
     stream.next(params, True)
 
+    return
+
 
 ##
 # Parses a block of source code. Most work is delegated to stream.next() and
@@ -828,7 +842,7 @@ def readInstantiation(stream):
 
     # Could be a simple variable or a just-in-time function declaration (closure)
     # Read this as expression
-    stmnt = readStatement(stream, True, False)
+    stmnt = readStatement(stream, True, False, True)
     item.addListChild("expression", stmnt)
 
     return item
@@ -853,7 +867,7 @@ def readLoop(stream):
             # Read the optional first statement
             first = createItemNode("first", stream)
             item.addChild(first)
-            first.addChild(readStatement(stream, False, False))
+            first.addChild(readStatement(stream, expressionMode=False, overrunSemicolon=False))
             stream.comment(first, True)
 
         if stream.currIsType("token", "SEMICOLON"):
@@ -865,7 +879,7 @@ def readLoop(stream):
                 # Read the optional second expression
                 second = createItemNode("second", stream)
                 item.addChild(second)
-                second.addChild(readExpression(stream))
+                second.addChild(readStatement(stream, expressionMode=True, inStatementList=False))
                 stream.comment(second, True)
 
             stream.expectCurrType("token", "SEMICOLON")
@@ -875,7 +889,7 @@ def readLoop(stream):
                 # Read the optional third statement
                 third = createItemNode("third", stream)
                 item.addChild(third)
-                third.addChild(readStatement(stream, False, False))
+                third.addChild(readStatement(stream, expressionMode=False, overrunSemicolon=False))
                 stream.comment(third, True)
 
         elif stream.currIsType("token", "RP"):

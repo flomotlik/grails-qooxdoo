@@ -135,6 +135,10 @@ qx.Class.define("inspector.widgets.WidgetsWindow", {
       if (parentWidget[kids] == undefined) {
         if (kids === "getChildren") {
           kids = "_getChildren";
+
+          if (parentWidget[kids] == undefined) {
+            return;
+          }
         } else {
           return;
         }
@@ -450,5 +454,11 @@ qx.Class.define("inspector.widgets.WidgetsWindow", {
       }
     }
 
+  },
+  
+  destruct : function()
+  {
+    this._iFrameWindow = null;
+    this._disposeObjects("_reloadButton", "_structureToggle", "_tree");
   }
 });

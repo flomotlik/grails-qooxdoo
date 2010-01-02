@@ -18,8 +18,6 @@
 ************************************************************************ */
 
 /**
- * <h3>EXPERIMENTAL</h3>
- *
  * This is a util class resposnible for serializing qooxdoo objects.
  */
 qx.Class.define("qx.util.Serializer",
@@ -80,6 +78,114 @@ qx.Class.define("qx.util.Serializer",
         var encValue = encodeURIComponent(value);
       }
       return encodeURIComponent(name) + "=" + encValue + "&";
+    },
+
+
+    /**
+     * Serializes the properties of the given qooxdoo object into a native
+     * object.
+     *
+     * @param object {qx.core.Object}
+     *   Any qooxdoo object
+     *
+     * @param qxSerializer {Function}
+     *   Function used for serializing qooxdoo objects stored in the propertys
+     *   of the object. Check for the type of classes <ou want to serialize
+     *   and return the serialized value. In all other cases, just return
+     *   nothing.
+     *
+     * @return {String}
+     *   The serialized object.
+     */
+    toNativeObject : function(object, qxSerializer)
+    {
+      var result;
+
+      // null or undefined
+      if (object == null)
+      {
+        return null;
+      }
+
+      // data array
+      if (qx.Class.hasInterface(object.constructor, qx.data.IListData))
+      {
+        result = [];
+        for (var i = 0; i < object.getLength(); i++)
+        {
+          result.push(qx.util.Serializer.toNativeObject(object.getItem(i),
+                                                        qxSerializer));
+        }
+
+        return result;
+      }
+
+      // other arrays
+      if (qx.lang.Type.isArray(object))
+      {
+        result = [];
+        for (var i = 0; i < object.length; i++)
+        {
+          result.push(qx.util.Serializer.toNativeObject(object[i],
+                                                        qxSerializer));
+        }
+
+        return result;
+      }
+
+      // qooxdoo object
+      if (object instanceof qx.core.Object)
+      {
+        if (qxSerializer != null)
+        {
+          var returnValue = qxSerializer(object);
+
+          // if we have something returned, return that
+          if (returnValue != undefined)
+          {
+            return returnValue;
+          }
+
+          // continue otherwise
+        }
+
+        result = {};
+
+        var properties =
+          qx.util.PropertyUtil.getProperties(object.constructor);
+
+        for (var name in properties)
+        {
+          // ignore property groups
+          if (properties[name].group != undefined)
+          {
+            continue;
+          }
+
+          var value = object["get" + qx.lang.String.firstUp(name)]();
+          result[name] = qx.util.Serializer.toNativeObject(value,
+                                                           qxSerializer);
+        }
+
+        return result;
+      }
+
+      // JavaScript objects
+      if (qx.lang.Type.isObject(object))
+      {
+        result = {};
+
+        for (var key in object)
+        {
+          result[key] = qx.util.Serializer.toNativeObject(object[key],
+                                                          qxSerializer);
+        }
+
+        return result;
+      }
+
+      // all other stuff, including String, Date, RegExp
+      return object;
     },
 
 
@@ -146,6 +252,18 @@ qx.Class.define("qx.util.Serializer",
         }
         return result + "}";
 
+      // javascript objects
+      } else if (qx.lang.Type.isObject(object)) {
+        result += "{";
+        for (var key in object) {
+          result += '"' + key + '":' +
+                    qx.util.Serializer.toJson(object[key], qxSerializer) + ",";
+        }
+        if (result != "{") {
+          result = result.substring(0, result.length - 1);
+        }
+        return result + "}";
+
       // strings
       } else if (qx.lang.Type.isString(object)) {
         // escape
@@ -161,7 +279,6 @@ qx.Class.define("qx.util.Serializer",
 
       // Date and RegExp
       } else if (
-
         qx.lang.Type.isDate(object) ||
         qx.lang.Type.isRegExp(object)
       ) {
@@ -170,6 +287,5 @@ qx.Class.define("qx.util.Serializer",
       // all other stuff
       return object + "";
     }
-
   }
 });

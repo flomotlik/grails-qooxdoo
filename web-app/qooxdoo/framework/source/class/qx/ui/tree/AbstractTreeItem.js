@@ -126,8 +126,7 @@ qx.Class.define("qx.ui.tree.AbstractTreeItem",
     {
       check : "String",
       apply : "_applyLabel",
-      init : "",
-      dispose : true
+      init : ""
     }
   },
 
@@ -209,7 +208,7 @@ qx.Class.define("qx.ui.tree.AbstractTreeItem",
       }
 
       var tree = treeItem.getLayoutParent() ? treeItem.getLayoutParent().getLayoutParent() : 0;
-      if (tree && tree instanceof qx.ui.core.ScrollPane) {
+      if (tree && tree instanceof qx.ui.core.scroll.ScrollPane) {
         return tree.getLayoutParent();
       }
       return null;
@@ -572,6 +571,16 @@ qx.Class.define("qx.ui.tree.AbstractTreeItem",
 
 
     /**
+     * Whether the tree item has a children container
+     *
+     * @return {Boolean} Whether it has a children container
+     */
+    hasChildrenContainer : function() {
+      return this.__childrenContainer;
+    },
+
+
+    /**
      * Get the children container of the item's parent. This function will return
      * <code>null</code>, if the item does not have a parent or is not the root
      * item.
@@ -842,8 +851,11 @@ qx.Class.define("qx.ui.tree.AbstractTreeItem",
 
         var container = this.getChildrenContainer();
 
-        if (treeItem.hasChildren()) {
-          container.remove(treeItem.getChildrenContainer());
+        if (treeItem.hasChildrenContainer()) {
+          var treeItemChildContainer = treeItem.getChildrenContainer();
+          if (container.getChildren().indexOf(treeItemChildContainer) >= 0){ //Sometimes not, see bug 3038
+             container.remove(treeItemChildContainer);
+          }
         }
         qx.lang.Array.remove(this.__children, treeItem);
 

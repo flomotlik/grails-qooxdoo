@@ -257,9 +257,9 @@ qx.Bootstrap.define("qx.log.Logger",
     {
       if (qx.core.Variant.isSet("qx.debug", "on"))
       {
-        var className = clazz.self ? clazz.self.classname : "unknown";
+        var className = clazz.classname || "unknown";
         this.warn(
-          "The method class '"+className+"' is deprecated: " +
+          "The class '"+className+"' is deprecated: " +
           (msg || "Please consult the API documentation of this class for alternatives.")
         );
         this.trace();
@@ -306,6 +306,36 @@ qx.Bootstrap.define("qx.log.Logger",
           (msg || "Please consult the API documentation of this class for alternatives.")
         );
         this.trace();
+      }
+    },
+
+
+    /**
+     * Prints a constant deprecation warning and a stacktrace if the setting
+     * <code>qx.debug</code> is set to <code>on</code> AND the browser supports
+     * __defineGetter__!
+     *
+     * @param clazz {Class} The class the constant is attached to.
+     * @param constant {String} The name of the constant as string.
+     * @param msg {String} Optional message to be printed.
+     */
+    deprecatedConstantWarning : function(clazz, constant, msg)
+    {
+      if (qx.core.Variant.isSet("qx.debug", "on"))
+      {
+        // check if __defineGetter__ is available
+        if (clazz.__defineGetter__) {
+          var self = this;
+          var constantValue = clazz[constant];
+          clazz.__defineGetter__(constant, function() {
+            self.warn(
+              "The constant '"+ constant + "' is deprecated: " +
+              (msg || "Please consult the API documentation for alternatives.")
+            );
+            self.trace();
+            return constantValue;
+          });
+        }
       }
     },
 

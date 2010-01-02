@@ -16,7 +16,6 @@
      * Jonathan Weiß (jonathan_rass)
 
 ************************************************************************ */
-var e;
 qx.Class.define("demobrowser.demo.animation.Save_Dialog",
 {
   extend : qx.application.Standalone,
@@ -79,7 +78,7 @@ qx.Class.define("demobrowser.demo.animation.Save_Dialog",
     {
       this.base(arguments);
 
-      var document = this.getRoot();
+      var doc = this.getRoot();
 
       /* Container widget */
       this.__container = new qx.ui.groupbox.GroupBox().set({
@@ -87,7 +86,7 @@ qx.Class.define("demobrowser.demo.animation.Save_Dialog",
       });
       this.__container.setLayout(new qx.ui.layout.VBox());
 
-      document.add(this.__container, {left:40, top:40});
+      doc.add(this.__container, {left:40, top:40});
 
 
       /* Close button */
@@ -137,7 +136,7 @@ qx.Class.define("demobrowser.demo.animation.Save_Dialog",
       });
       this.__dialog.setLayout(layout2);
 
-      document.add(this.__dialog, {
+      doc.add(this.__dialog, {
         left:65,
         top:125
       });
@@ -146,7 +145,7 @@ qx.Class.define("demobrowser.demo.animation.Save_Dialog",
       this.__dialog.addListenerOnce("appear", this.__prepareEffects, this);
 
       /* Labels  */
-      var label1 = new qx.ui.basic.Label('<b "font-size:12pt;">Do you want to save the changes you made in the document "Untitled"?</b>');
+      var label1 = new qx.ui.basic.Label('<b "font-size:12pt;">Do you want to save the changes you made in the doc "Untitled"?</b>');
       var label2 = new qx.ui.basic.Label("Your changes will be lost if you don't save them.");
 
       label1.setRich(true);

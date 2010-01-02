@@ -40,9 +40,13 @@ class PartBuilder(object):
         self._compiler  = compiler
 
 
+    ##
+    # interface method
+
     def getPackages(self, partIncludes, smartExclude, jobContext, script):
         # Get config settings
         jobConfig                 = jobContext["jobconf"]
+        self._jobconf             = jobConfig
         minPackageSize            = jobConfig.get("packages/sizes/min-package", 0)
         minPackageSizeForUnshared = jobConfig.get("packages/sizes/min-package-unshared", None)
         partsCfg                  = jobConfig.get("packages/parts", {})
@@ -72,23 +76,57 @@ class PartBuilder(object):
         # Collapse parts by package size
         self.collapsePartsBySize(script, minPackageSize, minPackageSizeForUnshared)
 
+        # Size collapsing might introduce new dependencies to the boot part
+        # try to assure a single package
+        if len(script.parts[script.boot].packages) > 1:
+            quickCollapseConfig = { 0 : set((script.parts[script.boot],))}
+            self.collapsePartsByOrder(script, quickCollapseConfig)
+            assert len(script.parts[script.boot].packages) == 1
+
         self._printPartStats(script)
 
         # Post process results
         resultParts = self._getFinalPartData(script)
 
-        resultClasses = self._getFinalClassList(script)
+        #resultClasses = self._getFinalClassList(script)
+        script = self._getFinalClassList1(script)
         #resultClasses = util.dictToList(resultClasses) # turn map into list, easier for upstream methods
 
-        script.parts    = resultParts
-        script.packages = resultClasses
+        #script.parts    = resultParts
+        #script.packages = resultClasses
+
+        if True: #self._console.getLevel() < self._console._levels["info"]: # - not working!
+            self.verifyParts(script.parts, script)
 
         # Return
         # {Map}   resultParts[partId] = [packageId1, packageId2]
         # {Array} resultClasses[packageId] = [class1, class2]
-        return boot, resultParts, resultClasses
+        #return boot, resultParts, resultClasses
+        return resultParts, script
 
 
+    def verifyParts(self, partsMap, script):
+        self._console.info("Verifying Parts...")
+        self._console.indent()
+        for part in partsMap.values():
+            self._console.info("Verifying: %s" % part.name)
+            self._console.indent()
+            # get set of current classes in this part
+            classSet = set()
+            for package in part.packages:
+                classSet.update(package.classes)
+            # check individual class deps are fullfilled in part
+            # alternative: check part.deps against classSet
+            for classId in classSet:
+                classDeps   = self._depLoader.getCombinedDeps(classId, script.variants)
+                loadDeps    = set(x.name for x in classDeps['load'])
+                missingDeps = loadDeps.difference(classSet)
+                if missingDeps:  # there is a load dep not in the part
+                    self._console.warn("Unfullfilled load dependencies of class '%s': %r" % (classId, tuple(missingDeps)))
+            self._console.outdent()
+
+        self._console.outdent()
+        return
     ##
     # create the set of parts, each part with a unique single-bit bit mask
     # @returns {Map} parts = { partName : Part() }
@@ -105,6 +143,8 @@ class PartBuilder(object):
             npart.deps     = partIncludes[partId][:]  # initialize dependencies with defining classes
             if 'expected-load-order' in partsCfg[partId]:
                 npart.collapse_index = partsCfg[partId]['expected-load-order']
+            if 'no-merge-private-package' in partsCfg[partId]:
+                npart.no_merge_private_package = partsCfg[partId]['no-merge-private-package']
             parts[partId]  = npart
             self._console.debug("Part #%s => %s" % (partId, npart.bit_mask))
 
@@ -146,7 +186,7 @@ class PartBuilder(object):
                 continue
 
             # Finally resolve the dependencies
-            partClasses = self._depLoader.resolveDependencies(part.deps, partExcludes, variants)
+            partClasses = self._depLoader.classlistFromInclude(part.deps, partExcludes, variants)
 
             # Remove all unknown classes
             for classId in partClasses[:]:  # need to work on a copy because of changes in the loop
@@ -157,6 +197,7 @@ class PartBuilder(object):
             self._console.debug("Part #%s depends on %s classes" % (part.name, len(partClasses)))
             part.deps = partClasses
 
+        self._console.outdent()
         return parts
 
 
@@ -194,15 +235,39 @@ class PartBuilder(object):
         for package in packages.values():
             for part in parts.values():
                 if package.id & part.bit_mask:
-                    part.packages.append(package.id)
-                    package.parts.append(part.name)
+                    #part.packages.append(package.id)
+                    part.packages.append(package)
+                    #package.parts.append(part.name)
+                    package.parts.append(part)
                     
             package.part_count = len(package.parts)
 
         # Sorting packages of parts
         for part in parts.values():
-            part.packages = self._sortPackages(part.packages, packages)
+            #part.packageIdsSorted = self._sortPackages([x.id for x in part.packages], packages)
+            ## re-map sorting to part.packages
+            #packObjs = []
+            #for pkgId in part.packageIdsSorted:
+            #    packObjs.append(packages[pkgId])
+            #part.packages = packObjs
+            self._sortPartPackages(part)
 
+        # Register dependencies between Packages
+        for package in packages.values():
+            # get all direct deps of this package
+            allDeps = set(())
+            for classId in package.classes:
+                classDeps   = self._depLoader.getCombinedDeps(classId, script.variants)
+                loadDeps    = set(x.name for x in classDeps['load'])
+                allDeps.update(loadDeps)
+
+            # record the other packages in which these dependencies are located
+            for classId in allDeps:
+                for otherpackage in packages.values():
+                    if otherpackage != package and classId in otherpackage.classes:
+                        #print "-- package %s adding dependent package %s" % (package.id, otherpackage.id)
+                        package.packageDeps.add(otherpackage)
+         
         return packages
 
 
@@ -229,8 +294,6 @@ class PartBuilder(object):
         if minPackageSize == None or minPackageSize == 0:
             return
 
-        packages  = script.packages
-        parts     = script.parts
         variants  = script.variants
         self._console.debug("")
         self._console.info("Collapsing parts by package sizes...")
@@ -243,12 +306,21 @@ class PartBuilder(object):
 
         # Start at the end with the sorted list
         # e.g. merge 4->7 etc.
-        allPackages = self._sortPackages(packages.keys(), packages)
+        allPackages = self._sortPackages(script.packages.keys(), script.packages)
         allPackages.reverse()
+
+        # make a dict {part.bit_mask: part}
+        allPartBitMasks = {}
+        [allPartBitMasks.setdefault(x.bit_mask, x) for x in script.parts.values()]
 
         # Test and optimize 'fromId'
         for fromId in allPackages:
-            fromPackage = packages[fromId]
+            # possibly protect part-private package from merging
+            if fromId in allPartBitMasks.keys():
+                if allPartBitMasks[fromId].no_merge_private_package:
+                    self._console.debug("Skipping private package #%s" % (fromId,))
+                    continue
+            fromPackage = script.packages[fromId]
             packageSize = self._computePackageSize(fromPackage, variants) / 1024
             self._console.debug("Package #%s: %sKB" % (fromPackage.id, packageSize))
             # check selectablility
@@ -260,22 +332,14 @@ class PartBuilder(object):
             # assert: the package is shared and smaller than minPackageSize
             #     or: the package is unshared and smaller than minPackageSizeForUnshared
             self._console.indent()
-            self._mergePackage(fromPackage, parts, packages)
+            self._mergePackage(fromPackage, script, script.packages)
+            del script.packages[fromPackage.id]
 
             self._console.outdent()
 
         self._console.outdent()
         self._console.outdent()
 
-
-
-    def _sortPackages(self, packageIds, packages):
-        def keyFunc (pkgId):
-            return packages[pkgId].part_count
-
-        packageIds.sort(key=keyFunc, reverse=True)
-
-        return packageIds
 
 
     def _getPreviousCommonPackage(self, searchPackage, parts, packages):
@@ -323,14 +387,15 @@ class PartBuilder(object):
     # to avoid merging all packages into one "monster" package that all parts
     # share eventually.
 
-    def collapsePartsByOrder(self, script):
+    def collapsePartsByOrder(self, script, collapse_groups=None):
         
         def getCollapseGroupsOrdered(parts, packages):
             # returns dict of parts grouped by collapse index
             # { 0 : set('boot'), 1 : set(part1, part2), 2 : ... }
-            collapseGroups = {}
+            collapseGroups    = {}
             # boot part is always collapse index 0
-            collapseGroups[0] = set((parts['boot'],))
+            boot              = self._jobconf.get("packages/init", "boot")
+            collapseGroups[0] = set((parts[boot],))
 
             for partname in parts:
                 part = parts[partname]
@@ -363,44 +428,45 @@ class PartBuilder(object):
 
         def getUniquePackages(part, collapse_group, packages):
             uniques = {}
-            for packId in part.packages:
-                package = packages[packId]
-                if isUnique(package.id, collapse_group):
-                    uniques[package.id] = package
+            for package in part.packages:
+                if isUnique(package, collapse_group):
+                    if (package.id == part.bit_mask and  # possibly protect "private" package
+                        part.no_merge_private_package):
+                        pass
+                    else:
+                        uniques[package.id] = package
             return uniques
 
         getUniquePackages.key = 'unique'
 
         def getCommonPackages(part, collapse_group, packages):
             commons = {}
-            for packId in part.packages:
-                package = packages[packId]
-                if isCommon(package.id, collapse_group):
+            for package in part.packages:
+                if isCommon(package, collapse_group):
                     commons[package.id] = package
             return commons
 
         getCommonPackages.key = 'common'
 
 
-        def mergeGroupPackages(selectFunc, collapse_group, parts, packages, seen_targets):
+        def mergeGroupPackages(selectFunc, collapse_group, script, seen_targets):
             self._console.debug("collapsing %s packages..." % selectFunc.key)
             self._console.indent()
             curr_targets = set(())
 
             for part in collapse_group:
-                selected_packages = selectFunc(part, collapse_group, packages)
+                selected_packages = selectFunc(part, collapse_group, script.packages)
                 #print "xxx selecteds: %r" % selected_packages
-                for packId in reversed(part.packages):   # start with "smallest" package
-                    package = packages[packId]
+                for package in reversed(part.packages):   # start with "smallest" package
                     if package.id in selected_packages:
-                        mergedPackage, targetPackage = self._mergePackage(package, parts, selected_packages, seen_targets)
+                        mergedPackage, targetPackage = self._mergePackage(package, script, selected_packages, seen_targets)
                         if mergedPackage:  # on success == package
-                            del packages[package.id]  # since we didn't pass in the whole packages struct to _mergePackage
+                            del script.packages[mergedPackage.id]
                             curr_targets.add(targetPackage)
 
             seen_targets.update(curr_targets)
             self._console.outdent()
-            return parts, packages
+            return script.parts, script.packages
         
         # ---------------------------------------------------------------------
 
@@ -411,7 +477,8 @@ class PartBuilder(object):
         self._console.info("Collapsing parts by collapse order...")
         self._console.indent()
 
-        collapse_groups = getCollapseGroupsOrdered(parts, packages)
+        if collapse_groups == None:
+            collapse_groups = getCollapseGroupsOrdered(parts, packages)
         seen_targets    = set(())
 
         for collidx in sorted(collapse_groups.keys()): # go through groups in load order
@@ -419,8 +486,8 @@ class PartBuilder(object):
             self._console.debug("Collapse group %d %r" % (collidx, [x.name for x in collgrp]))
             self._console.indent()
 
-            parts, packages = mergeGroupPackages(getUniquePackages, collgrp, parts, packages, seen_targets)
-            parts, packages = mergeGroupPackages(getCommonPackages, collgrp, parts, packages, seen_targets)
+            parts, packages = mergeGroupPackages(getUniquePackages, collgrp, script, seen_targets)
+            parts, packages = mergeGroupPackages(getCommonPackages, collgrp, script, seen_targets)
 
             self._console.outdent()
 
@@ -428,10 +495,37 @@ class PartBuilder(object):
         return
 
 
-    def _mergePackage(self, fromPackage, parts, packages, seen_targets=None):
+    def _mergePackage(self, fromPackage, script, packages, seen_targets=None):
+
+        def updatePartDependencies(part, packageDeps):
+            for package in packageDeps:
+                if package not in part.packages:
+                    # add package
+                    #print "-- adding dependent package %s to part %s (because of package %s)" % (package.id, part.name, toPackage.id)
+                    part.packages.append(package)
+                    # sort packages
+                    self._sortPartPackages(part)
+                    #print "-- part %s packages after sorting: %r" % (part.name, [x.id for x in part.packages])
+                    # recurse
+                    updatePartDependencies(part, package.packageDeps)
+            return
+
+        def mergeContAndDeps(fromPackage, toPackage):
+            # Merging package content
+            toPackage.classes.extend(fromPackage.classes)
+            # Merging package dependencies
+            depsDelta = fromPackage.packageDeps.difference(set((toPackage,))) # make sure toPackage is not included
+            self._console.debug("Adding packages dependencies to target package: %r" % ([x.id for x in depsDelta],))
+            toPackage.packageDeps.update(depsDelta)
+            toPackage.packageDeps.difference_update(set((fromPackage,))) # remove potential dependency to fromPackage
+            self._console.debug("Target package #%s now depends on: %r" % (toPackage.id, [x.id for x in toPackage.packageDeps]))
+            return toPackage
+
+        # ----------------------------------------------------------------------
+
         # find toPackage
         toPackage = None
-        for toPackage in self._getPreviousCommonPackage(fromPackage, parts, packages):
+        for toPackage in self._getPreviousCommonPackage(fromPackage, script.parts, packages):
             if toPackage == None:
                 break
             elif seen_targets != None:
@@ -442,18 +536,34 @@ class PartBuilder(object):
         if toPackage == None:
             return None, None
         self._console.debug("Merge package #%s into #%s" % (fromPackage.id, toPackage.id))
+        self._console.indent()
+
+        # Merge package content and dependencies
+        toPackage = mergeContAndDeps(fromPackage, toPackage)
+
+        # Update package dependencies
+        for package in script.packages.values():
+            if fromPackage in package.packageDeps:
+                # replace fromPackage with toPackage
+                package.packageDeps.difference_update(set((fromPackage,)))
+                package.packageDeps.update(set((toPackage,)))
 
         # Update part information
-        for part in parts.values():
-            if fromPackage.id in part.packages:
-                part.packages.remove(fromPackage.id)
+        for part in script.parts.values():
+            # remove the merged package
+            if fromPackage in part.packages:
+                # we can simply remove the package, as we know the target package is also there
+                part.packages.remove(fromPackage)
+            # check additional dependencies for all parts
+            if toPackage in part.packages:
+                # this could be a part method
+                # if the toPackage is in part, we might need to add additional packages that toPackage now depends on
+                updatePartDependencies(part, fromPackage.packageDeps)
 
-        # Merging package content
-        toPackage.classes.extend(fromPackage.classes)
-        del packages[fromPackage.id]
+        # remove of fromPackage from packages list is easier handled in the caller
         
+        self._console.outdent()
         return fromPackage, toPackage  # to allow caller check for merging and further clean-up fromPackage
-
 
 
     def _getFinalPartData(self, script):
@@ -470,12 +580,22 @@ class PartBuilder(object):
                     else:
                         resultParts[partId].append(toId)
 
+        # re-sort part packages, to clean up ordering issues from merging
+        # - (the issue here is that part packages are only re-sorted during merges
+        #   when actually new packages are added to the part, but *not* when existing
+        #   packages receive a merge package whos package dependencies are already
+        #   fullfilled in the part; still package dependencies among the existing
+        #   packages might change so a re-sorting is necessary to support proper
+        #   load order)
+        for part in script.parts.values():
+            self._sortPartPackages(part)
+
         return resultParts
 
 
 
     def _getFinalClassList(self, script):
-        packages   = script.packages
+        packages   = script.packagesArraySorted()
         variants   = script.variants
         packageIds = self._sortPackages(packages.keys(), packages)
 
@@ -489,6 +609,81 @@ class PartBuilder(object):
 
 
 
+    def _getFinalClassList1(self, script):
+        packages   = script.packages
+        variants   = script.variants
+        packageIds = self._sortPackages(packages.keys(), packages)
+
+        for pkgId in packageIds:
+            packages[pkgId].classes = self._depLoader.sortClasses(packages[pkgId].classes, variants)
+
+        script.packageIdsSorted = packageIds
+
+        return script
+
+
+
+    def _sortPartPackages(self, part):
+        part.packages = self._sortPackages1(part.packages)
+        #part.packages = list(reversed(self._sortPackagesTopological(part.packages)))
+        part.packageIdsSorted = [x.id for x in part.packages]
+        return
+
+
+    def _sortPackages(self, packageIds, packages):  # packages: {pkgId : Package}
+        def keyFunc (pkgId):
+            return packages[pkgId].part_count
+
+        packageIds.sort(key=keyFunc, reverse=True)
+
+        return packageIds
+
+
+    def _sortPackages1(self, packages):  # packages: [Package]
+        def cmpFunc (x, y):
+            if x.part_count != y.part_count:
+                return cmp(x.part_count, y.part_count)
+            else:
+                if x in y.packageDeps:  # y needs x, so x is "larger" (must be earlier)
+                    return 1
+                elif y in x.packageDeps: # other way round
+                    return -1
+                else:
+                    return 0
+
+        #packages.sort(key=lambda x: x.part_count, reverse=True)
+        packages.sort(cmp=cmpFunc, reverse=True)
+        return packages
+
+
+    ##
+    # <currently not used>
+
+    def _sortPackagesTopological(self, packages): # packages : [Package]
+
+        import graph
+        
+        # create graph object
+        gr = graph.digraph()
+
+        # add classes as nodes
+        gr.add_nodes(packages)
+
+        # for each load dependency add a directed edge
+        for package in packages:
+            for dep in package.packageDeps:
+                gr.add_edge(package, dep)
+
+        # cycle check?
+        cycle_nodes = gr.find_cycle()
+        if cycle_nodes:
+            raise RuntimeError("Detected circular dependencies between packages: %r" % cycle_nodes)
+
+        packageList = gr.topological_sorting()
+
+        return packageList
+
+
     def _printPartStats(self, script):
         packages = script.packages
         parts    = script.parts
@@ -498,17 +693,19 @@ class PartBuilder(object):
         packageIds.reverse()
 
         self._console.debug("")
-        self._console.debug("Package summary")
+        self._console.debug("Package summary : %d packages" % len(packageIds))
         self._console.indent()
         for packageId in packageIds:
             self._console.debug("Package #%s contains %s classes" % (packageId, len(packages[packageId].classes)))
+            self._console.debug("%r" % packages[packageId].classes)
+            self._console.debug("Package #%s depends on these packages: %r" % (packageId, [x.id for x in packages[packageId].packageDeps]))
         self._console.outdent()
 
         self._console.debug("")
-        self._console.debug("Part summary")
+        self._console.debug("Part summary : %d parts" % len(parts))
         self._console.indent()
         for part in parts.values():
-            self._console.debug("Part #%s packages(%d): %s" % (part.name, len(part.packages), ", ".join('#'+str(x) for x in part.packages)))
+            self._console.debug("Part #%s packages(%d): %s" % (part.name, len(part.packages), ", ".join('#'+str(x.id) for x in part.packages)))
 
         self._console.outdent()
         self._console.debug("")

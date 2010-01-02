@@ -196,7 +196,7 @@ qx.Class.define("qx.ui.table.model.Remote",
 
 
     /**
-     * Implementing classes have to call {@link _onRowCountLoaded()} when the
+     * Implementing classes have to call {@link #_onRowCountLoaded} when the
      * server response arrived. That method has to be called! Even when there
      * was an error.
      *
@@ -212,7 +212,7 @@ qx.Class.define("qx.ui.table.model.Remote",
     /**
      * Sets the row count.
      *
-     * Has to be called by {@link _loadRowCount()}.
+     * Has to be called by {@link #_loadRowCount}.
      *
      * @param rowCount {Integer} the number of rows in this model or null if loading.
      * @return {void}
@@ -486,7 +486,7 @@ qx.Class.define("qx.ui.table.model.Remote",
     /**
      * Loads some row data from the server.
      *
-     * Implementing classes have to call {@link _onRowDataLoaded()} when the server
+     * Implementing classes have to call {@link #_onRowDataLoaded} when the server
      * response arrived. That method has to be called! Even when there was an error.
      *
      * @abstract
@@ -503,7 +503,7 @@ qx.Class.define("qx.ui.table.model.Remote",
     /**
      * Sets row data.
      *
-     * Has to be called by {@link _loadRowData()}.
+     * Has to be called by {@link #_loadRowData}.
      *
      * @param rowDataArr {Map[]} the loaded row data or null if there was an error.
      * @return {void}
@@ -882,11 +882,40 @@ qx.Class.define("qx.ui.table.model.Remote",
     // overridden
     isSortAscending : function() {
       return this.__sortAscending;
+    },
+
+    /**
+     * Sets the sorted column without sorting the data.
+     * Use this method, if you want to mark the column as the sorted column,
+     * (e.g. for appearance reason), but the sorting of the data will be done
+     * in another step.
+     *
+     * @param sortColumnIndex {Integer} the column, which shall be marked as the sorted column.
+     * @return {void}
+     */
+    setSortColumnIndexWithoutSortingData : function(sortColumnIndex)
+    {
+      this.__sortColumnIndex = sortColumnIndex;
+    },
+
+    /**
+     * Sets the direction of the sorting without sorting the data.
+     * Use this method, if you want to set the direction of sorting, (e.g
+     * for appearance reason), but the sorting of the data will be done in
+     * another step.
+     *
+     * @param sortAscending {boolean} whether the sorting direction is ascending
+     *        (true) or not (false).
+     * @return {void}
+     */
+    setSortAscendingWithoutSortingData : function (sortAscending)
+    {
+      this.__sortAscending = sortAscending;
     }
+
   },
 
-  destruct : function()
-  {
-    this._disposeFields("__sortableColArr", "__editableColArr");
+  destruct : function() {
+    this.__sortableColArr = this.__editableColArr = this.__rowBlockCache = null;
   }
 });

@@ -160,6 +160,7 @@ qx.Class.define("qx.event.handler.Keyboard",
     __window : null,
     __root : null,
     __lastUpDownType : null,
+    __lastKeyCode : null,
     __inputListeners : null,
     __onKeyPressWrapper : null,
 
@@ -203,13 +204,7 @@ qx.Class.define("qx.event.handler.Keyboard",
      */
     _fireInputEvent : function(domEvent, charCode)
     {
-      var focusHandler = this.__manager.getHandler(qx.event.handler.Focus);
-      var target = focusHandler.getActive();
-
-      // Fallback to focused element when active is null or invisible
-      if (!target || target.offsetWidth == 0) {
-        target = focusHandler.getFocus();
-      }
+      var target = this.__getEventTarget();
 
       // Only fire when target is defined and visible
       if (target && target.offsetWidth != 0)
@@ -235,18 +230,8 @@ qx.Class.define("qx.event.handler.Keyboard",
      */
     _fireSequenceEvent : function(domEvent, type, keyIdentifier)
     {
-      var focusHandler = this.__manager.getHandler(qx.event.handler.Focus);
-      var target = focusHandler.getActive();
-
-      // Fallback to focused element when active is null or invisible
-      if (!target || target.offsetWidth == 0) {
-        target = focusHandler.getFocus();
-      }
-
-      // Fallback to body when focused is null or invisible
-      if (!target || target.offsetWidth == 0) {
-        target = this.__manager.getWindow().document.body;
-      }
+      var target = this.__getEventTarget();
+      var keyCode = domEvent.keyCode;
 
       // Fire key event
       var event = qx.event.Registration.createEvent(type, qx.event.type.KeySequence, [domEvent, target, keyIdentifier]);
@@ -259,8 +244,7 @@ qx.Class.define("qx.event.handler.Keyboard",
         if (type == "keydown" && event.getDefaultPrevented())
         {
           // some key press events are already emulated. Ignore these events.
-          var keyCode = domEvent.keyCode;
-          if (!(this._isNonPrintableKeyCode(keyCode) || keyCode == 8 || keyCode == 9)) {
+          if (!this._isNonPrintableKeyCode(keyCode) && !this._emulateKeyPress[keyCode]) {
             this._fireSequenceEvent(domEvent, "keypress", keyIdentifier);
           }
         }
@@ -274,7 +258,28 @@ qx.Class.define("qx.event.handler.Keyboard",
     },
 
 
+    /**
+     * Get the target element for mouse events
+     *
+     * @return {Element} the event target element
+     */
+    __getEventTarget : function()
+    {
+      var focusHandler = this.__manager.getHandler(qx.event.handler.Focus);
+      var target = focusHandler.getActive();
 
+      // Fallback to focused element when active is null or invisible
+      if (!target || target.offsetWidth == 0) {
+        target = focusHandler.getFocus();
+      }
+
+      // Fallback to body when focused is null or invisible
+      if (!target || target.offsetWidth == 0) {
+        target = this.__manager.getWindow().document.body;
+      }
+
+      return target;
+    },
 
 
 
@@ -362,7 +367,7 @@ qx.Class.define("qx.event.handler.Keyboard",
         if (type == "keydown")
         {
           // non-printable, backspace or tab
-          if (this._isNonPrintableKeyCode(keyCode) || keyCode == 8 || keyCode == 9) {
+          if (this._isNonPrintableKeyCode(keyCode) || this._emulateKeyPress[keyCode]) {
             this._idealKeyHandler(keyCode, charCode, "keypress", domEvent);
           }
         }
@@ -437,7 +442,7 @@ qx.Class.define("qx.event.handler.Keyboard",
           if (type == "keydown")
           {
             // non-printable, backspace or tab
-            if (this._isNonPrintableKeyCode(keyCode) || keyCode == 8 || keyCode == 9) {
+            if (this._isNonPrintableKeyCode(keyCode) || this._emulateKeyPress[keyCode]) {
               this._idealKeyHandler(keyCode, charCode, "keypress", domEvent);
             }
           }
@@ -448,7 +453,9 @@ qx.Class.define("qx.event.handler.Keyboard",
 
       },
 
-      "opera" : function(domEvent) {
+      "opera" : function(domEvent)
+      {
+        this.__lastKeyCode = domEvent.keyCode;
         this._idealKeyHandler(domEvent.keyCode, 0, domEvent.type, domEvent);
       }
     })),
@@ -568,11 +575,27 @@ qx.Class.define("qx.event.handler.Keyboard",
 
       "opera" : function(domEvent)
       {
-        if (this._keyCodeToIdentifierMap[domEvent.keyCode]) {
-          this._idealKeyHandler(domEvent.keyCode, 0, domEvent.type, domEvent);
-        } else {
-          this._idealKeyHandler(0, domEvent.keyCode, domEvent.type, domEvent);
+        var keyCode = domEvent.keyCode;
+        var type = domEvent.type;
+
+        // Some keys are identified differently for key up/down and keypress
+        // (e.g. "v" gets identified as "F7").
+        // So we store the last key up/down keycode and compare it to the
+        // current keycode.
+        // See http://bugzilla.qooxdoo.org/show_bug.cgi?id=603
+        if(keyCode != this.__lastKeyCode)
+        {
+          this._idealKeyHandler(0, this.__lastKeyCode, type, domEvent);
         }
+        else
+        {
+          if (this._keyCodeToIdentifierMap[domEvent.keyCode]) {
+            this._idealKeyHandler(domEvent.keyCode, 0, domEvent.type, domEvent);
+          } else {
+            this._idealKeyHandler(0, domEvent.keyCode, domEvent.type, domEvent);
+          }
+        }
+
       }
     })),
 
@@ -598,14 +621,10 @@ qx.Class.define("qx.event.handler.Keyboard",
      */
     _idealKeyHandler : function(keyCode, charCode, eventType, domEvent)
     {
-      if (!keyCode && !charCode) {
-        return;
-      }
-
       var keyIdentifier;
 
       // Use: keyCode
-      if (keyCode)
+      if (keyCode || (!keyCode && !charCode))
       {
         keyIdentifier = this._keyCodeToIdentifier(keyCode);
 
@@ -633,7 +652,11 @@ qx.Class.define("qx.event.handler.Keyboard",
     ---------------------------------------------------------------------------
     */
 
-    /** maps the charcodes of special printable keys to key identifiers */
+    /**
+     * {Map} maps the charcodes of special printable keys to key identifiers
+     *
+     * @lint ignoreReferenceField(_specialCharCodeMap)
+     */
     _specialCharCodeMap :
     {
       8  : "Backspace",   // The Backspace (Back) key.
@@ -646,7 +669,34 @@ qx.Class.define("qx.event.handler.Keyboard",
       32 : "Space"        // The Space (Spacebar) key.
     },
 
-    /** maps the keycodes of non printable keys to key identifiers */
+
+    /**
+     * {Map} maps the charcodes of special keys for key press emulation
+     *
+     * @lint ignoreReferenceField(_emulateKeyPress)
+     */
+    _emulateKeyPress : qx.core.Variant.select("qx.client",
+    {
+      "mshtml" : {
+        8: true,
+        9: true
+      },
+
+      "webkit" : {
+        8: true,
+        9: true,
+        27: true
+      },
+
+      "default" : {}
+    }),
+
+
+    /**
+     * {Map} maps the keycodes of non printable keys to key identifiers
+     *
+     * @lint ignoreReferenceField(_keyCodeToIdentifierMap)
+     */
     _keyCodeToIdentifierMap :
     {
        16 : "Shift",        // The Shift key.
@@ -690,7 +740,12 @@ qx.Class.define("qx.event.handler.Keyboard",
        93 : "Apps"          // The Application key (Windows Context Menu)
     },
 
-    /** maps the keycodes of the numpad keys to the right charcodes */
+
+    /**
+     * {Map} maps the keycodes of the numpad keys to the right charcodes
+     *
+     * @lint ignoreReferenceField(_numpadToCharCode)
+     */
     _numpadToCharCode :
     {
        96 : "0".charCodeAt(0),
@@ -834,7 +889,7 @@ qx.Class.define("qx.event.handler.Keyboard",
   destruct : function()
   {
     this._stopKeyObserver();
-    this._disposeFields("__manager", "__window", "__root", "__lastUpDownType");
+    this.__lastKeyCode = this.__manager = this.__window = this.__root = this.__lastUpDownType = null;
   },
 
 

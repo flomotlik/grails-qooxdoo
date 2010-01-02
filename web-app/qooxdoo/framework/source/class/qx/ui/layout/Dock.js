@@ -85,7 +85,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/layout/Dock'>
+ * <a href='http://qooxdoo.org/documentation/1.0/layout/Dock'>
  * Extended documentation</a> and links to demos of this layout in the qooxdoo wiki.
  */
 qx.Class.define("qx.ui.layout.Dock",
@@ -251,7 +251,11 @@ qx.Class.define("qx.ui.layout.Dock",
     },
 
 
-    /** {Map} Maps edge IDs to numeric values */
+    /**
+     * {Map} Maps edge IDs to numeric values
+     *
+     * @lint ignoreReferenceField(__edgeMap)
+     */
     __edgeMap :
     {
       north : 1,
@@ -262,7 +266,11 @@ qx.Class.define("qx.ui.layout.Dock",
     },
 
 
-    /** {Map} Maps edges to align values */
+    /**
+     * {Map} Maps edges to align values
+     *
+     * @lint ignoreReferenceField(__alignMap)
+     */
     __alignMap :
     {
       1 : "top",
@@ -926,11 +934,7 @@ qx.Class.define("qx.ui.layout.Dock",
   *****************************************************************************
   */
 
-  destruct : function()
-  {
-    this._disposeFields(
-      "__edges",
-      "__children"
-    );
+  destruct : function() {
+    this.__edges = this.__children = null;
   }
 });

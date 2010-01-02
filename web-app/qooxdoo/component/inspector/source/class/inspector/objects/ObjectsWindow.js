@@ -39,6 +39,7 @@ qx.Class.define("inspector.objects.ObjectsWindow",
     this._toolbar.add(new qx.ui.toolbar.Separator());
     this._toolbar.addSpacer();
     this._filterTextField = new qx.ui.form.TextField();
+    this._filterTextField.setPlaceholder("Filter...");
     this._filterTextField.setLiveUpdate(true);
     this._filterTextField.setMarginRight(5);
     this._toolbar.add(this._filterTextField);
@@ -104,7 +105,7 @@ qx.Class.define("inspector.objects.ObjectsWindow",
           this._table.getSelectionModel().setSelectionMode(qx.ui.table.selection.Model.SINGLE_SELECTION);
           this.select(qx.core.Init.getApplication().getSelectedObject());
         } else {
-          this._table.getSelectionModel().clearSelection();
+          this._table.resetSelection();
           this._table.getSelectionModel().setSelectionMode(qx.ui.table.selection.Model.NO_SELECTION);
         }
         // remove current filter
@@ -149,7 +150,7 @@ qx.Class.define("inspector.objects.ObjectsWindow",
         var data = this._table.getTableModel().getData();
         for (var i = 0; i < data.length; i++) {
           if (data[i][0] == object.toHashCode()) {
-            selectionModel.clearSelection();
+            selectionModel.resetSelection();
             selectionModel.setSelectionInterval(i, i);
             // scroll into view
             this._table.scrollCellVisible(0, i);
@@ -207,5 +208,12 @@ qx.Class.define("inspector.objects.ObjectsWindow",
       return null;
     }
 
+  },
+  
+  destruct : function()
+  {
+    this._currentModel = this._iFrameWindow = null;
+    this._disposeObjects("_reloadButton", "_filterTextField", "_model",
+      "_table", "_modelRadio");
   }
 });

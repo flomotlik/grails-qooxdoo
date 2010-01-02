@@ -108,7 +108,7 @@ qx.Bootstrap.define("qx.lang.String",
      * Returns "i like cookies"
      *
      * @param str {String} the string to clean up
-     * @return Cleaned up string
+     * @return {String} Cleaned up string
      */
     clean: function(str){
       return this.trim(str.replace(/\s+/g, ' '));
@@ -173,26 +173,39 @@ qx.Bootstrap.define("qx.lang.String",
 
 
     /**
+     * Returns a string, which repeats a string 'length' times
+     *
+     * @param str {String} string used to repeat
+     * @param times {Integer} the number of repetitions
+     * @return {String} repeated string
+     */
+    repeat : function(str, times) {
+      return str.length >= 0 ? new Array(times + 1).join(str) : "";
+    },
+
+
+    /**
      * Pad a string up to a given length. Padding characters are added to the left of the string.
      *
      * @param str {String} the string to pad
      * @param length {Integer} the final length of the string
      * @param ch {String} character used to fill up the string
-     * @return {String} paddded string
+     * @return {String} padded string
      */
     pad : function(str, length, ch)
     {
-      if (typeof ch === "undefined") {
-        ch = "0";
+      var padLength = length - str.length;
+      if (padLength > 0)
+      {
+        if (typeof ch === "undefined") {
+          ch = "0";
+        }
+        return this.repeat(ch, padLength) + str;
       }
-
-      var temp = "";
-
-      for (var i=str.length; i<length; i++) {
-        temp += ch;
+      else
+      {
+        return str;
       }
-
-      return temp + str;
     },
 
 
@@ -289,7 +302,7 @@ qx.Bootstrap.define("qx.lang.String",
 
 
     /**
-     * Strips the String of its <script> tags and anything in between them.
+     * Strips <script> tags including its content from the given string.
      *
      * @param str {String} string containing tags
      * @param exec {Boolean?false} Whether the filtered code should be executed

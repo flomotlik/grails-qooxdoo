@@ -138,6 +138,8 @@ qx.Bootstrap = {
 
     // Store class reference in global class registry
     qx.Bootstrap.$$registry[name] = config.statics;
+
+    return clazz;
   }
 };
 
@@ -166,12 +168,11 @@ qx.Bootstrap.define("qx.Bootstrap",
   statics :
   {
     /** Timestamp of qooxdoo based application startup */
-    LOADSTART : new Date,
+    LOADSTART : qx.$$start || new Date(),
 
 
     /**
      * Creates a namespace and assigns the given object to it.
-     * Lightweight version of {@link qx.Class#createNamespace} only used during bootstrap phase.
      *
      * @internal
      * @param name {String} The complete namespace to create. Typically, the last part is the class name itself
@@ -190,7 +191,7 @@ qx.Bootstrap.define("qx.Bootstrap",
      * @signature function(name, config)
      * @param name {String} Name of the class
      * @param config {Map ? null} Class definition structure.
-     * @return {void}
+     * @return {Class} The defined class
      */
     define : qx.Bootstrap.define,
 

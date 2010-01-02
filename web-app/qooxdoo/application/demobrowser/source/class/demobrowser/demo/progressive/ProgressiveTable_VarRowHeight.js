@@ -13,6 +13,8 @@ qx.Class.define("demobrowser.demo.progressive.ProgressiveTable_VarRowHeight",
 
   members :
   {
+    __loadCount : null,
+    
     main : function()
     {
       this.base(arguments);
@@ -64,7 +66,7 @@ qx.Class.define("demobrowser.demo.progressive.ProgressiveTable_VarRowHeight",
         ++this.__loadCount;
 
         // Pre-load the image.  Call doLoad() when images is loaded.
-        qx.io2.ImageLoader.load(
+        qx.io.ImageLoader.load(
           source,
           function(source, entry)
           {
@@ -110,7 +112,6 @@ qx.Class.define("demobrowser.demo.progressive.ProgressiveTable_VarRowHeight",
 
     doLoad : function()
     {
-      var nextId = 0;
       var _this = this;
       var createRow = function(imageNum, text)
       {

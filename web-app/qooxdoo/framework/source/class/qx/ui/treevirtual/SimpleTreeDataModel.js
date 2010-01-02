@@ -280,7 +280,14 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataModel",
       return false;
     },
 
-    // overridden
+
+    /**
+     * Sorts the model by a column.
+     *
+     * @param columnIndex {Integer} the column to sort by.
+     * @param ascending {Boolean} whether to sort ascending.
+     * @throws {Error} If one tries to sort the tree by column
+     */
     sortByColumn : function(columnIndex, ascending)
     {
       throw new Error("Trees can not be sorted by column");
@@ -339,7 +346,16 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataModel",
       return this._rowArr[rowIndex];
     },
 
-    // overridden
+
+    /**
+     * Returns a cell value by column index.
+     *
+     * @throws {Error} if the row index is out of bounds.
+     * @param columnIndex {Integer} the index of the column.
+     * @param rowIndex {Integer} the index of the row.
+     * @return {var} The value of the cell.
+     * @see #getValueById
+     */
     getValue : function(columnIndex, rowIndex)
     {
       if (rowIndex < 0 || rowIndex >= this._rowArr.length)
@@ -454,7 +470,8 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataModel",
      *
      * @return {Integer} The node id of the newly-added node.
      *
-     * @throws TODOC
+     * @throws {Error} If one tries to add a child to a non-existent parent.
+     * @throws {Error} If one tries to add a node to a leaf.
      */
     _addNode : function(parentNodeId,
                         label,
@@ -619,6 +636,8 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataModel",
      *   If <i>true</i> then remove the node identified by <i>nodeId</i> as
      *   well as all of the children.
      *
+     * @throws {Error} If the node object or id is not valid.
+     *
      * @return {void}
      */
     prune : function(nodeReference, bSelfAlso)
@@ -681,6 +700,9 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataModel",
      *   represented either by the node object, or the node id (as would have
      *   been returned by addBranch(), addLeaf(), etc.)
      *
+     * @throws {Error} If the node object or id is not valid.
+     * @throws {Error} If one tries to add a child to a non-existent parent.
+     * @throws {Error} If one tries to add a node to a leaf.
      * @return {Void}
      */
     move : function(moveNodeReference,
@@ -762,7 +784,7 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataModel",
      *
      * @return {void}
      *
-     * @throws TODOC
+     * @throws {Error} If the parameter has the wrong type.
      */
     setData : function(nodeArr)
     {
@@ -956,7 +978,7 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataModel",
      *
      * @param nodeId {Integer}
      *   A node identifier, as previously returned by {@link #addBranch} or
-     *   {@link addLeaf}.
+     *   {@link #addLeaf}.
      *
      * @param columnIndex {Integer}
      *   The column number to which the provided data applies
@@ -978,7 +1000,7 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataModel",
      *
      * @param nodeId {Integer}
      *   A node identifier, as previously returned by {@link #addBranch} or
-     *   {@link addLeaf}.
+     *   {@link #addLeaf}.
      *
      * @param columnIndex {Integer}
      *   The column number to which the provided data applies
@@ -1002,9 +1024,10 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataModel",
      * @param attributes {Map}
      *   Each property name in the map may correspond to the property names of
      *   a node which are specified as <i>USER-PROVIDED ATTRIBUTES</i> in
-     *   {@link #SimpleTreeDataModel}.  Each property value will be assigned
+     *   {@link SimpleTreeDataModel}.  Each property value will be assigned
      *   to the corresponding property of the node specified by nodeId.
      *
+     * @throws {Error} If the node object or id is not valid.
      * @return {void}
      */
     setState : function(nodeReference, attributes)
@@ -1206,13 +1229,7 @@ qx.Class.define("qx.ui.treevirtual.SimpleTreeDataModel",
 
   destruct : function()
   {
-    this._disposeFields(
-      "_rowArr",
-      "_nodeArr",
-      "_nodeRowMap",
-      "_treeColumn",
-      "_selections",
-      "__tree"
-    );
+    this._rowArr = this._nodeArr = this._nodeRowMap = this._selections =
+      this.__tree = null;
   }
 });

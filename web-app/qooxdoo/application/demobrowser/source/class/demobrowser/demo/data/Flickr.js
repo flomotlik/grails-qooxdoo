@@ -16,6 +16,14 @@
      * Martin Wittemann (martinwittemann)
 
 ************************************************************************ */
+/* ************************************************************************
+
+#tag(databinding)
+#tag(store)
+#tag(list controller) 
+#tag(showcase)
+
+************************************************************************ */
 qx.Class.define("demobrowser.demo.data.Flickr",
 {
   extend : qx.application.Standalone,
@@ -115,24 +123,12 @@ qx.Class.define("demobrowser.demo.data.Flickr",
 
 
 
-/* ************************************************************************
-
-   qooxdoo - the new era of web development
-
-   http://qooxdoo.org
-
-   Copyright:
-     2004-2009 1&1 Internet AG, Germany, http://www.1und1.de
-
-   License:
-     LGPL: http://www.gnu.org/licenses/lgpl.html
-     EPL: http://www.eclipse.org/org/documents/epl-v10.php
-     See the LICENSE file in the project's top-level directory for details.
-
-   Authors:
-     * Martin Wittemann (martinwittemann)
-
-************************************************************************ */
+/*
+ * PLEASE NOTE:
+ * For demonstration purposes the following class is added to the same file as
+ * the application class. For a regular qooxdoo application each class must live
+ * in a file of its own. You may neglect any warnings when generating this demo.
+ */
 qx.Class.define("demobrowser.demo.data.store.Flickr",
 {
   extend : qx.data.store.Json,
@@ -165,7 +161,7 @@ qx.Class.define("demobrowser.demo.data.store.Flickr",
     },
 
     _createRequest: function(url) {
-      var loader = new qx.io2.ScriptLoader();
+      var loader = new qx.io.ScriptLoader();
       this.setState("receiving");
       url += "&method=flickr.photos.search&api_key=63a8042eead205f7e0040f488c02afd9&format=json";
       loader.load(url, function(data) {

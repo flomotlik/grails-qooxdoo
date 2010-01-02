@@ -159,6 +159,7 @@ qx.Class.define("apiviewer.ui.panels.InfoPanel", {
           var className = hit[2];
           var itemName = hit[3];
           var label = hit[6];
+          var style = "";
 
           // Make the item name absolute
           if (className == null || className.length == 0)
@@ -216,6 +217,13 @@ qx.Class.define("apiviewer.ui.panels.InfoPanel", {
               {
                 var iconUrl = apiviewer.TreeUtil.getIconUrl(itemNode);
                 var iconCode = apiviewer.ui.ClassViewer.createImageHtml(iconUrl);
+
+                if (qx.core.Variant.isSet("qx.client", "webkit"))
+                {
+                  if(iconCode.indexOf("overlay_") !== -1) {
+                    style = "margin-left:18px;";              
+                  }
+                }
               }
             }
           }
@@ -228,7 +236,7 @@ qx.Class.define("apiviewer.ui.panels.InfoPanel", {
           var linkHtml = new qx.util.StringBuilder(
             '<span style="white-space: nowrap;">',
             (typeof iconCode != "undefined" ? iconCode : ""),
-            '<a href="' + window.location.protocol, '//',
+            '<a style="' + style + '" href="' + window.location.protocol, '//',
             window.location.host,
             window.location.pathname, '#', fullItemName,
             '" onclick="', 'apiviewer.ui.ClassViewer.instance._onSelectItem(\'',
@@ -1166,8 +1174,7 @@ qx.Class.define("apiviewer.ui.panels.InfoPanel", {
   *****************************************************************************
   */
 
-  destruct : function()
-  {
-    this._disposeFields("_titleElement", "_bodyElement");
+  destruct : function() {
+    this._titleElement = this._bodyElement = null;
   }
 });

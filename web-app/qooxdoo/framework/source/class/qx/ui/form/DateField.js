@@ -21,7 +21,7 @@
  * A *date field* is like a combo box with the date as popup. As button to
  * open the calendar a calendar icon is shown at the right to the textfield.
  *
- * To be conform with all form widgets, the {@link qx.ui.form.IFormElement} interface
+ * To be conform with all form widgets, the {@link qx.ui.form.IForm} interface
  * is implemented.
  *
  * The following example creates a date field and sets the current
@@ -51,8 +51,15 @@ qx.Class.define("qx.ui.form.DateField",
     this.base(arguments);
 
     // create a default date format
-    var currentDateFormat = qx.locale.Date.getDateFormat("medium").toString();
-    this.setDateFormat(new qx.util.format.DateFormat(currentDateFormat));
+    this.setDateFormat(qx.ui.form.DateField.getDefaultDateFormatter());
+
+    // listen for locale changes
+    if (qx.core.Variant.isSet("qx.dynlocale", "on"))
+    {
+      qx.locale.Manager.getInstance().addListener("changeLocale", function() {
+        this.setDateFormat(qx.ui.form.DateField.getDefaultDateFormatter());
+      }, this);
+    }
   },
 
 
@@ -77,8 +84,45 @@ qx.Class.define("qx.ui.form.DateField",
     dateFormat :
     {
       check : "qx.util.format.DateFormat",
-      apply : "_applyDateFormat",
-      dispose : true
+      apply : "_applyDateFormat"
+    }
+  },
+
+
+
+
+  /*
+  *****************************************************************************
+     MEMBERS
+  *****************************************************************************
+  */
+
+  statics :
+  {
+    __dateFormat : null,
+    __formatter : null,
+
+    /**
+     * Get the shared default date formatter
+     *
+     * @return {qx.util.format.DateFormat} The shared date formatter
+     */
+    getDefaultDateFormatter : function()
+    {
+      var format = qx.locale.Date.getDateFormat("medium").toString();
+
+      if (format == this.__dateFormat) {
+        return this.__formatter;
+      }
+
+      if (this.__formatter) {
+        this.__formatter.dispose();
+      }
+
+      this.__formatter = new qx.util.format.DateFormat(format, qx.locale.Manager.getInstance().getLocale());
+      this.__dateFormat = format;
+
+      return this.__formatter;
     }
   },
 
@@ -100,59 +144,15 @@ qx.Class.define("qx.ui.form.DateField",
     ---------------------------------------------------------------------------
     */
 
-    /**
-     * This method sets the date corresponding to the {@link dateFormat} to the
-     * date field. It will also select the date in the calender popup.
-     *
-     * @param date {Date} The date to set.
-     *
-     * @deprecated
-     */
-    setDate : function(date)
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee, "Please use the setValue instead."
-      );
-
-      this.setValue(date);
-    },
-
 
     /**
-     * Returns the current set date corresponding to the {@link dateFormat}.
-     * If the given text could not be parsed, <code>null</code> will be returned.
-     *
-     * @return {Date} The currently set date.
-     *
-     * @deprecated
-     */
-    getDate : function()
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee, "Please use the getValue instead."
-      );
-
-      return this.getValue();
-    },
-
-
-    /**
-    * This method sets the date corresponding to the {@link dateFormat} to the
-    * date field. It will also select the date in the calender popup.
+    * This method sets the date corresponding to the {@link #dateFormat} to the
+    * date field. It will also select the date in the calendar popup.
     *
     * @param value {Date} The date to set.
      */
     setValue : function(value)
     {
-      if (qx.lang.Type.isString(value))
-      {
-        qx.log.Logger.deprecatedMethodWarning(
-          arguments.callee, "Wrong data type detected. setValue is " +
-          "used with Dates now."
-        );
-        return;
-      }
-
       // set the date to the textfield
       var textField = this.getChildControl("textfield");
       textField.setValue(this.getDateFormat().format(value));
@@ -164,7 +164,7 @@ qx.Class.define("qx.ui.form.DateField",
 
 
     /**
-     * Returns the current set date corresponding to the {@link dateFormat}.
+     * Returns the current set date corresponding to the {@link #dateFormat}.
      * If the given text could not be parsed, <code>null</code> will be returned.
      *
      * @return {Date} The currently set date.
@@ -212,7 +212,8 @@ qx.Class.define("qx.ui.form.DateField",
       try
       {
         var textfield = this.getChildControl("textfield");
-        var currentDate = old.parse(textfield.getValue());
+        var dateStr =textfield.getValue()
+        var currentDate = old.parse(dateStr);
         textfield.setValue(value.format(currentDate));
       }
       catch (ex) {
@@ -365,7 +366,8 @@ qx.Class.define("qx.ui.form.DateField",
      *
      * @return {Boolean} True, if the textfield of the DateField is empty.
      */
-    isEmpty: function() {
+    isEmpty: function()
+    {
       var value = this.getChildControl("textfield").getValue();
       return value == null || value == "";
     }

@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -43,6 +43,7 @@ BUILTIN = [
           "Number",
           "Object",
           "Option",
+          "Range",
           "RegExp",
           "String",
           "window",
@@ -50,7 +51,7 @@ BUILTIN = [
           "XMLSerializer",
           "XPathEvaluator",
           "XPathResult",
-          "Range"
+          "XSLTProcessor",
           ]
 
 GLOBALS = BUILTIN + [
@@ -63,12 +64,15 @@ GLOBALS = BUILTIN + [
           # IE
           "event", "offscreenBuffering", "clipboardData", "clientInformation",
           "external", "screenTop", "screenLeft",
+          
+          # Webkit
+          "WebkitCSSMatrix",
   
           # window
           'addEventListener', '__firebug__', 'location', 'netscape',
           'XPCNativeWrapper', 'Components', 'parent', 'top', 'scrollbars',
           'name', 'scrollX', 'scrollY', 'scrollTo', 'scrollBy', 'getSelection',
-          'scrollByLines', 'scrollByPages', 'sizeToContent', 'dump',
+          'JSON', 'scrollByLines', 'scrollByPages', 'sizeToContent', 'dump',
           'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
           'setResizable', 'captureEvents', 'releaseEvents', 'routeEvent',
           'enableExternalCapture', 'disableExternalCapture', 'prompt', 'open',
@@ -86,7 +90,7 @@ GLOBALS = BUILTIN + [
           'getComputedStyle', 'sessionStorage', 'globalStorage',
   
           # Language
-          "decodeURI", "decodeURIComponent", "encodeURIComponent",
+          "eval", "decodeURI", "decodeURIComponent", "encodeURIComponent",
           "escape", "unescape", "parseInt", "parseFloat", "isNaN", "isFinite",
   
           "this", "arguments", "undefined", "NaN", "Infinity"
@@ -241,7 +245,34 @@ SPACE_AFTER = ["VAR", "NEW", "GOTO", "INSTANCEOF", "TYPEOF", "DELETE", "IN", "TH
 SPACE_AFTER_USAGE = ["RETURN", "FUNCTION"]
 PARANTHESIS_BEFORE = ["ELSE", "FINALLY", "CATCH", "WHILE"]
 
-#IDENTIFIER_REGEXP = r'[\.a-zA-Z0-9_-]+'
-IDENTIFIER_CHARS  = r'(?u)[\.\w$]'
-IDENTIFIER_REGEXP = r'%s+' % IDENTIFIER_CHARS
-#IDENTIFIER_REGEXP = re.compile(r'[\.\w$-]+', re.U)
+IDENTIFIER_CHARS          = r'(?u)[\.\w$]'
+IDENTIFIER_ILLEGAL_CHARS  = r'(?u)[^\.\w$]'
+IDENTIFIER_REGEXP         = r'%s+' % IDENTIFIER_CHARS
+
+##
+# Re-creating some Unicode information here, as it is not provided by Python
+
+
+# source: http://www.fileformat.info/info/unicode/category/Zs/list.htm
+#UNICODE_CATEGORY_Zs = ur'''(?ux)
+#    [
+#        \u0020  # SPACE
+#        \u00A0  # NO-BREAK SPACE
+#        \u1680  # OGHAM SPACE MARK
+#        #\u180E # MONGOLIAN VOWEL SEPARATOR  -- not included, as it is not matched by '(?u)\s'
+#        \u2000  # EN QUAD
+#        \u2001  # EM QUAD
+#        \u2002  # EN SPACE
+#        \u2003  # EM SPACE
+#        \u2004  # THREE PER EM SPACE
+#        \u2005  # FOUR PER EM SPACE
+#        \u2006  # SIX PER EM SPACE
+#        \u2007  # FIGURE SPACE
+#        \u2008  # PUNCTUATION SPACE
+#        \u2009  # THIN SPACE
+#        \u200A  # HAIR SPACE
+#        \u202F  # NARROW NO BREAK SPACE
+#        \u205F  # MEDIUM MATHEMATICAL SPACE
+#        \u3000  # IDEOGRAPHIC SPACE
+#    ]'''
+UNICODE_CATEGORY_Zs = ur'''(?u)[\u0020\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000]'''

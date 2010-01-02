@@ -167,14 +167,7 @@ qx.Class.define("qx.ui.table.Table",
     // Create the models
     this.__selectionManager = this.getNewSelectionManager()(this);
     this.setSelectionModel(this.getNewSelectionModel()(this));
-    this.setTableColumnModel(this.getNewTableColumnModel()(this));
-
-    // If a table model was provided...
-    if (tableModel != null)
-    {
-      // ... then save it.
-      this.setTableModel(tableModel);
-    }
+    this.setTableModel(tableModel || this.getEmptyTableModel());
 
     // create the main meta column
     this.setMetaColumnCounts([ -1 ]);
@@ -315,6 +308,21 @@ qx.Class.define("qx.ui.table.Table",
       init : 50
     },
 
+    /**
+     * Whether the widget contains content which may be selected by the user.
+     *
+     * If the value set to <code>true</code> the native browser selection can
+     * be used for text selection. But it is normally useful for
+     * forms fields, longer texts/documents, editors, etc.
+     *
+     * Note: This has no effect on Table!
+     */
+    selectable :
+    {
+      refine : true,
+      init : false
+    },
+
 
     /** The selection model. */
     selectionModel :
@@ -330,22 +338,7 @@ qx.Class.define("qx.ui.table.Table",
     {
       check : "qx.ui.table.ITableModel",
       apply : "_applyTableModel",
-      event : "changeTableModel",
-      nullable : true
-    },
-
-
-    /**
-     * The table column model.
-     *
-     * Note that is is not possible to change the table column model once it
-     * is set.
-     */
-    tableColumnModel :
-    {
-      check : "qx.ui.table.columnmodel.Basic",
-      apply : "_applyTableColumnModel",
-      event : "changeTableColumnModel"
+      event : "changeTableModel"
     },
 
 
@@ -378,7 +371,8 @@ qx.Class.define("qx.ui.table.Table",
       check : "Integer",
       init : 16,
       apply : "_applyHeaderCellHeight",
-      event : "changeHeaderCellHeight"
+      event : "changeHeaderCellHeight",
+      nullable : true
     },
 
 
@@ -410,7 +404,7 @@ qx.Class.define("qx.ui.table.Table",
 
 
     /**
-     * {int[]} The number of columns per meta column. If the last array entry is -1,
+     * {Integer[]} The number of columns per meta column. If the last array entry is -1,
      * this meta column will get the remaining columns.
      */
     metaColumnCounts :
@@ -555,8 +549,8 @@ qx.Class.define("qx.ui.table.Table",
     newTableColumnModel :
     {
       check : "Function",
-      init : function(obj) {
-        return new qx.ui.table.columnmodel.Basic(obj);
+      init : function(table) {
+        return new qx.ui.table.columnmodel.Basic(table);
       }
     },
 
@@ -640,6 +634,9 @@ qx.Class.define("qx.ui.table.Table",
     __internalChange : null,
 
     __columnMenuButtons : null,
+    __columnModel : null,
+    __emptyTableModel : null,
+
 
 
     // overridden
@@ -660,18 +657,19 @@ qx.Class.define("qx.ui.table.Table",
 
       case "column-button":
         control = this.getNewColumnMenu()();
-        control.set(
-          {
-            focusable : false
-          });
+        control.set({
+          focusable : false
+        });
 
         // Create the initial menu too
         var menu = control.factory("menu", { table : this });
 
         // Add a listener to initialize the column menu when it becomes visible
-        menu.addListener("appear",
-                         this._initColumnMenu,
-                         this);
+        menu.addListener(
+          "appear",
+          this._initColumnMenu,
+          this
+        );
 
         break;
       }
@@ -697,11 +695,6 @@ qx.Class.define("qx.ui.table.Table",
     // property modifier
     _applyRowHeight : function(value, old)
     {
-      if (! this.getTableModel())
-      {
-        return;
-      }
-
       var scrollerArr = this._getPaneScrollerArr();
 
       for (var i=0; i<scrollerArr.length; i++) {
@@ -718,6 +711,24 @@ qx.Class.define("qx.ui.table.Table",
       for (var i=0; i<scrollerArr.length; i++) {
         scrollerArr[i].getHeader().setHeight(value);
       }
+    },
+
+
+    /**
+     * Get an empty table model instance to use for this table. Use this table
+     * to configure the table with no table model.
+     *
+     * @return {qx.ui.table.ITableModel} The empty table model
+     */
+    getEmptyTableModel : function()
+    {
+      if (!this.__emptyTableModel)
+      {
+        this.__emptyTableModel = new qx.ui.table.model.Simple();
+        this.__emptyTableModel.setColumns([]);
+        this.__emptyTableModel.setData([]);
+      }
+      return this.__emptyTableModel;
     },
 
 
@@ -760,36 +771,36 @@ qx.Class.define("qx.ui.table.Table",
     },
 
 
-    // property modifier
-    _applyTableColumnModel : function(value, old)
+    /**
+     * Get the The table column model.
+     *
+     * @return {qx.ui.table.columnmodel.Basic} The table's column model
+     */
+    getTableColumnModel : function()
     {
-      if (old != null) {
-        throw new Error("The table column model can only be set once per table.");
-      }
-
-      value.addListener("visibilityChanged", this._onColVisibilityChanged, this);
-      value.addListener("widthChanged", this._onColWidthChanged, this);
-      value.addListener("orderChanged", this._onColOrderChanged, this);
-
-      // Get the current table model
-      var tm = this.getTableModel();
-
-      // If one is already in effect...
-      if (tm)
+      if (!this.__columnModel)
       {
-        // ... then initialize this new table column model now.
-        value.init(tm.getColumnCount(), this);
-      }
+        var columnModel = this.__columnModel = this.getNewTableColumnModel()(this)
 
-      // Reset the table column model in each table pane model
-      var scrollerArr = this._getPaneScrollerArr();
+        columnModel.addListener("visibilityChanged", this._onColVisibilityChanged, this);
+        columnModel.addListener("widthChanged", this._onColWidthChanged, this);
+        columnModel.addListener("orderChanged", this._onColOrderChanged, this);
 
-      for (var i=0; i<scrollerArr.length; i++)
-      {
-        var paneScroller = scrollerArr[i];
-        var paneModel = paneScroller.getTablePaneModel();
-        paneModel.setTableColumnModel(value);
+        // Get the current table model
+        var tableModel = this.getTableModel();
+        columnModel.init(tableModel.getColumnCount(), this);
+
+        // Reset the table column model in each table pane model
+        var scrollerArr = this._getPaneScrollerArr();
+
+        for (var i=0; i<scrollerArr.length; i++)
+        {
+          var paneScroller = scrollerArr[i];
+          var paneModel = paneScroller.getTablePaneModel();
+          paneModel.setTableColumnModel(columnModel);
+        }
       }
+      return this.__columnModel;
     },
 
 
@@ -1428,7 +1439,7 @@ qx.Class.define("qx.ui.table.Table",
 
     /**
      * Gets the TablePaneScroller at a certain x position in the page. If there is
-     * no TablePaneScroller at this postion, null is returned.
+     * no TablePaneScroller at this position, null is returned.
      *
      * @param pageX {Integer} the position in the page to check (in pixels).
      * @return {qx.ui.table.pane.Scroller} the TablePaneScroller or null.
@@ -1475,10 +1486,25 @@ qx.Class.define("qx.ui.table.Table",
 
 
     /**
+     * Resets (clears) the current selection
+     */
+    resetSelection : function() {
+      this.getSelectionModel().resetSelection();
+    },
+
+
+    /**
      * Clears the current selection
+     *
+     * @deprecated Use 'resetSelection' instead.
      */
     clearSelection : function() {
-      this.getSelectionModel().clearSelection();
+      qx.log.Logger.deprecatedMethodWarning(
+        arguments.callee,
+        "Use 'resetSelection' instead."
+      );
+
+      this.resetSelection();
     },
 
 
@@ -1739,14 +1765,14 @@ qx.Class.define("qx.ui.table.Table",
     {
       var tableModel = this.getTableModel();
 
-      if (this.getStatusBarVisible() && tableModel)
+      if (this.getStatusBarVisible())
       {
         var selectedRowCount = this.getSelectionModel().getSelectedCount();
         var rowCount = tableModel.getRowCount();
 
         var text;
 
-        if (rowCount > 0)
+        if (rowCount >= 0)
         {
           if (selectedRowCount == 0) {
             text = this.trn("one row", "%1 rows", rowCount, rowCount);
@@ -1915,7 +1941,7 @@ qx.Class.define("qx.ui.table.Table",
      * Creates a handler for a check box of the column visibility menu.
      *
      * @param col {Integer} the model index of column to create the handler for.
-     * @return {Function} TODOC
+     * @return {Function} The created event handler.
      */
     _createColumnVisibilityCheckBoxHandler : function(col)
     {
@@ -2019,7 +2045,11 @@ qx.Class.define("qx.ui.table.Table",
 
     this._cleanUpMetaColumns(0);
     this.getTableColumnModel().dispose();
-    this._disposeObjects("__selectionManager", "_columnVisibilityMenu", "_tableModel", "__scrollerParent");
+    this._disposeObjects(
+      "__selectionManager", "__scrollerParent",
+      "__emptyTableModel", "__emptyTableModel",
+      "__columnModel"
+    );
     this._disposeMap("__columnMenuButtons");
   }
 });

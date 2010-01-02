@@ -25,7 +25,7 @@
  *
  * To paint something on the canvas and keep the content updated on resizes you
  * either have to override the {@link #_draw} method or redraw the content on
- * the {@link #redraw} event. The drawing context can be obtained by {@link #getCanvas2d}.
+ * the {@link #redraw} event. The drawing context can be obtained by {@link #getContext2d}.
  *
  * Note that this widget operates on two different coordinate systems. The canvas
  * has its own coordinate system for drawing operations. This canvas coordinate
@@ -63,7 +63,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/widget/canvas' target='_blank'>
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/canvas' target='_blank'>
  * Documentation of this widget in the qooxdoo wiki.</a>
  */
 qx.Class.define("qx.ui.embed.Canvas",

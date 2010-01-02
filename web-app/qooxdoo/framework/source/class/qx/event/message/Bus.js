@@ -34,7 +34,9 @@ qx.Class.define("qx.event.message.Bus",
     /**
      * gets the hash map of message subscriptions
      *
-     * @return {Object} TODOC
+     * @return {Map} with registered subscriptions. The key is the
+     *    <code>message</code> and the value is a map with <code>{subscriber: {Function},
+     *    context: {Object|null}}</code>.
      */
     getSubscriptions : function() {
       return this.getInstance().getSubscriptions();
@@ -90,11 +92,12 @@ qx.Class.define("qx.event.message.Bus",
      * dispatch message and call subscribed functions
      *
      * @param msg {qx.event.message.Message|String} message which is being dispatched
-     * @return {boolean} TODOC
+     * @return {Boolean} <code>true</code> if the message was dispatched,
+     *    <code>false</code> otherwise.
      */
     dispatch : function(msg)
     {
-      return this.getInstance().dispatch.apply(this,arguments);
+      return this.getInstance().dispatch.apply(this.getInstance(), arguments);
     }
   },
 
@@ -117,7 +120,9 @@ qx.Class.define("qx.event.message.Bus",
     /**
      * gets the hash map of message subscriptions
      *
-     * @return {Object} TODOC
+     * @return {Map} with registered subscriptions. The key is the
+     *    <code>message</code> and the value is a map with <code>{subscriber: {Function},
+     *    context: {Object|null}}</code>.
      */
     getSubscriptions : function() {
       return this.__subscriptions;
@@ -163,8 +168,7 @@ qx.Class.define("qx.event.message.Bus",
       else
       {
         // create a subscription
-        sub[message] = [
-        {
+        sub[message] = [ {
           subscriber : subscriber,
           context    : context || null
         } ];
@@ -188,7 +192,7 @@ qx.Class.define("qx.event.message.Bus",
     {
       var sub = this.getSubscriptions();
 
-      if (!sub[message] || sub[message].length == 0) {
+      if (!sub[message] || sub[message].length === 0) {
         return false;
       }
 
@@ -196,7 +200,7 @@ qx.Class.define("qx.event.message.Bus",
       {
         for (var i=0; i<sub[message].length; i++)
         {
-          if (sub[message][i].subscriber == subscriber && sub[message][i].context == (context || null)) {
+          if (sub[message][i].subscriber === subscriber && sub[message][i].context === (context || null)) {
             return true;
           }
         }
@@ -221,34 +225,35 @@ qx.Class.define("qx.event.message.Bus",
      */
     unsubscribe : function(message, subscriber, context)
     {
-      var sub = this.getSubscriptions();
-
-      if (!sub[message]) {
-        return false;
-      }
-
-      if (subscriber)
-      {
-        for (var i=0; i<sub[message].length; i++)
-        {
-          if (sub[message][i].subscriber == subscriber && sub[message][i].context == (context || null))
-          {
-            sub[message].splice(i, 1);
-            return true;
-          }
-        }
-      }
-
-      sub[message] = null;
-      return true;
+       var sub = this.getSubscriptions();
+       var subscrList = sub[message];
+       if (subscrList) {
+           if (! context) {
+               context = null;
+           }
+           var i = subscrList.length;
+           var subscription;
+           do {
+               subscription = subscrList[--i];
+               if (subscription.subscriber === subscriber && subscription.context === context) {
+                   subscrList.splice(i, 1);
+                   if (subscrList.length === 0) {
+                       sub[message] = null;
+                       delete sub[message];
+                   }
+                   return true;
+               }
+           } while (i);
+       }
+       return false;
     },
-
 
     /**
      * dispatch message and call subscribed functions
      *
      * @param msg {qx.event.message.Message|String} message which is being dispatched
-     * @return {boolean} TODOC
+     * @return {Boolean} <code>true</code> if the message was dispatched,
+     *    <code>false</code> otherwise.
      */
     dispatch : function(msg)
     {
@@ -261,6 +266,7 @@ qx.Class.define("qx.event.message.Bus",
 
       var sub = this.getSubscriptions();
       var msgName = msg.getName();
+      var dispatched = false;
 
       for (var key in sub)
       {
@@ -269,34 +275,56 @@ qx.Class.define("qx.event.message.Bus",
         if (pos > -1)
         {
           // use of wildcard
-          if (pos == 1 || key.substr(0, pos) == msgName.substr(0, pos))
+          if (pos === 0 || key.substr(0, pos) === msgName.substr(0, pos))
           {
-            for (var i=0; i<sub[key].length; i++)
-            {
-              var subscriber = sub[key][i].subscriber;
-              var context = sub[key][i].context;
-
-              // call message monitor subscriber
-              subscriber.call(context, msg);
-            }
+            this.__callSubscribers(sub[key], msg);
+            dispatched = true;
           }
         }
         else
         {
           // exact match
-          if (key == msgName)
+          if (key === msgName)
           {
-            for (var i=0; i<sub[msgName].length; i++)
-            {
-              var subscriber = sub[msgName][i].subscriber;
-              var context = sub[msgName][i].context;
-
-              // call message monitor subscriber
-              subscriber.call(context, msg);
-            }
-
-            return true;
+            this.__callSubscribers(sub[msgName], msg);
+            dispatched = true;
           }
+        }
+      }
+
+      return dispatched;
+    },
+
+
+    /**
+     * Call subscribers with passed message.
+     *
+     * @param subscribers {Map} subscribers to call
+     * @param msg {qx.event.message.Message} message for subscribers
+     */
+    __callSubscribers : function(subscribers, msg)
+    {
+      for (var i=0; i<subscribers.length; i++)
+      {
+        var subscriber = subscribers[i].subscriber;
+        var context = subscribers[i].context;
+
+        // call message monitor subscriber
+        if (context && context.isDisposed)
+        {
+          if (context.isDisposed())
+          {
+            subscribers.splice(i, 1);
+            i--;
+          }
+          else
+          {
+            subscriber.call(context, msg);
+          }
+        }
+        else
+        {
+          subscriber.call(context, msg);
         }
       }
     }

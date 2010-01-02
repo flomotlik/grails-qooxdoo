@@ -15,6 +15,7 @@
    Authors:
      * Sebastian Werner (wpbasti)
      * Fabian Jakobs (fjakobs)
+     * Martin Wittemann (martinwittemann)
 
 ************************************************************************ */
 
@@ -52,7 +53,7 @@ qx.Mixin.define("qx.ui.core.MExecutable",
      */
     command :
     {
-      check : "qx.event.Command",
+      check : "qx.ui.core.Command",
       apply : "_applyCommand",
       event : "changeCommand",
       nullable : true
@@ -69,49 +70,111 @@ qx.Mixin.define("qx.ui.core.MExecutable",
 
   members :
   {
+    __executableBindingIds : null,
+    __semaphore : false,
+    __executeListenerId : null,
+
+
+    /**
+     * {Map} Set of properties, which will by synced from the command to the
+     *    including widget
+     *
+     * @lint ignoreReferenceField(_bindableProperties)
+     */
+    _bindableProperties :
+    [
+      "enabled",
+      "label",
+      "icon",
+      "toolTipText",
+      "value",
+      "menu"
+    ],
+
+
     /**
      * Initiate the execute action.
-     *
      */
     execute : function()
     {
       var cmd = this.getCommand();
 
       if (cmd) {
-        cmd.execute(this);
+        if (this.__semaphore) {
+          this.__semaphore = false;
+        } else {
+          this.__semaphore = true;
+          cmd.execute(this);
+        }
       }
 
       this.fireEvent("execute");
     },
 
 
-    // property apply
-    _applyCommand : function(value, old)
-    {
-      if (old) {
-        old.removeListener("changeEnabled", this._onChangeEnabledCommand, this);
+    /**
+     * Handler for the execute event of the command.
+     *
+     * @param e {qx.event.type.Event} The execute event of the command.
+     */
+    __onCommandExecute : function(e) {
+      if (this.__semaphore) {
+        this.__semaphore = false;
+        return;
       }
-
-      if (value)
-      {
-        value.addListener("changeEnabled", this._onChangeEnabledCommand, this);
-
-        if (this.getEnabled() === false) {
-          value.setEnabled(false);
-        } else if (value.getEnabled() === false) {
-          this.setEnabled(false);
-        }
-      }
+      this.__semaphore = true;
+      this.execute();
     },
 
 
-    /**
-     * Event Listener. Listen for enabled changes in the associated command
-     *
-     * @param e {qx.event.type.Data} The change event
-     */
-    _onChangeEnabledCommand : function(e) {
-      this.setEnabled(e.getData());
+    // property apply
+    _applyCommand : function(value, old)
+    {
+      // execute forwarding
+      if (old != null) {
+        old.removeListenerById(this.__executeListenerId);
+      }
+      if (value != null) {
+        this.__executeListenerId = value.addListener(
+          "execute", this.__onCommandExecute, this
+        );
+      }
+
+      // binding stuff
+      var ids = this.__executableBindingIds;
+      if (ids == null) {
+        this.__executableBindingIds = ids = {};
+      }
+      for (var i = 0; i < this._bindableProperties.length; i++) {
+        var property = this._bindableProperties[i];
+
+        // remove the old binding
+        if (old != null && ids[property] != null)
+        {
+          old.removeBinding(ids[property]);
+          ids[property] = null;
+        }
+
+        // add the new binding
+        if (value != null && qx.Class.hasProperty(this.constructor, property)) {
+          // handle the init value (dont sync the initial null)
+          var cmdPropertyValue = value.get(property);
+          if (cmdPropertyValue == null) {
+            var selfPropertyValue = this.get(property)
+          }
+          // set up the binding
+          ids[property] = value.bind(property, this, property);
+          // reapply the former value
+          if (selfPropertyValue) {
+            this.set(property, selfPropertyValue);
+          }
+        }
+      }
     }
+  },
+
+
+  destruct : function() {
+    this.__executableBindingIds = null;
   }
 });

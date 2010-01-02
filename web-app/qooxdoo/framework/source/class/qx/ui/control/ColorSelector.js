@@ -245,7 +245,7 @@ qx.Class.define("qx.ui.control.ColorSelector",
         case "hue-saturation-pane":
           control = new qx.ui.container.Composite(new qx.ui.layout.Canvas());
           control.setAllowGrowY(false);
-          control.addListener("mouseup", this._onHueSaturationPaneMouseWheel, this);
+          control.addListener("mousewheel", this._onHueSaturationPaneMouseWheel, this);
           control.add(this.getChildControl("hue-saturation-field"));
           control.add(this.getChildControl("hue-saturation-handle"), {left: 0, top: 256});
           break;
@@ -452,20 +452,26 @@ qx.Class.define("qx.ui.control.ColorSelector",
     /**
      * The value of the ColorSelector is a string containing the HEX value of
      * the currently selected color. Take a look at
-     * {@link qx.util.ColorUtil.stringToRgb} to see what kind of input the
+     * {@link qx.util.ColorUtil#stringToRgb} to see what kind of input the
      * method can handle.
      *
      * @param value {String} The value of a color.
      */
-    setValue: function(value) {
+    setValue: function(value)
+    {
       var rgb;
-      if (value == null) {
+
+      if (value == null)
+      {
         this.__nullValue = true;
         rgb = [255, 255, 255];
-      } else {
+      }
+      else
+      {
         rgb = qx.util.ColorUtil.stringToRgb(value);
         this.__nullValue = false;
       }
+
       // block the first tow events
       this.__preventChangeValueEvent = true;
       this.setRed(rgb[0]);
@@ -482,7 +488,8 @@ qx.Class.define("qx.ui.control.ColorSelector",
      * @return {String | null} The HEX value of the color of if not color
      *   is set, null.
      */
-    getValue: function() {
+    getValue: function()
+    {
       return this.__nullValue ? null : "#" + qx.util.ColorUtil.rgbToHexString(
         [this.getRed(), this.getGreen(), this.getBlue()]
       );
@@ -491,7 +498,8 @@ qx.Class.define("qx.ui.control.ColorSelector",
     /**
      * Resets the color to null.
      */
-    resetValue: function() {
+    resetValue: function()
+    {
       this.__nullValue = true;
       this.__preventChangeValueEvent = true;
       this.setRed(255);
@@ -504,8 +512,10 @@ qx.Class.define("qx.ui.control.ColorSelector",
     /**
      * Helper for firing the changeValue event and checking for the mutex.
      */
-    __fireChangeValueEvent: function() {
-      if (!this.__preventChangeValueEvent) {
+    __fireChangeValueEvent: function()
+    {
+      if (!this.__preventChangeValueEvent)
+      {
         this.__nullValue = false;
         this.fireDataEvent("changeValue", this.getValue());
       }
@@ -786,6 +796,7 @@ qx.Class.define("qx.ui.control.ColorSelector",
       // Update if captured currently (through previous mousedown)
       if (this.__capture === "brightness-handle") {
         this._setBrightnessOnFieldEvent(e);
+        e.stopPropagation();
       }
     },
 
@@ -818,8 +829,10 @@ qx.Class.define("qx.ui.control.ColorSelector",
      *
      * @param e {qx.event.type.Mouse} Incoming event object
      */
-    _onBrightnessPaneMouseWheel : function(e) {
+    _onBrightnessPaneMouseWheel : function(e)
+    {
       this.setBrightness(qx.lang.Number.limit(this.getBrightness() + e.getWheelDelta(), 0, 100));
+      e.stop();
     },
 
 
@@ -861,8 +874,12 @@ qx.Class.define("qx.ui.control.ColorSelector",
     _onHueSaturationHandleMouseUp : function(e)
     {
       // Disabling capturing
-      this.getChildControl("hue-saturation-handle").releaseCapture();
-      this.__capture = null;
+      if (this.__capture)
+      {
+        e.stopPropagation();
+        this.getChildControl("hue-saturation-handle").releaseCapture();
+        this.__capture = null;
+      }
     },
 
 
@@ -876,8 +893,10 @@ qx.Class.define("qx.ui.control.ColorSelector",
     {
 
       // Update if captured currently (through previous mousedown)
-      if (this.__capture === "hue-saturation-handle") {
+      if (this.__capture === "hue-saturation-handle")
+      {
         this._setHueSaturationOnFieldEvent(e);
+        e.stopPropagation();
       }
     },
 
@@ -914,8 +933,10 @@ qx.Class.define("qx.ui.control.ColorSelector",
      *
      * @param e {qx.event.type.Mouse} Incoming event object
      */
-    _onHueSaturationPaneMouseWheel : function(e) {
+    _onHueSaturationPaneMouseWheel : function(e)
+    {
       this.setSaturation(qx.lang.Number.limit(this.getSaturation() + e.getWheelDelta(), 0, 100));
+      e.stop();
     },
 
 
@@ -1064,7 +1085,8 @@ qx.Class.define("qx.ui.control.ColorSelector",
         return;
       }
 
-      try {
+      try
+      {
         var hexField = this.getChildControl("hex-field");
         var rgb = qx.util.ColorUtil.hexStringToRgb("#" + hexField.getValue());
       } catch(ex) {
@@ -1082,7 +1104,8 @@ qx.Class.define("qx.ui.control.ColorSelector",
     /**
      * Sets hexfield value to it's corresponding red, green and blue value.
      */
-    _setHexFromRgb : function() {
+    _setHexFromRgb : function()
+    {
       var value = qx.util.ColorUtil.rgbToHexString(
         [this.getRed(),this.getGreen(),this.getBlue()]
       );
@@ -1164,9 +1187,9 @@ qx.Class.define("qx.ui.control.ColorSelector",
         default:
           var vRgb = qx.util.ColorUtil.hsbToRgb([this.getHue(), this.getSaturation(), this.getBrightness()]);
 
-          this.setRed(vRgb.red);
-          this.setGreen(vRgb.green);
-          this.setBlue(vRgb.blue);
+          this.setRed(vRgb[0]);
+          this.setGreen(vRgb[1]);
+          this.setBlue(vRgb[2]);
       }
     },
 
@@ -1213,7 +1236,7 @@ qx.Class.define("qx.ui.control.ColorSelector",
     {
       var ColorUtil = qx.util.ColorUtil;
       var helpRgb = ColorUtil.hsbToRgb([this.getHue(), this.getSaturation(), 255]);
-      var helpRgbString = ColorUtil.rgbToRgbString([helpRgb.red, helpRgb.green, helpRgb.blue])
+      var helpRgbString = ColorUtil.rgbToRgbString(helpRgb)
       this.getChildControl("brightness-field").setBackgroundColor(helpRgbString);
     },
 
@@ -1223,7 +1246,8 @@ qx.Class.define("qx.ui.control.ColorSelector",
      *
      * @param e {qx.event.type.Data} Incoming event object
      */
-    _onAppear : function(e) {
+    _onAppear : function(e)
+    {
       var color = qx.util.ColorUtil.rgbToRgbString([this.getRed(),
       this.getGreen(), this.getBlue()]);
 

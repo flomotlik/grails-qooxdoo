@@ -39,7 +39,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/widget/themediframe' target='_blank'>
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/themediframe' target='_blank'>
  * Documentation of this widget in the qooxdoo wiki.</a>
  */
 qx.Class.define("qx.ui.embed.ThemedIframe",
@@ -140,7 +140,7 @@ qx.Class.define("qx.ui.embed.ThemedIframe",
 
 
         case "scrollbar-x":
-          control = new qx.ui.core.ScrollBar("horizontal");
+          control = new qx.ui.core.scroll.ScrollBar("horizontal");
           control.setMinWidth(0);
 
           control.exclude();
@@ -151,7 +151,7 @@ qx.Class.define("qx.ui.embed.ThemedIframe",
 
 
         case "scrollbar-y":
-          control = new qx.ui.core.ScrollBar("vertical");
+          control = new qx.ui.core.scroll.ScrollBar("vertical");
           control.setMinHeight(0);
 
           control.exclude();
@@ -241,7 +241,10 @@ qx.Class.define("qx.ui.embed.ThemedIframe",
      */
     _onMouseWheel : function(e)
     {
-      var showY = this._isChildControlVisible("scrollbar-y");
+      var showY =
+        this._isChildControlVisible("scrollbar-y") &&
+        this.getChildControl("scrollbar-y").isEnabled();
+
       if (!showY) {
         return;
       }
@@ -316,8 +319,9 @@ qx.Class.define("qx.ui.embed.ThemedIframe",
     {
       try
       {
-        var body = this._getIframeElement().getBody();
-        body.style.overflow = "hidden";
+        var doc = this._getIframeElement().getDocument();
+        doc.documentElement.style.overflow = "hidden";
+        doc.body.style.overflow = "hidden";
       } catch (e) {
         this._disableScollbars();
       }
@@ -332,7 +336,7 @@ qx.Class.define("qx.ui.embed.ThemedIframe",
     {
       var iframeSize = this.__iframeSize;
       var paneSize = this.getChildControl("iframe").getBounds();
-      var innerSize = this.getInnerSize();
+      var innerSize = this.getChildControl("iframe").getInnerSize();
 
       if (!iframeSize || !innerSize || !innerSize) {
         return;
@@ -403,10 +407,10 @@ qx.Class.define("qx.ui.embed.ThemedIframe",
     {
       try
       {
-        var doc = this._getIframeElement().getDocument();
+        var win = this._getIframeElement().getWindow();
         var frameSize = {
-          width: qx.bom.element.Dimension.getWidth(doc.body),
-          height: qx.bom.element.Dimension.getHeight(doc.body)
+          width: qx.bom.Document.getWidth(win),
+          height: qx.bom.Document.getHeight(win)
         }
         return frameSize;
       }
@@ -457,7 +461,7 @@ qx.Class.define("qx.ui.embed.ThemedIframe",
         bar.set({
           position: 0,
           maximum: contentSize,
-          knobFactor: 0,
+          knobFactor: 1,
           enabled: false
         });
       }
@@ -466,7 +470,7 @@ qx.Class.define("qx.ui.embed.ThemedIframe",
         bar.setMaximum(1000000)
         bar.set({
           position: Math.min(bar.getPosition(), contentSize),
-          maximum: contentSize,
+          maximum: contentSize - containerSize,
           knobFactor: containerSize / contentSize,
           enabled: true
         });
@@ -532,6 +536,6 @@ qx.Class.define("qx.ui.embed.ThemedIframe",
   destruct : function()
   {
     this._stopIframeObserver();
-    this._disposeFields("__iframeObserverId", "__iframeSize");
+    this.__iframeSize = null;
   }
 })

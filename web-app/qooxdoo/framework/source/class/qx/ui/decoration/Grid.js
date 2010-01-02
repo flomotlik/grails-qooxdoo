@@ -214,11 +214,11 @@ qx.Class.define("qx.ui.decoration.Grid",
         // have rounding issues when working with odd dimensions:
         // right and bottom positioned elements are rendered with a
         // one pixel negative offset which results into some ugly
-        // render effects. We use the margin to correct this here
-        // as all other options conflict with styles applied by the
-        // the decoration class.
-        if (qx.bom.client.Engine.VERSION < 7 ||
-          (qx.bom.client.Feature.QUIRKS_MODE && qx.bom.client.Engine.VERSION < 8))
+        // render effects.
+        if (
+          qx.bom.client.Engine.VERSION < 7 ||
+          (qx.bom.client.Feature.QUIRKS_MODE && qx.bom.client.Engine.VERSION < 8)
+        )
         {
           if (width%2==1)
           {
@@ -274,13 +274,9 @@ qx.Class.define("qx.ui.decoration.Grid",
         }
       }
 
-      var ResourceManager = qx.util.ResourceManager.getInstance();
-
       if (value)
       {
-        var Alias = qx.util.AliasManager.getInstance();
-
-        var base = Alias.resolve(value);
+        var base = this._resolveImageUrl(value);
         var split = /(.*)(\.[a-z]+)$/.exec(base);
         var prefix = split[1];
         var ext = split[2];
@@ -302,14 +298,39 @@ qx.Class.define("qx.ui.decoration.Grid",
         };
 
         // Store edges
-        this.__edges =
-        {
-          top : ResourceManager.getImageHeight(images.t),
-          bottom : ResourceManager.getImageHeight(images.b),
-          left : ResourceManager.getImageWidth(images.l),
-          right : ResourceManager.getImageWidth(images.r)
-        };
+        this.__edges = this._computeEdgeSizes(images);
       }
+    },
+
+
+    /**
+     * Resolve the url of the given image
+     *
+     * @param image {String} base image URL
+     * @return {String} the resolved image URL
+     */
+    _resolveImageUrl : function(image) {
+      return qx.util.AliasManager.getInstance().resolve(image);
+    },
+
+
+    /**
+     * Returns the sizes of the "top" and "bottom" heights and the "left" and
+     * "right" widths of the grid.
+     *
+     * @param images {Map} Map of image URLs
+     * @return {Map} the edge sizes
+     */
+    _computeEdgeSizes : function(images)
+    {
+      var ResourceManager = qx.util.ResourceManager.getInstance();
+
+      return {
+        top : ResourceManager.getImageHeight(images.t),
+        bottom : ResourceManager.getImageHeight(images.b),
+        left : ResourceManager.getImageWidth(images.l),
+        right : ResourceManager.getImageWidth(images.r)
+      };
     }
   },
 
@@ -322,6 +343,6 @@ qx.Class.define("qx.ui.decoration.Grid",
   */
 
   destruct : function() {
-    this._disposeFields("__markup", "__images", "__edges", "__insets");
+    this.__markup = this.__images = this.__edges = null;
   }
 });

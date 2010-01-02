@@ -39,7 +39,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/widget/Atom' target='_blank'>
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/Atom' target='_blank'>
  * Documentation of this widget in the qooxdoo wiki.</a>
  */
 qx.Class.define("qx.ui.basic.Atom",
@@ -99,8 +99,8 @@ qx.Class.define("qx.ui.basic.Atom",
     {
       apply : "_applyLabel",
       nullable : true,
-      dispose : true,
-      check : "String"
+      check : "String",
+      event : "changeLabel"
     },
 
 
@@ -124,7 +124,8 @@ qx.Class.define("qx.ui.basic.Atom",
       check : "String",
       apply : "_applyIcon",
       nullable : true,
-      themeable : true
+      themeable : true,
+      event : "changeIcon"
     },
 
 

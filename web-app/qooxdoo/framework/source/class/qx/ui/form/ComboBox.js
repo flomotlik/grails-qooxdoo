@@ -30,10 +30,7 @@
 qx.Class.define("qx.ui.form.ComboBox",
 {
   extend  : qx.ui.form.AbstractSelectBox,
-  implement : [
-    qx.ui.form.IFormElement,
-    qx.ui.form.IStringForm
-  ],
+  implement : [qx.ui.form.IStringForm],
 
 
 
@@ -80,18 +77,6 @@ qx.Class.define("qx.ui.form.ComboBox",
       init : "combobox"
     },
 
-    /**
-     * Formatter to format <code>TextField</code> value when <code>ListItem</code>
-     * is selected. Uses the default formatter {@link qx.ui.form.ComboBox#__defaultFormat}.
-     */
-    format :
-    {
-      check : "Function",
-      init : function(item) {
-        return this.__defaultFormat(item);
-      },
-      nullable : true
-    },
 
     /**
      * String value which will be shown as a hint if the field is all of:
@@ -116,14 +101,6 @@ qx.Class.define("qx.ui.form.ComboBox",
 
   events :
   {
-    /** The input event is fired on every keystroke modifying the value of the field
-     *
-     *  Event data: The new text value of the field.
-     *
-     * @deprecated
-     */
-    "input" : "qx.event.type.Data",
-
     /** Whenever the value is changed this event is fired
      *
      *  Event data: The new text value of the field.
@@ -246,27 +223,6 @@ qx.Class.define("qx.ui.form.ComboBox",
     ---------------------------------------------------------------------------
     */
 
-    // @deprecated
-    // overridden
-    addListener: function(type, listener, self, capture)
-    {
-      if (type == "input") {
-        qx.log.Logger.deprecatedEventWarning(
-          arguments.callee,
-          "input",
-          "Please use the changeValue event instead."
-        );
-        if (!this.__onInputId)
-        {
-          var textfield = this.getChildControl("textfield");
-          this.__onInputId = textfield.addListener("input", this._onTextFieldInput, this);
-        }
-      }
-
-      return this.base(arguments, type, listener, self, capture);
-    },
-
-
     // overridden
     _onKeyPress : function(e)
     {
@@ -322,6 +278,10 @@ qx.Class.define("qx.ui.form.ComboBox",
           label = this.getFormat().call(this, this.__preSelectedItem);
         }
 
+        // check for translation
+        if (label && label.translate) {
+          label = label.translate();
+        }
         this.setValue(label);
         this.__preSelectedItem = null;
       }
@@ -349,6 +309,10 @@ qx.Class.define("qx.ui.form.ComboBox",
             label = this.getFormat().call(this, current[0]);
           }
 
+          // check for translation
+          if (label && label.translate) {
+            label = label.translate();
+          }
           this.setValue(label);
           this.__preSelectedItem = null;
         }
@@ -394,17 +358,6 @@ qx.Class.define("qx.ui.form.ComboBox",
 
 
     /**
-     * Redirects the input event of the textfield to the combobox.
-     *
-     * @param e {qx.event.type.Data} Input event
-     * @deprecated
-     */
-    _onTextFieldInput : function(e) {
-      this.fireDataEvent("input", e.getData());
-    },
-
-
-    /**
      * Reacts on value changes of the text field and syncs the
      * value to the combobox.
      *
@@ -417,7 +370,7 @@ qx.Class.define("qx.ui.form.ComboBox",
       var list = this.getChildControl("list");
       if (value != null) {
         // Select item when possible
-        var item = list.findItem(value);
+        var item = list.findItem(value, false);
         if (item) {
           list.setSelection([item]);
         } else {
@@ -431,125 +384,12 @@ qx.Class.define("qx.ui.form.ComboBox",
       this.fireDataEvent("changeValue", value, e.getOldData());
     },
 
-    /*
-    ---------------------------------------------------------------------------
-      FORMAT HANDLING
-    ---------------------------------------------------------------------------
-    */
-    /**
-     * Return the formatted label text from the <code>ListItem</code>.
-     * The formatter removes all HTML tags and converts all HTML entities
-     * to string characters when the rich property is <code>true</code>.
-     *
-     * @param item {ListItem} The list item to format.
-     * @return {String} The formatted text.
-     */
-    __defaultFormat : function(item)
-    {
-      var valueLabel = item ? item.getLabel() : "";
-      var rich = item ? item.getRich() : false;
-
-      if (rich) {
-        valueLabel = valueLabel.replace(/<[^>]+?>/g, "");
-        valueLabel = qx.bom.String.unescape(valueLabel);
-      }
-
-      return valueLabel;
-    },
 
     /*
     ---------------------------------------------------------------------------
       TEXTFIELD SELECTION API
     ---------------------------------------------------------------------------
     */
-
-    /**
-     * Returns the current selection.
-     * This method only works if the widget is already created and
-     * added to the document.
-     *
-     * @deprecated Use public method 'getTextSelection' instead
-     * @return {String|null}
-     */
-    getSelection : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'getTextSelection' instead!"
-      );
-
-      return this.getTextSelection();
-    },
-
-
-    /**
-     * Returns the current selection length.
-     * This method only works if the widget is already created and
-     * added to the document.
-     *
-     * @deprecated Use public method 'getTextSelectionLength' instead
-     * @return {Integer|null}
-     */
-    getSelectionLength : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'getTextSelectionLength' instead!"
-      );
-      return this.getTextSelectionLength();
-    },
-
-
-    /**
-     * Set the selection to the given start and end (zero-based).
-     * If no end value is given the selection will extend to the
-     * end of the textfield's content.
-     * This method only works if the widget is already created and
-     * added to the document.
-     *
-     * @deprecated Use public method 'setTextSelection' instead
-     * @param start {Integer} start of the selection (zero-based)
-     * @param end {Integer} end of the selection
-     * @return {void}
-     */
-    setSelection : function(start, end) {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'setTextSelection' instead!"
-      );
-      this.setTextSelection(start, end);
-    },
-
-
-    /**
-     * Clears the current selection.
-     * This method only works if the widget is already created and
-     * added to the document.
-     *
-     * @deprecated Use public method 'clearTextSelection' instead
-     * @return {void}
-     */
-    clearSelection : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'clearTextSelection' instead!"
-      );
-      this.clearTextSelection();
-    },
-
-
-    /**
-     * Selects the whole content
-     *
-     * @deprecated Use public method 'selectAllText' instead
-     * @return {void}
-     */
-    selectAll : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'selectAllText' instead!"
-      );
-      this.selectAllText();
-    },
-
 
     /**
      * Returns the current selection.

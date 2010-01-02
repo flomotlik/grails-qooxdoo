@@ -249,7 +249,7 @@ qx.Class.define("qx.test.ui.layout.LayoutItem",
 
     getLayoutChildren : function()
     {
-      var children = this.__children || [];
+      var children = this.__children || [];
       var layoutChildren = [];
 
       for (var i=0; i<children.length; i++)
@@ -286,6 +286,6 @@ qx.Class.define("qx.test.ui.layout.LayoutItem",
   },
 
   destruct : function() {
-    this._disposeFields("bounds", "__layout", "__children");
+    this.bounds = this.__layout = this.__children = null;
   }
 })

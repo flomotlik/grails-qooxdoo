@@ -119,7 +119,11 @@ qx.Class.define("qx.ui.core.EventHandler",
     __manager : null,
 
 
-    /** {Map} Supported focus event types */
+    /**
+     * {Map} Supported focus event types
+     *
+     * @lint ignoreReferenceField(__focusEvents)
+     */
     __focusEvents :
     {
       focusin : 1,
@@ -129,7 +133,11 @@ qx.Class.define("qx.ui.core.EventHandler",
     },
 
 
-    /** {Map} Map of events which should be fired independently from being disabled */
+    /**
+     * {Map} Map of events which should be fired independently from being disabled
+     *
+     * @lint ignoreReferenceField(__ignoreDisabled)
+     */
     __ignoreDisabled :
     {
       // mouse events
@@ -225,7 +233,7 @@ qx.Class.define("qx.ui.core.EventHandler",
 
       // Ignore most events in the disabled state.
       var type = domEvent.getType();
-      if (!(currentWidget.isEnabled() || this.__ignoreDisabled[type])) {
+      if (!currentWidget || !(currentWidget.isEnabled() || this.__ignoreDisabled[type])) {
         return;
       }
 
@@ -333,7 +341,7 @@ qx.Class.define("qx.ui.core.EventHandler",
   */
 
   destruct : function() {
-    this._disposeFields("__manager");
+    this.__manager = null;
   },
 
 

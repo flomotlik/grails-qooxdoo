@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -169,7 +169,7 @@ def handleClassDefinition(docTree, item, variant):
             handleStatics(valueItem, classNode)
 
         elif key == "properties":
-        	handleProperties(valueItem, classNode)
+            handleProperties(valueItem, classNode)
 
         elif key == "members":
             handleMembers(valueItem, classNode)
@@ -813,6 +813,7 @@ def handleFunction(funcItem, name, commentAttributes, classNode, reportMissingDe
 
     # Read all description, param and return attributes
     for attrib in commentAttributes:
+
         # Add description
         if attrib["category"] == "description":
             if attrib.has_key("text"):
@@ -849,6 +850,25 @@ def handleFunction(funcItem, name, commentAttributes, classNode, reportMissingDe
             node.addChild(returnNode)
 
             addTypeInfo(returnNode, attrib, funcItem)
+
+        elif attrib["category"] == "throws":
+
+            if node.hasChild("throws"):
+              throwsNode = node.getChild("throws")
+            else:
+              throwsNode = tree.Node("throws")
+
+            if not "text" in attrib:
+                addError(node, "Throws documentation is missing.", funcItem)
+            else:
+              child = tree.Node("desc")
+              child.set("text", attrib["text"])
+
+              if "type" in attrib:
+                child.set("type", attrib["type"][0]["type"])
+
+              throwsNode.addChild(child) 
+              node.addChild(throwsNode)
 
     # Check for documentation errors
     # Check whether all parameters have been documented
@@ -1452,6 +1472,31 @@ def packagesToJsonString(node, prefix = "", childPrefix = "  ", newLine="\n", en
     asString += '}'
 
     return asString
+
+
+def getPackageData(node):
+    data = {
+      "type" : node.type
+    } 
+
+    if node.type == "class":
+        node.set("externalRef", True)
+
+    if node.hasAttributes():
+        data["attributes"] = {}
+        for key in node.attributes:
+            data["attributes"][key] = node.attributes[key]
+
+    if node.type == "class":
+        node.remove("externalRef")
+
+    if node.hasChildren() and node.type != "class":
+        data["children"] = []
+
+        for child in node.children:
+            data["children"].append(getPackageData(child))
+
+    return data
 
 
 def packagesToXmlString(node, prefix = "", childPrefix = "  ", newLine="\n", encoding="utf-8"):

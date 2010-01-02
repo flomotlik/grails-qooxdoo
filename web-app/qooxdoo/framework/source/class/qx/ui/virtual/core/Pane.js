@@ -185,19 +185,6 @@ qx.Class.define("qx.ui.virtual.core.Pane",
     */
 
     /**
-     * Returns the layer container
-     *
-     * @deprecated
-     * @return {qx.ui.core.Widget} The layer container
-     */
-    getChild : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee, "Please use getChildren instead."
-      );
-      return this.__layerContainer;
-    },
-
-    /**
      * Returns an array containing the layer container
      *
      * @return {Object[]} The layer container array
@@ -681,7 +668,7 @@ qx.Class.define("qx.ui.virtual.core.Pane",
      * Converts a mouse event into a cell event and fires the cell event if the
      * mouse is over a cell.
      *
-     * @param e {qx.event.type.Mouse}
+     * @param e {qx.event.type.Mouse} The mouse event
      * @param cellEventType {String} The name of the cell event to fire
      */
     __handleMouseCellEvent : function(e, cellEventType)
@@ -963,6 +950,7 @@ qx.Class.define("qx.ui.virtual.core.Pane",
   {
     this._disposeArray("__layers");
     this._disposeObjects("__rowConfig", "__columnConfig", "__layerContainer");
-    this._disposeFields("__layerWindow", "__jobs", "__columnSizes", "__rowSizes");
+    this.__layerWindow = this.__jobs = this.__columnSizes =
+      this.__rowSizes = null;
   }
 });

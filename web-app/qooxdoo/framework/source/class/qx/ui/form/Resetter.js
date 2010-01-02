@@ -17,8 +17,6 @@
 
 ************************************************************************ */
 /**
- * <h3>EXPERIMENTAL!</h3>
- *
  * The resetter is responsible for managing a set of items and resetting this
  * items on a {@link #reset} call. It can halnde all form items supplying a
  * value property and all widgets implementing the single selection linke list
@@ -71,11 +69,108 @@ qx.Class.define("qx.ui.form.Resetter",
       for (var i = 0; i < this.__items.length; i++) {
         var dataEntry = this.__items[i];
         // set the init value
-        if (this.__supportsValue(dataEntry.item)) {
-          dataEntry.item.setValue(dataEntry.init);
-        } else if (this.__supportsSingleSelection(dataEntry.item)) {
-          dataEntry.item.setSelection(dataEntry.init)
+        this.__setItem(dataEntry.item, dataEntry.init);
+      }
+    },
+
+
+    /**
+     * Resets a single given item. The item has to be added to the resetter
+     * instance before. Otherwise, an error is thrown.
+     *
+     * @param item {qx.ui.core.Widget} The widget, which should be resetted.
+     */
+    resetItem : function(item)
+    {
+      // get the init value
+      var init;
+      for (var i = 0; i < this.__items.length; i++) {
+        var dataEntry = this.__items[i];
+        if (dataEntry.item === item) {
+          init = dataEntry.init;
+          break;
         }
+      };
+
+      // check for the available init value
+      if (init === undefined) {
+        throw new Error("The given item has not been added.");
+      }
+
+      this.__setItem(item, init);
+    },
+
+
+    /**
+     * Internal helper for setting an item to a given init value. It checks
+     * for the supported APIs and uses the fitting API.
+     *
+     * @param item {qx.ui.core.Widget} The item to reset.
+     * @param init {var} The value to set.
+     */
+    __setItem : function(item, init)
+    {
+      // set the init value
+      if (this.__supportsValue(item)) {
+        item.setValue(init);
+      } else if (this.__supportsSingleSelection(item)) {
+        item.setSelection(init)
+      }
+    },
+
+
+    /**
+     * Takes the current values of all added items and uses these values as
+     * init values for resetting.
+     */
+    redefine: function() {
+      // go threw all added items
+      for (var i = 0; i < this.__items.length; i++) {
+        var item = this.__items[i].item;
+        // set the new init value for the item
+        this.__items[i].init = this.__getCurrentValue(item);
+      }
+    },
+
+
+    /**
+     * Takes the current value of the given item and stores this value as init
+     * value for resetting.
+     *
+     * @param item {qx.ui.core.Widget} The item to redefine.
+     */
+    redefineItem : function(item)
+    {
+      // get the data entry
+      var dataEntry;
+      for (var i = 0; i < this.__items.length; i++) {
+        if (this.__items[i].item === item) {
+          dataEntry = this.__items[i];
+          break;
+        }
+      };
+
+      // check for the available init value
+      if (dataEntry === undefined) {
+        throw new Error("The given item has not been added.");
+      }
+
+      // set the new init value for the item
+      dataEntry.init = this.__getCurrentValue(dataEntry.item);
+    },
+
+
+    /**
+     * Internel helper top access the value of a given item.
+     *
+     * @param item {qx.ui.core.Widget} The item to access.
+     */
+    __getCurrentValue : function(item)
+    {
+      if (this.__supportsValue(item)) {
+        return item.getValue();
+      } else if (this.__supportsSingleSelection(item)) {
+        return item.getSelection();
       }
     },
 

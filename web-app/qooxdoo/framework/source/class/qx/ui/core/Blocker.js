@@ -53,6 +53,10 @@ qx.Class.define("qx.ui.core.Blocker",
     if (this._isPageRoot) {
       widget.addListener("resize", this.__onResize, this);
     }
+
+    this.__activeElements = [];
+    this.__focusElements = [];
+    this.__contentBlockerCount = [];
   },
 
   /*
@@ -101,14 +105,22 @@ qx.Class.define("qx.ui.core.Blocker",
   members :
   {
     __blocker : null,
-    __isBlocked : null,
+    __blockerCount : 0,
     __contentBlocker : null,
-    __isContentBlocked : null,
+    __contentBlockerCount : null,
+
+    __activeElements  : null,
+    __focusElements   : null,
 
     __oldAnonymous : null,
+
+    // @deprecated
     __anonymousCounter : 0,
 
     __timer : null,
+
+    _isPageRoot : false,
+    _widget : null,
 
 
     /**
@@ -122,14 +134,14 @@ qx.Class.define("qx.ui.core.Blocker",
 
       if (this.isContentBlocked())
       {
-        this._getContentBlocker().setStyles({
+        this.getContentBlockerElement().setStyles({
           width: data.width,
           height: data.height
         });
       }
       if (this.isBlocked())
       {
-        this._getBlocker().setStyles({
+        this.getBlockerElement().setStyles({
           width: data.width,
           height: data.height
         });
@@ -151,6 +163,7 @@ qx.Class.define("qx.ui.core.Blocker",
       this.__setBlockersStyle("opacity", value);
     },
 
+
     /**
      * Set the style to all blockers (blocker and content blocker).
      *
@@ -168,12 +181,18 @@ qx.Class.define("qx.ui.core.Blocker",
       }
     },
 
+
     /**
      * Remember current value and make widget anonymous. This prevents
      * "capturing events".
+     *
+     * @deprecated 'It is not needed anymore.'
      */
     _saveAndSetAnonymousState : function()
     {
+      qx.log.Logger.deprecatedMethodWarning(arguments.callee,
+        "This method is not needed anymore.");
+
       this.__anonymousCounter += 1;
       if (this.__anonymousCounter == 1)
       {
@@ -186,12 +205,65 @@ qx.Class.define("qx.ui.core.Blocker",
     /**
      * Reset the value of the anonymous property to its previous state. Each call
      * to this method must have a matching call to {@link #_saveAndSetAnonymousState}.
+     *
+     * @deprected 'It is not needed anymore.'
      */
     _restoreAnonymousState : function()
     {
+      qx.log.Logger.deprecatedMethodWarning(arguments.callee,
+        "This method is not needed anymore.");
+
       this.__anonymousCounter -= 1;
       if (this.__anonymousCounter == 0) {
         this._widget.setAnonymous(this.__oldAnonymous);
+      }
+    },
+
+
+    /**
+     * Backup the current active and focused widget.
+     */
+    _backupActiveWidget : function()
+    {
+      var focusHandler = qx.event.Registration.getManager(window).getHandler(qx.event.handler.Focus);
+
+      this.__activeElements.push(focusHandler.getActive());
+      this.__focusElements.push(focusHandler.getFocus());
+
+      if (this._widget.isFocusable()) {
+        this._widget.focus();
+      }
+    },
+
+
+    /**
+     * Restore the current active and focused widget.
+     */
+    _restoreActiveWidget : function()
+    {
+      var activeElementsLength = this.__activeElements.length;
+      if (activeElementsLength > 0)
+      {
+        var widget = this.__activeElements[activeElementsLength - 1];
+
+        if (widget) {
+          qx.bom.Element.activate(widget);
+        }
+
+        this.__activeElements.pop();
+      }
+
+      var focusElementsLength = this.__focusElements.length;
+
+      if (focusElementsLength > 0)
+      {
+        var widget = this.__focusElements[focusElementsLength - 1];
+
+        if (widget) {
+          qx.bom.Element.focus(this.__focusElements[focusElementsLength - 1]);
+        }
+
+        this.__focusElements.pop();
       }
     },
 
@@ -209,9 +281,24 @@ qx.Class.define("qx.ui.core.Blocker",
     /**
      * Get/create the blocker element
      *
+     * @deprecated Use 'getBlockerElement' instead. (for 0.9)
+     *
      * @return {qx.html.Element} The blocker element
      */
     _getBlocker : function()
+    {
+      qx.log.Logger.deprecatedMethodWarning(arguments.callee, "Use 'getBlockerElement' instead.");
+
+      return this.getBlockerElement();
+    },
+
+
+    /**
+     * Get/create the blocker element
+     *
+     * @return {qx.html.Element} The blocker element
+     */
+    getBlockerElement : function()
     {
       if (!this.__blocker)
       {
@@ -230,16 +317,20 @@ qx.Class.define("qx.ui.core.Blocker",
      */
     block : function()
     {
-      if (this.__isBlocked) {
-        return;
+      this.__blockerCount++;
+      if (this.__blockerCount < 2)
+      {
+        this._backupActiveWidget();
+
+        var blocker = this.getBlockerElement();
+        blocker.include();
+        blocker.activate();
+
+        blocker.addListener("deactivate", this.__activateBlockerElement, this);
+        blocker.addListener("keypress", this.__stopTabEvent, this);
+        blocker.addListener("keydown", this.__stopTabEvent, this);
+        blocker.addListener("keyup", this.__stopTabEvent, this);
       }
-      this.__isBlocked = true;
-
-      // overlay the blocker widget
-      // this prevents bubbling events
-      this._getBlocker().include();
-
-      this._saveAndSetAnonymousState();
     },
 
 
@@ -249,22 +340,71 @@ qx.Class.define("qx.ui.core.Blocker",
      * @return {Boolean} Whether the widget is blocked.
      */
     isBlocked : function() {
-      return !!this.__isBlocked;
+      return this.__blockerCount > 0;
     },
 
 
     /**
-     * Unblock the widget blocked by {@link #block}
+     * Unblock the widget blocked by {@link #block}, but it takes care of
+     * the amount of {@link #block} calls. The blocker is only removed if
+     * the numer of {@link #unblock} calls is identical to {@link #block} calls.
      */
     unblock : function()
     {
-      if (!this.__isBlocked) {
+      if (!this.isBlocked()){
         return;
       }
-      this.__isBlocked = false;
 
-      this._restoreAnonymousState();
-      this._getBlocker().exclude();
+      this.__blockerCount--;
+      if (this.__blockerCount < 1) {
+        this.__unblock();
+      }
+    },
+
+
+    /**
+     * Unblock the widget blocked by {@link #block}, but it doesn't take care of
+     * the amount of {@link #block} calls. The blocker is directly removed.
+     */
+    forceUnblock : function()
+    {
+      if (!this.isBlocked()){
+        return;
+      }
+
+      this.__blockerCount = 0;
+      this.__unblock();
+    },
+
+
+    /**
+     * Unblock the widget blocked by {@link #block}.
+     */
+    __unblock : function()
+    {
+      this._restoreActiveWidget();
+
+      var blocker = this.getBlockerElement();
+      blocker.removeListener("deactivate", this.__activateBlockerElement, this);
+      blocker.removeListener("keypress", this.__stopTabEvent, this);
+      blocker.removeListener("keydown", this.__stopTabEvent, this);
+      blocker.removeListener("keyup", this.__stopTabEvent, this);
+      blocker.exclude();
+    },
+
+
+    /**
+     * Get/create the content blocker element
+     *
+     * @deprecated Use 'getContentBlockerElement' instead. (for 0.9)
+     *
+     * @return {qx.html.Element} The content blocker element
+     */
+    _getContentBlocker : function()
+    {
+      qx.log.Logger.deprecatedMethodWarning(arguments.callee, "Use 'getContentBlockerElement' instead.");
+
+      return this.getContentBlockerElement();
     },
 
 
@@ -273,7 +413,7 @@ qx.Class.define("qx.ui.core.Blocker",
      *
      * @return {qx.html.Element} The blocker element
      */
-    _getContentBlocker : function()
+    getContentBlockerElement : function()
     {
       if (!this.__contentBlocker)
       {
@@ -293,29 +433,28 @@ qx.Class.define("qx.ui.core.Blocker",
      */
     blockContent : function(zIndex)
     {
-      var blocker = this._getContentBlocker();
+      var blocker = this.getContentBlockerElement();
       blocker.setStyle("zIndex", zIndex);
 
-      if (this.__isContentBlocked) {
-        return;
-      }
-      this.__isContentBlocked = true;
-
-      blocker.include();
-
-      if (this._isPageRoot)
+      this.__contentBlockerCount.push(zIndex);
+      if (this.__contentBlockerCount.length < 2)
       {
-        // to block interaction we need to cover the HTML page with a div as well.
-        // we do so by placing a div parallel to the page root with a slightly
-        // lower zIndex and keep the size of this div in sync with the body
-        // size.
-        if (!this.__timer)
+        blocker.include();
+
+        if (this._isPageRoot)
         {
-          this.__timer = new qx.event.Timer(300);
-          this.__timer.addListener("interval", this.__syncBlocker, this);
+          // to block interaction we need to cover the HTML page with a div as well.
+          // we do so by placing a div parallel to the page root with a slightly
+          // lower zIndex and keep the size of this div in sync with the body
+          // size.
+          if (!this.__timer)
+          {
+            this.__timer = new qx.event.Timer(300);
+            this.__timer.addListener("interval", this.__syncBlocker, this);
+          }
+          this.__timer.start();
+          this.__syncBlocker();
         }
-        this.__timer.start();
-        this.__syncBlocker();
       }
     },
 
@@ -326,21 +465,58 @@ qx.Class.define("qx.ui.core.Blocker",
      * @return {Boolean} Whether the content is blocked
      */
     isContentBlocked : function() {
-      return !!this.__isContentBlocked;
+      return this.__contentBlockerCount.length > 0;
     },
 
 
     /**
-     * Remove the content blocker.
+     * Unblock the content blocked by {@link #blockContent}, but it takes care of
+     * the amount of {@link #blockContent} calls. The blocker is only removed if
+     * the numer of {@link #unblockContent} calls is identical to
+     * {@link #blockContent} calls.
      */
     unblockContent : function()
     {
-      if (!this.__isContentBlocked) {
+      if (!this.isContentBlocked()) {
         return;
       }
-      this.__isContentBlocked = false;
 
-      this._getContentBlocker().exclude();
+      this.__contentBlockerCount.pop();
+      var zIndex = this.__contentBlockerCount[this.__contentBlockerCount.length - 1];
+      var contentBlocker = this.getContentBlockerElement();
+      contentBlocker.setStyle("zIndex", zIndex);
+
+      if (this.__contentBlockerCount.length < 1) {
+        this.__unblockContent();
+      }
+    },
+
+
+    /**
+     * Unblock the content blocked by {@link #blockContent}, but it doesn't take
+     * care of the amount of {@link #blockContent} calls. The blocker is
+     * directly removed.
+     */
+    forceUnblockContent : function()
+    {
+      if (!this.isContentBlocked()) {
+        return;
+      }
+
+      this.__contentBlockerCount = [];
+      var contentBlocker = this.getContentBlockerElement();
+      contentBlocker.setStyle("zIndex", null);
+
+      this.__unblockContent();
+    },
+
+
+    /**
+     * Unblock the content blocked by {@link #blockContent}.
+     */
+    __unblockContent : function()
+    {
+     this.getContentBlockerElement().exclude();
 
       if (this._isPageRoot) {
         this.__timer.stop();
@@ -357,14 +533,32 @@ qx.Class.define("qx.ui.core.Blocker",
       var containerEl = this._widget.getContainerElement().getDomElement();
       var doc = qx.dom.Node.getDocument(containerEl);
 
-      this._getContentBlocker().setStyles({
+      this.getContentBlockerElement().setStyles({
         height: doc.documentElement.scrollHeight + "px",
         width: doc.documentElement.scrollWidth + "px"
       });
+    },
+
+
+    /**
+     * Stops the passed "Tab" event.
+     *
+     * @param e {qx.event.type.KeySequence} event to stop.
+     */
+    __stopTabEvent : function(e) {
+      if (e.getKeyIdentifier() == "Tab") {
+        e.stop();
+      }
+    },
+
+
+    /**
+     * Sets the blocker element to avtive.
+     */
+    __activateBlockerElement : function() {
+      this.getBlockerElement().activate();
     }
   },
-
-
 
 
   /*
@@ -379,6 +573,7 @@ qx.Class.define("qx.ui.core.Blocker",
       this._widget.removeListener("resize", this.__onResize, this);
     }
     this._disposeObjects("__contentBlocker", "__blocker", "__timer");
-    this._disposeFields("__oldAnonymous");
+    this.__oldAnonymous = this.__activeElements = this.__focusElements =
+      this._widget = this.__contentBlockerCount = null;
   }
 });

@@ -18,8 +18,6 @@
 ************************************************************************ */
 
 /**
- * EXPERIMENTAL!!!
- *
  * The data binding package is still under development so there will be changes
  * to the API. This Features is for texting purpose only.
  */
@@ -73,7 +71,7 @@ qx.Mixin.define("qx.data.MBinding",
     /**
      * Removes all bindings from the object.
      *
-     * @throws {qx.core.AssertionErrro} If the object is not in the internal
+     * @throws {qx.core.AssertionError} If the object is not in the internal
      *   registry of the bindings.
      * @throws {Error} If one of the bindings listed internally can not be
      *   removed.

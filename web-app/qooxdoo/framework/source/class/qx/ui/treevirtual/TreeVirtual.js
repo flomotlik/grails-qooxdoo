@@ -346,7 +346,7 @@ qx.Class.define("qx.ui.treevirtual.TreeVirtual",
     /**
      * Return the data model for this tree.
      *
-     * @return {var} TODOC
+     * @return {qx.ui.table.ITableModel} The data model.
      */
     getDataModel : function()
     {
@@ -539,22 +539,6 @@ qx.Class.define("qx.ui.treevirtual.TreeVirtual",
     getSelectionMode : function()
     {
       return this.getSelectionModel().getSelectionMode();
-    },
-
-
-    /**
-     * Set the attributes used to indicate the cell that has the focus.
-     *
-     * @deprecated
-     *   This method no longer does anything and will be removed in 0.9
-     *
-     * @param attributes {Map} attributes used to indicate the cell that has the focus
-     * @return {void}
-     */
-    setCellFocusAttributes : function(attributes)
-    {
-       qx.log.Logger.deprecatedMethodWarning(arguments.callee,
-           "This method no longer does anything and will be removed in 0.9");
     },
 
 

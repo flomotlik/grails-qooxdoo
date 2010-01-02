@@ -37,6 +37,8 @@ from generator.code.TreeCompiler     import TreeCompiler
 from generator.code.LibraryPath      import LibraryPath
 from generator.code.ResourceHandler  import ResourceHandler
 from generator.code.Script           import Script
+from generator.code.Package          import Package
+from generator.code.Part             import Part
 from generator.action.CodeGenerator  import CodeGenerator
 from generator.action.ImageInfo      import ImgInfoFmt
 from generator.action.ImageClipping  import ImageClipping
@@ -86,6 +88,11 @@ class Generator(object):
             {
               "type"   : "JClassDepJob"
             },
+            
+            "collect-environment-info" :
+            {
+              "type"   : "JSimpleJob"
+            },
 
             "copy-files" :
             {
@@ -105,6 +112,11 @@ class Generator(object):
             "copy-resources" :
             {
               "type"   : "JClassDepJob"
+            },
+
+            "compile" :
+            {
+              "type" : "JCompileJob",
             },
 
             "compile-source" :
@@ -159,10 +171,10 @@ class Generator(object):
           }
 
 
-        def computeClassList(smartInclude, smartExclude, explicitInclude, explicitExclude, variants):
+        def computeClassList(includeWithDeps, excludeWithDeps, includeNoDeps, excludeNoDeps, variants, verifyDeps=False):
             self._console.info("Resolving dependencies...")
             self._console.indent()
-            classList = self._depLoader.getClassList(smartInclude, smartExclude, explicitInclude, explicitExclude, variants)
+            classList = self._depLoader.getClassList(includeWithDeps, excludeWithDeps, includeNoDeps, excludeNoDeps, variants, verifyDeps)
             self._console.outdent()
 
             return classList
@@ -245,12 +257,12 @@ class Generator(object):
 
 
 
-        def partsConfigFromClassList(smartExclude, script):
+        def partsConfigFromClassList(excludeWithDeps, script):
 
             classList  = script.classes
             variants   = script.variants
 
-            def evalPackagesConfig(smartExclude, classList, variants):
+            def evalPackagesConfig(excludeWithDeps, classList, variants):
                 
                 # Reading configuration
                 partsCfg = self._job.get("packages/parts", {})
@@ -262,9 +274,12 @@ class Generator(object):
                     partIncludes[partId] = self._expandRegExps(partsCfg[partId]['include'])
 
                 # Computing packages
-                boot, partPackages, packageClasses = self._partBuilder.getPackages(partIncludes, smartExclude, self._context, script)
+                #boot, partPackages, packageClasses = self._partBuilder.getPackages(partIncludes, excludeWithDeps, self._context, script)
+                partPackages, _ = self._partBuilder.getPackages(partIncludes, excludeWithDeps, self._context, script)
+                packageClasses = script.packagesArraySorted()
 
-                return boot, partPackages, packageClasses
+                #return boot, partPackages, packageClasses
+                return script.boot, script.parts, packageClasses
 
 
             # Check for package configuration
@@ -272,12 +287,22 @@ class Generator(object):
                 (boot,
                 partPackages,           # partPackages[partId]=[0,1,3]
                 packageClasses          # packageClasses[0]=['qx.Class','qx.bom.Stylesheet',...]
-                )              = evalPackagesConfig(smartExclude, classList, variants)
+                )              = evalPackagesConfig(excludeWithDeps, classList, variants)
             else:
                 # Emulate configuration
                 boot           = "boot"
                 partPackages   = { "boot" : [0] }
                 packageClasses = [classList]
+                # patch script object
+                script.boot        = boot
+                packageObj         = Package(0)
+                packageObj.classes = classList
+                script.packages[0] = packageObj
+                script.packageIdsSorted = [0]
+                partObj            = Part("boot")
+                #partObj.packages   = [0]
+                partObj.packages.append(packageObj)
+                script.parts       = { "boot" : partObj }
 
             return boot, partPackages, packageClasses
 
@@ -302,11 +327,11 @@ class Generator(object):
 
             # Splitting lists
             self._console.debug("Preparing exclude configuration...")
-            smartExclude, explicitExclude = self._splitIncludeExcludeList(excludeCfg)
+            excludeWithDeps, excludeNoDeps = self._splitIncludeExcludeList(excludeCfg)
 
             # Configuration feedback
             self._console.indent()
-            self._console.debug("Excluding %s items smart, %s items explicit" % (len(smartExclude), len(explicitExclude)))
+            self._console.debug("Excluding %s items smart, %s items explicit" % (len(excludeWithDeps), len(excludeNoDeps)))
 
             if len(excludeCfg) > 0:
                 self._console.warn("Excludes may break code!")
@@ -316,11 +341,27 @@ class Generator(object):
             # Resolve regexps
             self._console.indent()
             self._console.debug("Expanding expressions...")
-            smartExclude = self._expandRegExps(smartExclude)
-            explicitExclude = self._expandRegExps(explicitExclude)
+            nexcludeWithDeps = []
+            for entry in excludeWithDeps:
+                try:
+                    expanded = self._expandRegExp(entry)
+                    nexcludeWithDeps.extend(expanded)
+                except RuntimeError:
+                    self._console.warn("! Skipping unresolvable exclude entry: \"%s\"" % entry)
+            excludeWithDeps = nexcludeWithDeps
+
+            nexcludeNoDeps = []
+            for entry in excludeNoDeps:
+                try:
+                    expanded = self._expandRegExp(entry)
+                    nexcludeNoDeps.extend(expanded)
+                except RuntimeError:
+                    self._console.warn("! Skipping unresolvable exclude entry: \"%s\"" % entry)
+            excludeNoDeps = nexcludeNoDeps
+
             self._console.outdent()
 
-            return smartExclude, explicitExclude
+            return excludeWithDeps, excludeNoDeps
 
 
 
@@ -329,55 +370,65 @@ class Generator(object):
 
             # Splitting lists
             self._console.debug("Preparing include configuration...")
-            smartInclude, explicitInclude = self._splitIncludeExcludeList(includeCfg)
+            includeWithDeps, includeNoDeps = self._splitIncludeExcludeList(includeCfg)
             self._console.indent()
 
-            if len(smartInclude) > 0 or len(explicitInclude) > 0:
+            if len(includeWithDeps) > 0 or len(includeNoDeps) > 0:
                 # Configuration feedback
-                self._console.debug("Including %s items smart, %s items explicit" % (len(smartInclude), len(explicitInclude)))
+                self._console.debug("Including %s items smart, %s items explicit" % (len(includeWithDeps), len(includeNoDeps)))
 
-                if len(explicitInclude) > 0:
+                if len(includeNoDeps) > 0:
                     self._console.warn("Explicit included classes may not work")
 
                 # Resolve regexps
                 self._console.debug("Expanding expressions...")
-                smartInclude = self._expandRegExps(smartInclude)
-                explicitInclude = self._expandRegExps(explicitInclude)
+                try:
+                    includeWithDeps = self._expandRegExps(includeWithDeps)
+                    includeNoDeps = self._expandRegExps(includeNoDeps)
+                except RuntimeError:
+                    self._console.error("Invalid include block: %s" % includeCfg)
+                    raise
 
             elif self._job.get("packages"):
                 # Special part include handling
                 self._console.info("Including part classes...")
                 partsCfg = partsCfg = self._job.get("packages/parts", {})
-                smartInclude = []
+                includeWithDeps = []
                 for partId in partsCfg:
-                    smartInclude.extend(partsCfg[partId])
+                    includeWithDeps.extend(partsCfg[partId])
 
                 # Configuration feedback
-                self._console.debug("Including %s items smart, %s items explicit" % (len(smartInclude), len(explicitInclude)))
+                self._console.debug("Including %s items smart, %s items explicit" % (len(includeWithDeps), len(includeNoDeps)))
 
                 # Resolve regexps
                 self._console.debug("Expanding expressions...")
-                smartInclude = self._expandRegExps(smartInclude)
+                includeWithDeps = self._expandRegExps(includeWithDeps)
 
             self._console.outdent()
 
-            return smartInclude, explicitInclude
+            return includeWithDeps, includeNoDeps
 
 
         def printVariantInfo(variantSetNum, variants, variantSets, variantData):
             if len(variantSets) < 2:  # only log when more than 1 set
                 return
             variantStr = simplejson.dumps(variants,ensure_ascii=False)
-            self._console.head("Processing variant set %s/%s (%s)" % (variantSetNum+1, len(variantSets), variantStr))
+            self._console.head("Processing variant set %s/%s" % (variantSetNum+1, len(variantSets)))
 
             # Debug variant combination
-            self._console.debug("Switched variants:")
-            self._console.indent()
+            hasVariants = False
             for key in variants:
                 if len(variantData[key]) > 1:
-                    self._console.debug("%s = %s" % (key, variants[key]))
-            self._console.outdent()
-
+                    hasVariants = True
+                    
+            if hasVariants:
+                self._console.info("Switched variants:")
+                self._console.indent()
+                for key in variants:
+                    if len(variantData[key]) > 1:
+                        self._console.info("%s = %s" % (key, variants[key]))
+                self._console.outdent()
+            
             return
 
 
@@ -416,7 +467,9 @@ class Generator(object):
         # -- Process simple job triggers
         if simpleTriggers:
             for trigger in simpleTriggers:
-                if trigger == "copy-files":
+                if trigger == "collect-environment-info":
+                    self.runCollectEnvironmentInfo()
+                elif trigger == "copy-files":
                     self.runCopyFiles()
                 elif trigger == "combine-images":
                     self.runImageCombining()
@@ -450,19 +503,19 @@ class Generator(object):
 
         # create tool chain instances
         self._treeLoader     = TreeLoader(self._classes, self._cache, self._console)
-        self._locale         = Locale(self._classes, self._translations, self._cache, self._console, self._treeLoader)
+        self._locale         = Locale(self._context, self._classes, self._translations, self._cache, self._console, self._treeLoader)
         self._depLoader      = DependencyLoader(self._classes, self._cache, self._console, self._treeLoader, require, use, context)
         self._resourceHandler= ResourceHandler(self)
         self._codeGenerator  = CodeGenerator(self._cache, self._console, self._config, self._job, self._settings, self._locale, self._resourceHandler, self._classes)
 
         # Preprocess include/exclude lists
-        smartInclude, explicitInclude = getIncludes(self._job.get("include", []))
-        smartExclude, explicitExclude = getExcludes(self._job.get("exclude", []))
+        includeWithDeps, includeNoDeps = getIncludes(self._job.get("include", []))
+        excludeWithDeps, excludeNoDeps = getExcludes(self._job.get("exclude", []))
         # Processing all combinations of variants
         variantData = getVariants()  # e.g. {'qx.debug':['on','off'], 'qx.aspects':['on','off']}
         variantSets = util.computeCombinations(variantData) # e.g. [{'qx.debug':'on','qx.aspects':'on'},...]
         # get a class list with an initial variant set
-        classList = computeClassList(smartInclude, smartExclude, explicitInclude, explicitExclude, variantSets[0])
+        classList = computeClassList(includeWithDeps, excludeWithDeps, includeNoDeps, excludeNoDeps, variantSets[0], verifyDeps=True)
         
         # process job triggers
         if classdepTriggers:
@@ -498,8 +551,8 @@ class Generator(object):
         if "log" in jobTriggers:
             optimize = config.get("log/dependencies/dot/optimize", [])
             self._treeCompiler.setOptimize(optimize)
-        if "compile-dist" in jobTriggers:  # let the compile-dist settings win
-            optimize = config.get("compile-dist/code/optimize", [])
+        if "compile-dist" or "compile-options" in jobTriggers:  # let the compile-dist settings win
+            optimize = config.get("compile-dist/code/optimize", []) or config.get("compile-options/code/optimize", [])
             self._treeCompiler.setOptimize(optimize)
 
         # Iterate through variant sets
@@ -512,15 +565,18 @@ class Generator(object):
             script.variants = variants
 
             # get current class list
-            self._classList = computeClassList(smartInclude, smartExclude, explicitInclude, 
-                                               explicitExclude, variants)
+            self._classList = computeClassList(includeWithDeps, excludeWithDeps, includeNoDeps, 
+                                               excludeNoDeps, variants)
             script.classes  = self._classList
 
             # get parts config
-            (script.boot,
-            script.parts,            # script.parts['boot']=[0,1,3]
-            script.packages          # script.packages[0]=['qx.Class','qx.bom.Stylesheet',...]
-            )               = partsConfigFromClassList(smartExclude, script)
+            #(script.boot,
+            #script.parts,            # script.parts['boot']=[0,1,3]
+            #script.packages          # script.packages[0]=['qx.Class','qx.bom.Stylesheet',...]
+            (_,
+            _,            # script.parts['boot']=[0,1,3]
+            _          # script.packages[0]=['qx.Class','qx.bom.Stylesheet',...]
+            )               = partsConfigFromClassList(excludeWithDeps, script)
 
             # Execute real tasks
             self._codeGenerator.runSource  (script, self._libs, self._classes)
@@ -556,6 +612,10 @@ class Generator(object):
         self._apiLoader      = ApiLoader(self._classes, self._docs, self._cache, self._console, self._treeLoader)
 
         self._apiLoader.storeApi(classList, apiPath)
+        
+        verify = self._job.get("api/verify", [])
+        if "links" in verify:
+            self._apiLoader.verifyLinks(classList, apiPath)
 
         return
 
@@ -564,7 +624,7 @@ class Generator(object):
         if not self._job.get("log/classes-unused", False):
             return
 
-        packages   = script.packages
+        packages   = script.packagesArraySorted()
         parts      = script.parts
         variants   = script.variants
 
@@ -638,7 +698,7 @@ class Generator(object):
         if not depsLogConf:
            return
 
-        packages   = script.packages
+        packages   = script.packagesArraySorted()
         parts      = script.parts
         variants   = script.variants
 
@@ -651,11 +711,11 @@ class Generator(object):
                 for classId in sorted(package):
                     classDeps = self._depLoader.getDeps(classId, variants)
                     if classDeps["load"]:
-                        for depId in classDeps["load"]:
-                            yield (packageId, classId, depId, 'load')
+                        for dep in classDeps["load"]:
+                            yield (packageId, classId, dep.name, 'load')
                     if classDeps["run"]:
-                        for depId in classDeps["run"]:
-                            yield (packageId, classId, depId, 'run')
+                        for dep in classDeps["run"]:
+                            yield (packageId, classId, dep.name, 'run')
             return
 
         def depsToJsonFile(classDepsIter, depsLogConf):
@@ -762,9 +822,8 @@ class Generator(object):
 
             def addNodes(gr, st_nodes):
                 # rather gr.add_nodes(st), go through indiviudal nodes for coloring
-                if depsLogConf.get("dot/compiled-class-size", True):
-                    useCompiledSize = True
-                    optimize        = depsLogConf.get("dot/optimize", [])
+                useCompiledSize = depsLogConf.get("dot/compiled-class-size", True)
+                optimize        = depsLogConf.get("dot/optimize", [])
                 for cid in st_nodes:
                     if cid == None:  # None is introduced in st
                         continue
@@ -817,10 +876,11 @@ class Generator(object):
                     oPackageId = packageId
                     self._console.outdent()
                     self._console.outdent()
+                    self._console.outdent()
                     self._console.info("Package %s" % packageId)
                     self._console.indent()
                     for partId in parts:
-                        if packageId in parts[partId]:
+                        if packageId in (x.id for x in parts[partId].packages):
                             self._console.info("Part %s" % partId)
                     self._console.indent()
                     self._console.indent()
@@ -894,10 +954,10 @@ class Generator(object):
                     for otherClassId in package:
                         otherClassDeps = self._depLoader.getDeps(otherClassId, variants)
 
-                        if classId in otherClassDeps["load"]:
+                        if classId in (x.name for x in otherClassDeps["load"]):
                             self._console.info("Used by: %s (load)" % otherClassId)
 
-                        if classId in otherClassDeps["run"]:
+                        if classId in (x.name for x in otherClassDeps["run"]):
                             self._console.info("Used by: %s (run)" % otherClassId)
 
                     self._console.outdent()
@@ -970,7 +1030,7 @@ class Generator(object):
         resTargetRoot = self._config.absPath(resTargetRoot)
         self.approot  = resTargetRoot  # this is a hack, because resource copying generates uri's
         libs          = self._job.get("library", [])
-        resourceFilter= self._resourceHandler.getResourceFilterByAssets(classList)
+        resourceFilter, classMap = self._resourceHandler.getResourceFilterByAssets(classList)
 
         self._console.indent()
         # Copy resources
@@ -1007,6 +1067,83 @@ class Generator(object):
                 self._copyResources(res, os.path.dirname(resTarget))
 
         self._console.outdent()
+
+    
+
+    def runCollectEnvironmentInfo(self):
+        letConfig = self._job.get('let',{})
+        
+        self._console.info("Environment information")
+        self._console.indent()        
+        
+        platformInfo = util.getPlatformInfo()
+        self._console.info("Platform: %s %s" % (platformInfo[0], platformInfo[1]))
+        
+        self._console.info("Python version: %s" % sys.version)
+        
+        if 'QOOXDOO_PATH' in letConfig:
+            qxPath = letConfig['QOOXDOO_PATH']
+            self._console.info("qooxdoo path: %s" % qxPath)
+        
+            versionFile = open(os.path.join(qxPath, "version.txt"))
+            version = versionFile.read()
+            self._console.info("Framework version: %s" % version.strip())
+        
+            #TODO: Improve this check
+            classFile = os.path.join(qxPath, "framework", "source", "class", "qx", "Class.js")
+            self._console.info("Kit looks OK: %s" % os.path.isfile(classFile) )
+
+        self._console.info("Looking for generated versions...")
+        try:
+            console.indent()
+            expandedjobs = self._config.resolveExtendsAndRuns(["build-script", "source-script"])
+            self._config.includeSystemDefaults(expandedjobs)
+            self._config.resolveMacros(expandedjobs)
+            console.outdent()
+        except Exception:
+            pass
+        
+        if expandedjobs:
+          
+            # check for build loader
+            buildScriptFile =  expandedjobs[0].get("compile-options/paths/file", None)
+            if buildScriptFile:
+                buildScriptFilePath = self._config.absPath(buildScriptFile)
+                self._console.info("Build version generated: %s" % os.path.isfile(buildScriptFilePath) )
+            
+            # check for source loader
+            sourceScriptFile =  expandedjobs[1].get("compile-options/paths/file", None)
+            if sourceScriptFile:
+                sourceScriptFilePath = self._config.absPath(sourceScriptFile)
+                self._console.info("Source version generated: %s" % os.path.isfile(sourceScriptFilePath) )
+
+            # check cache path
+            cacheCfg = expandedjobs[0].get("cache", None)  # TODO: this might be better taken from self._cache?!
+            if cacheCfg:
+                if 'compile' in cacheCfg:
+                    compDir = cacheCfg['compile']
+                    self._console.info("Compile cache path is: %s" % compDir )
+                    self._console.indent()
+                    isDir = os.path.isdir(compDir)
+                    self._console.info("Existing directory: %s" % isDir)
+                    if isDir:
+                        self._console.info("Cache file revision: %d" % self._cache.getCacheFileVersion())
+                        self._console.info("Elements in cache: %d" % len(os.listdir(compDir)))
+                    self._console.outdent()
+                if 'downloads' in cacheCfg:
+                    downDir = cacheCfg['downloads']
+                    self._console.info("Download cache path is: %s" % downDir )
+                    self._console.indent()
+                    isDir = os.path.isdir(downDir)
+                    self._console.info("Existing directory: %s" % isDir)
+                    if isDir:
+                        self._console.info("Elements in cache: %d" % len(os.listdir(downDir)))
+                    self._console.outdent()
+                    
+
+        
+        self._console.outdent()
+            
 
 
     def runCopyFiles(self):
@@ -1114,11 +1251,16 @@ class Generator(object):
                 if prefix:
                     prefix = self._config.absPath(prefix)
                 for filepatt in group['files']:
+                    num_files = 0
                     for file in glob.glob(self._config.absPath(filepatt)):  # resolve file globs - TODO: can be removed in generator.action.ImageClipping
                         imgObject        = ImgInfoFmt()
                         imgObject.prefix = [prefix, altprefix]
                         self._console.debug("adding image %s" % file)
-                        imgDict[file]  = imgObject
+                        imgDict[file]    = imgObject
+                        num_files       += 1
+                    if num_files == 0:
+                        raise ValueError("Non-existing file spec: %s" % filepatt)
+                        #self._console.warn("Non-existing file spec: %s" % filepatt)
 
             return imgDict
 
@@ -1172,7 +1314,7 @@ class Generator(object):
             bname += '.meta'
             meta_fname = os.path.join(os.path.dirname(image), bname)
             self._console.debug("writing meta file %s" % meta_fname)
-            filetool.save(meta_fname, simplejson.dumps(config, ensure_ascii=False))
+            filetool.save(meta_fname, simplejson.dumps(config, ensure_ascii=False, sort_keys=True))
             self._console.outdent()
             
         self._console.outdent()
@@ -1181,12 +1323,28 @@ class Generator(object):
 
 
     def runClean(self):
+
+        def isLocalPath(path):
+            return self._config.absPath(path).startswith(self._config.absPath(self._job.get("let/ROOT")))
+
         if not self._job.get('clean-files', False):
             return
 
         self._console.info("Cleaning up files...")
         self._console.indent()
 
+        # Handle caches
+        #print "-- cache: %s; root: %s" % (self._config.absPath(self._job.get("cache/compile")), self._config.absPath(self._job.get("let/ROOT")))
+
+        if (self._job.name == "clean" and not isLocalPath(self._job.get("cache/compile"))): # "clean" with non-local caches
+            pass
+        else:
+            self._cache.cleanCompileCache()
+        if (self._job.name == "clean" and not isLocalPath(self._job.get("cache/downloads"))): # "clean" with non-local caches
+            pass
+        else:
+            self._cache.cleanDownloadCache()
+        # Clean up other files
         self._actionLib.clean(self._job.get('clean-files'))
 
         self._console.outdent()
@@ -1219,8 +1377,20 @@ class Generator(object):
 
 
     def runMigration(self, libs):
+        
+        def checkConfigFiles():
+            keyset = set(self._config.findKey(r'compile-dist|compile-source', "rel"))
+            for key in keyset:
+                self._console.warn("! DeprecationWarning: You are using deprecated config key '%s'" % key)
+            return
+
         if not self._job.get('migrate-files', False):
             return
+
+        self._console.info("Checking configuration files...")
+        self._console.indent()
+        checkConfigFiles()
+        self._console.outdent()
 
         self._console.info("Migrating Javascript source code to most recent qooxdoo version...")
         self._console.indent()
@@ -1228,8 +1398,7 @@ class Generator(object):
         migSettings     = self._job.get('migrate-files')
         self._shellCmd  = ShellCmd()
 
-        qxPath      = self._job.get('let',{})['QOOXDOO_PATH']
-        migratorCmd = os.path.join(qxPath, 'tool', "bin", "migrator.py")
+        migratorCmd = os.path.join(os.path.dirname(filetool.root()), "bin", "migrator.py")
 
         libPaths = []
         for lib in libs:
@@ -1250,12 +1419,20 @@ class Generator(object):
 
 
     def runFix(self, classes):
+
+        def fixPng():
+            return
+
+        # - Main ---------------------------------------------------------------
+
         if not isinstance(self._job.get("fix-files", False), types.DictType):
             return
 
+        fixsettings = ExtMap(self._job.get("fix-files"))
+
+        # Fixing JS source files
         self._console.info("Fixing whitespace in source files...")
         self._console.indent()
-        fixsettings = ExtMap(self._job.get("fix-files"))
 
         self._console.info("Fixing files: ", False)
         numClasses = len(classes)
@@ -1265,12 +1442,21 @@ class Generator(object):
             filePath   = classEntry['path']
             fileEncoding = classEntry['encoding']
             fileContent  = filetool.read(filePath, fileEncoding)
-            fixedContent = textutil.removeTrailingSpaces(textutil.tab2Space(textutil.any2Unix(fileContent), 2))
+            fixedContent = textutil.normalizeWhiteSpace(textutil.removeTrailingSpaces(textutil.tab2Space(textutil.any2Unix(fileContent), 2)))
             if fixedContent != fileContent:
                 self._console.debug("modifying file: %s" % filePath)
             filetool.save(filePath, fixedContent, fileEncoding)
 
         self._console.outdent()
+
+        # Fixing PNG files -- currently just a stub!
+        if fixsettings.get("fix-png", False):
+            self._console.info("Fixing PNGs...")
+            self._console.indent()
+            fixPng()
+            self._console.outdent()
+
+        return
 
 
     def _splitIncludeExcludeList(self, data):
@@ -1289,49 +1475,28 @@ class Generator(object):
 
     def _expandRegExps(self, entries, container=None):
         result = []
-        if not container:
-            container = self._classes
-
         for entry in entries:
-            # Fast path: Try if a matching class could directly be found
-            if entry in container:
-                result.append(entry)
-
-            else:
-                regexp = textutil.toRegExp(entry)
-                expanded = []
-
-                for classId in container:
-                    if regexp.search(classId):
-                        if not classId in expanded:
-                            expanded.append(classId)
-
-                if len(expanded) == 0:
-                    raise RuntimeError, "Expression gives no results. Malformed entry: %s" % entry
-
-                result.extend(expanded)
-
+            expanded = self._expandRegExp(entry, container)
+            result.extend(expanded)
         return result
 
+    def _expandRegExp(self, entry, container=None):
+        if not container:
+            container = self._classes
+        result = []
 
+        # Fast path: Try if a matching class could directly be found
+        if entry in container:
+            result.append(entry)
+        else:
+            regexp   = textutil.toRegExp(entry)
+            for classId in container:
+                if regexp.search(classId) and classId not in result:
+                    result.append(classId)
+            if len(result) == 0:
+                raise RuntimeError, "Expression gives no results. Malformed entry: %s" % entry
 
-    # wpbasti: TODO: Clean up compiler. Maybe split-off pretty-printing. These hard-hacked options, the pure
-    # need of them is bad. Maybe options could be stored easier in a json-like config map instead of command line
-    # args. This needs a rework of the compiler which is not that easy.
-    def _optimizeJavaScript(self, code):
-        restree = treegenerator.createSyntaxTree(tokenizer.parseStream(code))
-        variableoptimizer.search(restree)
-
-        # Emulate options
-        parser = optparse.OptionParser()
-        parser.add_option("--p1", action="store_true", dest="prettyPrint", default=False)
-        parser.add_option("--p2", action="store_true", dest="prettypIndentString", default="  ")
-        parser.add_option("--p3", action="store_true", dest="prettypCommentsInlinePadding", default="  ")
-        parser.add_option("--p4", action="store_true", dest="prettypCommentsTrailingCommentCols", default="")
-
-        (options, args) = parser.parse_args([])
-
-        return compiler.compile(restree, options)
+        return result
 
 
     # wpbasti: Does robocopy really help us here? Is it modified largely. Does this only mean modifications
@@ -1340,8 +1505,9 @@ class Generator(object):
         # targPath *has* to be directory  -- there is now way of telling a
         # non-existing target file from a non-existing target directory :-)
         generator = self
-        generator._console.debug("_copyResource: %s => %s" % (srcPath, targPath))
+        #generator._console.debug("_copyResource: %s => %s" % (srcPath, targPath))
         copier = robocopy.PyRobocopier(generator._console)
+        #copier.parse_args(['-f', '-c', '-s', '-x', '.svn', srcPath, targPath])
         copier.parse_args(['-c', '-s', '-x', '.svn', srcPath, targPath])
         copier.do_work()
 

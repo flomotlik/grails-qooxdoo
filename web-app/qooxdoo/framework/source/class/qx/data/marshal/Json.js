@@ -18,8 +18,6 @@
 ************************************************************************ */
 
 /**
- * EXPERIMENTAL!
- *
  * This class is responsible for converting json data to class instances
  * including the creation of the classes.
  */
@@ -70,36 +68,6 @@ qx.Class.define("qx.data.marshal.Json",
   members :
   {
     __delegate : null,
-
-    /**
-     * Please use {@link #toClass} instead.
-     * @deprecated
-     *
-     * @param data {Object} The object for which classes should be created.
-     * @param includeBubbleEvents {Boolean} Whether the model should support
-     *   the bubbling of change events or not.
-     */
-    jsonToClass : function(data, includeBubbleEvents) {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee, "Please use toClass instead."
-      );
-      this.toClass(data, includeBubbleEvents);
-    },
-
-
-    /**
-     * Please use {@link #toModel} instead.
-     * @deprecated
-     *
-     * @param data {Object} The object for which classes should be created.
-     * @return {qx.core.Object} The created model
-     */
-    jsonToModel : function(data) {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee, "Please use toModel instead."
-      );
-      this.toModel(data);
-    },
 
 
     /**
@@ -177,6 +145,8 @@ qx.Class.define("qx.data.marshal.Json",
       // create the properties map
       var properties = {};
       for (var key in data) {
+        // stip the unwanted characters
+        key = key.replace("-", "");
         properties[key] = {};
         properties[key].nullable = true;
         properties[key].event = "change" + qx.lang.String.firstUp(key);
@@ -278,7 +248,8 @@ qx.Class.define("qx.data.marshal.Json",
 
         // go threw all element in the data
         for (var key in data) {
-          model["set" + qx.lang.String.firstUp(key)](this.toModel(data[key]));
+          var propertyName = key.replace("-", "");
+          model["set" + qx.lang.String.firstUp(propertyName)](this.toModel(data[key]));
         }
         return model;
       }
@@ -293,8 +264,7 @@ qx.Class.define("qx.data.marshal.Json",
    *****************************************************************************
    */
 
-  destruct : function()
-  {
-    this._disposeFields("__delegate");
+  destruct : function() {
+    this.__delegate = null;
   }
 });

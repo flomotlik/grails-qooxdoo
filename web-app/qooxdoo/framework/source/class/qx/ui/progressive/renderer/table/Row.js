@@ -24,7 +24,7 @@
 ************************************************************************ */
 
 /**
- * Table Row renderer for Progressive.  EXPERIMENTAL!  INTERFACE MAY CHANGE.
+ * Table Row renderer for Progressive.
  */
 qx.Class.define("qx.ui.progressive.renderer.table.Row",
 {
@@ -369,6 +369,7 @@ qx.Class.define("qx.ui.progressive.renderer.table.Row",
     /**
      * This method is required by the box layout. If returns an array of items
      * to relayout.
+     * @return {Array} Array of column data.
      */
     getLayoutChildren : function()
     {
@@ -532,12 +533,9 @@ qx.Class.define("qx.ui.progressive.renderer.table.Row",
       }
     }
 
-    this._disposeFields(
-      "__name",
-      "__colors",
-      "__renderers",
-      "__progressive",
-      "__columnWidths");
+    this.__colors = this.__renderers = this.__progressive =
+      this.__columnWidths = null;
+
 
     this._disposeObjects(
       "__layout",

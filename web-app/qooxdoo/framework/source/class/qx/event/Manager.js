@@ -39,11 +39,14 @@ qx.Bootstrap.define("qx.event.Manager",
    * Creates a new instance of the event handler.
    *
    * @param win {Window} The DOM window this manager handles the events for
+   * @param registration {qx.event.Registration} The event registration to use
    */
-  construct : function(win)
+  construct : function(win, registration)
   {
     // Assign window object
     this.__window = win;
+    this.__windowId = qx.core.ObjectRegistry.toHashCode(win);
+    this.__registration = registration;
 
     // Register to the page unload event.
     // Only for iframes and other secondary documents.
@@ -104,13 +107,16 @@ qx.Bootstrap.define("qx.event.Manager",
 
   members :
   {
+    __registration : null,
     __listeners : null,
+
     __dispatchers : null,
     __disposeWrapper : null,
 
     __handlers : null,
     __handlerCache : null,
     __window : null,
+    __windowId : null,
 
 
     /*
@@ -127,6 +133,16 @@ qx.Bootstrap.define("qx.event.Manager",
      */
     getWindow : function() {
       return this.__window;
+    },
+
+
+    /**
+     * Get the hashcode of the manager's window
+     *
+     * @return {String} The window's hashcode
+     */
+    getWindowId : function() {
+      return this.__windowId;
     },
 
 
@@ -162,7 +178,7 @@ qx.Bootstrap.define("qx.event.Manager",
         return dispatcher;
       }
 
-      return this.__dispatchers[clazz.classname] = new clazz(this);
+      return this.__dispatchers[clazz.classname] = new clazz(this, this.__registration);
     },
 
 
@@ -378,7 +394,7 @@ qx.Bootstrap.define("qx.event.Manager",
 
     /**
      * Add an event listener to any valid target. The event listener is passed an
-     * instance of {@link Event} containing all relevant information
+     * instance of {@link qx.event.type.Event} containing all relevant information
      * about the event as parameter.
      *
      * @param target {Object} Any valid event target
@@ -489,7 +505,7 @@ qx.Bootstrap.define("qx.event.Manager",
       }
 
 
-      var classes = qx.event.Registration.getHandlers();
+      var classes = this.__registration.getHandlers();
       var IEventHandler = qx.event.IEventHandler;
       var clazz, instance, supportedTypes, targetCheck;
 
@@ -548,11 +564,12 @@ qx.Bootstrap.define("qx.event.Manager",
         return;
       }
 
-      if (qx.core.Variant.isSet("qx.debug", "on")) {
+      if (qx.core.Variant.isSet("qx.debug", "on"))
+      {
         qx.log.Logger.warn(
           this,
           "There is no event handler for the event '" + type +
-          "' on target '" + target.classname + "'!"
+          "' on target '" + target + "'!"
         );
       }
     },
@@ -745,7 +762,7 @@ qx.Bootstrap.define("qx.event.Manager",
         qx.log.Logger.warn(
           this,
           "There is no event handler for the event '" + type +
-          "' on target '" + target.classname + "'!"
+          "' on target '" + target + "'!"
         );
       }
     },
@@ -799,7 +816,7 @@ qx.Bootstrap.define("qx.event.Manager",
       }
 
       // Interation data
-      var classes = qx.event.Registration.getDispatchers();
+      var classes = this.__registration.getDispatchers();
       var instance;
 
       // Loop through the dispatchers
@@ -840,13 +857,14 @@ qx.Bootstrap.define("qx.event.Manager",
     dispose : function()
     {
       // Remove from manager list
-      qx.event.Registration.removeManager(this);
+      this.__registration.removeManager(this);
 
       qx.util.DisposeUtil.disposeMap(this, "__handlers");
       qx.util.DisposeUtil.disposeMap(this, "__dispatchers");
 
       // Dispose data fields
-      this.__listeners = this.__window = this.__disposeWrapper = this.__handlerCache = null;
+      this.__listeners = this.__window = this.__disposeWrapper = null;
+      this.__registration = this.__handlerCache = null;
     }
   }
 });

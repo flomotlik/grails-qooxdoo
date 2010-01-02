@@ -20,6 +20,10 @@
 /* ************************************************************************
 
 #asset(qx/icon/${qx.icontheme}/16/emotes/*)
+#tag(databinding)
+#tag(list controller)
+#tag(delegate)
+#tag(noPlayground)
 
 ************************************************************************ */
 
@@ -34,7 +38,7 @@ qx.Class.define("demobrowser.demo.data.ExtendedList",
       this.base(arguments);
 
       // names
-      var names = ["Max", "Jackob", "Tim", "Jack", "Dan", "Dustin", "Karl", "Jim"];
+      var names = ["Max", "Jakob", "Tim", "Jack", "Dan", "Dustin", "Karl", "Jim"];
       var emotes = ["embarrassed", "kiss", "plain", "sad", "surprise", "angel"];
 
       // create the data
@@ -69,6 +73,7 @@ qx.Class.define("demobrowser.demo.data.ExtendedList",
         bindItem : function(controller, item, id) {
           controller.bindProperty("name", "label", null, item, id);
           controller.bindProperty("online", "value", null, item, id);
+          controller.bindPropertyReverse("online", "value", null, item, id);          
         }
       };
       controller.setDelegate(delegate);

@@ -8,7 +8,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -66,7 +66,13 @@ class Lint:
         for node in treeutil.nodeIterator(self.tree, "loop"):
             block = treeutil.selectNode(node, "statement/block")
             if not block:
-                self.log(node, "The statement of loops and conditions must be enclosed by a block in braces '{}'")
+                self.log(node, "The statement of loops and conditions should be enclosed by a block in braces '{}'")
+        for node in treeutil.nodeIterator(self.tree, "elseStatement"):
+            block = treeutil.selectNode(node, "block")
+            if not block:
+                block = treeutil.selectNode(node, "loop[@loopType='IF']")
+            if not block:
+                self.log(node, "The statement of loops and conditions should be enclosed by a block in braces '{}'")
 
 
     def checkMaps(self):
@@ -347,7 +353,7 @@ class Lint:
         
         lintAttribs = [x for x in comments if x["category"] == "lint"]
         
-        unused_re = re.compile("<p>\s*%s\s*\(\s*((?:\w+)\s*(?:,\s*(?:\w+)\s*)*)\)" % docCommand)
+        unused_re = re.compile("<p>\s*%s\s*\(\s*((?:[\w\$]+)\s*(?:,\s*(?:[\w\$]+)\s*)*)\)" % docCommand)
         for attrib in lintAttribs:
             match = unused_re.match(attrib["text"])
             if match:

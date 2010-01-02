@@ -68,6 +68,8 @@ qx.Mixin.define("qx.ui.window.MDesktop",
      * Get the desktop's window manager. Each desktop must have a window manager.
      * If none is configured the default window manager {@link qx.ui.window.Window#DEFAULT_MANAGER_CLASS}
      * is used.
+     *
+     * @return {qx.ui.window.IWindowManager} The desktop's window manager
      */
     getWindowManager : function()
     {
@@ -153,7 +155,7 @@ qx.Mixin.define("qx.ui.window.MDesktop",
 
 
     /**
-     * Overrides the method {@link qx.core.Widget#_afterAddChild}
+     * Overrides the method {@link qx.ui.core.Widget#_afterAddChild}
      *
      * @param win {qx.core.Widget} added widget
      */
@@ -188,7 +190,7 @@ qx.Mixin.define("qx.ui.window.MDesktop",
 
 
     /**
-     * Overrides the method {@link qx.core.Widget#_afterRemoveChild}
+     * Overrides the method {@link qx.ui.core.Widget#_afterRemoveChild}
      *
      * @param win {qx.core.Widget} removed widget
      */

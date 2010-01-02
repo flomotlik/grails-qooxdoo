@@ -182,7 +182,14 @@ qx.Class.define("qx.event.handler.Window",
       }
 
       var win = this._window;
-      var doc = win.document;
+      try {
+        var doc = win.document;
+      } catch (e) {
+        // IE7 sometimes dispatches "unload" events on protected windows
+        // Ignore these events
+        return;
+      }
+
       var html = doc.documentElement;
 
       // At least Safari 3.1 and Opera 9.2.x have a bubbling scroll event
@@ -220,7 +227,7 @@ qx.Class.define("qx.event.handler.Window",
   destruct : function()
   {
     this._stopWindowObserver();
-    this._disposeFields("_manager", "_window");
+    this._manager = this._window = null;
   },
 
 

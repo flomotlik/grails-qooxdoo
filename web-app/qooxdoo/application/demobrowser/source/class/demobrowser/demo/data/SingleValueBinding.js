@@ -16,7 +16,13 @@
      * Martin Wittemann (martinwittemann)
 
 ************************************************************************ */
+/* ************************************************************************
 
+#tag(databinding)
+#tag(single value binding)
+#tag(noPlayground)
+
+************************************************************************ */
 qx.Class.define("demobrowser.demo.data.SingleValueBinding",
 {
   extend : qx.application.Standalone,

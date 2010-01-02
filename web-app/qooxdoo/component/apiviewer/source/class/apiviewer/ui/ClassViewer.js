@@ -171,13 +171,13 @@ qx.Class.define("apiviewer.ui.ClassViewer",
       var style;
 
       if(qx.bom.client.Engine.WEBKIT) {
-        html = '<span style="display:inline;padding-right:18px;position:relative;top:-2px;left:-30px;width:' + width + 'px;height:' + height + 'px' + ((styleAttributes == null) ? '' : (';' + styleAttributes)) + '">';
+        html = '<span style="display:inline;position:relative;top:-2px;width:' + width + 'px;height:' + height + 'px' + ((styleAttributes == null) ? '' : (';' + styleAttributes)) + '">';
       } else {
         html = '<span style="display:inline-block;display:inline;padding-right:18px;position:relative;top:-2px;left:0;width:' + width + 'px;height:' + height + 'px' + ((styleAttributes == null) ? '' : (';' + styleAttributes)) + '">';
       }
 
       if(qx.bom.client.Engine.WEBKIT) {
-        style = "position:absolute;top:0px;left:0px;margin-left:18px;padding-right:18px;";
+        style = "position:absolute;top:0px;left:0px;padding-right:18px;";
       } else if(qx.bom.client.Engine.OPERA) {
         style = "margin-right:-18px;";
       }else{
@@ -198,7 +198,7 @@ qx.Class.define("apiviewer.ui.ClassViewer",
       html += '</span>';
 
       return html;
-      }
+    }
 
   },
 
@@ -548,9 +548,8 @@ qx.Class.define("apiviewer.ui.ClassViewer",
       // Use a timeout as pragmatic solution
       // Replace this later on with a kind of post-processing
       // to get rid off this timer
-      qx.event.Timer.once(function(e)
-      {
-        qx.bom.element.Scroll.intoView(elem);
+      qx.event.Timer.once(function(e) {
+        qx.bom.element.Scroll.intoView(elem, null, "left", "top");
       }, this, 0);
 
       return true;
@@ -626,8 +625,7 @@ qx.Class.define("apiviewer.ui.ClassViewer",
   *****************************************************************************
   */
 
-  destruct : function()
-  {
-    this._disposeFields("_titleElem", "_classDescElem", "_markedElement");
+  destruct : function() {
+    this._titleElem = this._classDescElem = this._markedElement = null;
   }
 });

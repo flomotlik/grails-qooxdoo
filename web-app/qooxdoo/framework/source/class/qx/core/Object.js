@@ -122,6 +122,14 @@ qx.Class.define("qx.core.Object",
      */
     base : function(args, varags)
     {
+      if (qx.core.Variant.isSet("qx.debug", "on"))
+      {
+        this.assertFunction(
+          args.callee.base,
+          "Cannot call super class. Method is not derived: " + qx.lang.Function.getName(args.callee)
+        );
+      }
+
       if (arguments.length === 1) {
         return args.callee.base.call(this);
       } else {
@@ -146,7 +154,7 @@ qx.Class.define("qx.core.Object",
 
     /*
     ---------------------------------------------------------------------------
-      CLONE/SERIALIZE SUPPORT
+      CLONE SUPPORT
     ---------------------------------------------------------------------------
     */
 
@@ -156,6 +164,17 @@ qx.Class.define("qx.core.Object",
      * Returns a clone of this object. Copies over all user configured
      * property values. Do not configure a parent nor apply the appearance
      * styles directly.
+     * The method has some limitation you should know before considering to use
+     * it:
+     *
+     * * Objects with mandatory constructor parameters can not be cloned.
+     * * Objects holding its state not only in properties will not have the same
+     * state!
+     *
+     *  * The method fails cloning singletons.
+     *
+     *  * If you have stored other qooxdoo objects in properties, only the
+     * references will be cloned. (flat copy)
      *
      * @return {qx.core.Object} The clone
      */
@@ -180,48 +199,6 @@ qx.Class.define("qx.core.Object",
       // Return clone
       return clone;
     },
-
-
-    /**
-     * EXPERIMENTAL - NOT READY FOR PRODUCTION
-     *
-     * Returns a json map of the object configuration.
-     *
-     * @return {Map} The json result
-     */
-    serialize : function()
-    {
-      var clazz = this.constructor
-      var props = qx.Class.getProperties(clazz);
-      var user = qx.core.Property.$$store.user;
-      var name, value;
-
-      var result =
-      {
-        classname : clazz.classname,
-        properties : {}
-      };
-
-      // Iterate through properties
-      for (var i=0, l=props.length; i<l; i++)
-      {
-        name = props[i];
-        if (this.hasOwnProperty(user[name]))
-        {
-          value = this[user[name]];
-          if (value instanceof qx.core.Object) {
-            result.properties[name] = { $$hash : value.$$hash };
-          } else {
-            result.properties[name] = value;
-          }
-        }
-      }
-
-      // Return clone
-      return result;
-    },
-
-
 
 
     /*
@@ -534,7 +511,7 @@ qx.Class.define("qx.core.Object",
      *     default action of a native event (e.g. open the context menu on a
      *     right click) or the default action of a qooxdoo class (e.g. close
      *     the window widget). The default action can be prevented by calling
-     *     {@link #preventDefault}
+     *     {@link qx.event.type.Event#preventDefault}
      * @return {Boolean} whether the event default was prevented or not.
      *     Returns true, when the event was NOT prevented.
      */
@@ -790,9 +767,15 @@ qx.Class.define("qx.core.Object",
      * Disconnects given fields from instance.
      *
      * @param varargs {arguments} List of fields to dispose
-     * @return {void}
+     * @deprecated Performance: Don't use '_disposeFields' - instead
+     *      assign directly to <code>null</code>
      */
     _disposeFields : function(varargs) {
+      qx.log.Logger.deprecatedMethodWarning(
+        arguments.callee,
+        "Don't use '_disposeFields' - instead assign directly to 'null'"
+      );
+
       qx.util.DisposeUtil.disposeFields(this, arguments);
     },
 
@@ -882,7 +865,7 @@ qx.Class.define("qx.core.Object",
     qx.core.ObjectRegistry.unregister(this);
 
     // Cleanup user data
-    this._disposeFields("__userData");
+    this.__userData = null;
 
     // Cleanup properties
     // TODO: Is this really needed for non DOM/JS links?

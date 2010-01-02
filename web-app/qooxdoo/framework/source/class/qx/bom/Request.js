@@ -5,7 +5,9 @@
    http://qooxdoo.org
 
    Copyright:
-     2004-2008 1&1 Internet AG, Germany, http://www.1und1.de
+     2004-2009 1&1 Internet AG, Germany, http://www.1und1.de
+     2009 Sebastian Werner, http://sebastian-werner.net
+
 
    License:
      LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -55,10 +57,13 @@
  * specification by the W3C at http://www.w3.org/TR/XMLHttpRequest/.
  *
  * For an higher level implementation with additional comfort please have a look
- * at {@link qx.io2.HttpRequest}.
+ * at {@link qx.io.HttpRequest}.
  */
-qx.Bootstrap.define("qx.bom.Request",
+qx.Class.define("qx.bom.Request",
 {
+  extend : qx.core.Object,
+
+
   /*
   *****************************************************************************
      CONSTRUCTOR
@@ -67,6 +72,8 @@ qx.Bootstrap.define("qx.bom.Request",
 
   construct : function()
   {
+    this.base(arguments);
+
     this.__headers = {};
     this.__xmlhttp = this.__createNative();
   },
@@ -101,7 +108,6 @@ qx.Bootstrap.define("qx.bom.Request",
 
   members :
   {
-
     __async : null,
     __stateListener : null,
     __xmlhttp : null,
@@ -218,36 +224,35 @@ qx.Bootstrap.define("qx.bom.Request",
      *
      * @param method {String} The HTTP method to use. Valid values: GET, POST, PUT, HEAD and DELETE.
      * @param url {String} The URL to open
-     * @param async {Boolean?false} Whether the request should be asynchronous
+     * @param async {Boolean?true} Whether the request should be asynchronous. Default is <code>true</code>
      * @param username {String?null} Optional user name
      * @param password {String?null} Optional password
      * @return {void}
      */
     open : function(method, url, async, username, password)
     {
+      if (async == null) {
+        async = true;
+      }
+
       // Save async parameter for fixing Gecko bug with missing readystatechange in synchronous requests
       this.__async = async;
 
-      // Prepare and register native listeners
+      // Prepare listeners
       this.__stateListener = qx.lang.Function.bind(this.__onNativeReadyStateChange, this);
-      this.__xmlhttp.onreadystatechange = this.__stateListener;
-
       this.__timeoutListener = qx.lang.Function.bind(this.__onNativeTimeout, this);
 
-      // setting "ontimeout" is not possible in IE
-      if (!qx.core.Variant.isSet("qx.client", "mshtml"))
-      {
-        this.__xmlhttp.ontimeout = this.__timeoutListener;
-      }
-
-      // Store timeout to request
-      // Currently only supported by IE8 beta
-      if (this.timeout != null && this.timeout > 0) {
-        this.__xmlhttp.timeout = this.timeout;
-      }
+      // Register native listeners
+      this.__xmlhttp.onreadystatechange = this.__stateListener;
 
       // Natively open request
-      this.__xmlhttp.open(method, url, async, username, password);
+      if (arguments.length > 4) {
+        this.__xmlhttp.open(method, url, async, username, password);
+      } else if (arguments.length > 3) {
+        this.__xmlhttp.open(method, url, async, username);
+      } else {
+        this.__xmlhttp.open(method, url, async);
+      }
 
       // BUGFIX: Gecko - missing readystatechange calls in synchronous requests
       if (qx.core.Variant.isSet("qx.client", "gecko"))
@@ -341,11 +346,19 @@ qx.Bootstrap.define("qx.bom.Request",
      */
     abort : function()
     {
+      // Clear timeout for all aborted requests
+      if (this.__timeoutHandle) {
+        window.clearTimeout(this.__timeoutHandle);
+      }
+
       // Execute abort helper
       this.__abortHelper();
 
       // Call listener
       this.onabort();
+
+      // Cleanup listeners etc.
+      this.dispose();
     },
 
 
@@ -389,12 +402,17 @@ qx.Bootstrap.define("qx.bom.Request",
         return;
       }
 
+      // Clear timeout before firing event
+      if (this.readyState == qx.bom.Request.DONE && this.__timeoutHandle) {
+        window.clearTimeout(this.__timeoutHandle);
+      }
+
       // Fire real state change
       this.__fireReadyStateChange();
 
       // Cleanup native object when done
       if (this.readyState == qx.bom.Request.DONE) {
-        this.__cleanTransport();
+        this.dispose();
       }
     }),
 
@@ -411,6 +429,9 @@ qx.Bootstrap.define("qx.bom.Request",
 
       // Fire user visible event
       this.ontimeout();
+
+      // Cleanup listeners etc.
+      this.dispose();
     }),
 
 
@@ -534,9 +555,6 @@ qx.Bootstrap.define("qx.bom.Request",
 
       // Natively abort request
       this.__xmlhttp.abort();
-
-      // Cleanup listeners etc.
-      this.__cleanTransport();
     },
 
 
@@ -631,8 +649,8 @@ qx.Bootstrap.define("qx.bom.Request",
         }
       }
 
-      // Check if there is no error in document
-      else if (doc && doc.documentElement && doc.documentElement.tagName == "parsererror") {
+      // Check if there is a document and no error in document
+      else if (!doc.documentElement || doc.documentElement.tagName == "parsererror") {
         return null;
       }
 
@@ -679,40 +697,34 @@ qx.Bootstrap.define("qx.bom.Request",
       if (!this.status && location.protocol === "file:") {
         this.status = 204;
       }
-    },
-
-
-    /**
-     * Cleans up the native transport object and some other internal stuff.
-     *
-     * @return {void}
-     */
-    __cleanTransport : function()
-    {
-      // Clear timeout handle
-      if (this.__timeoutHandle) {
-        window.clearTimeout(this.__timeoutHandle);
-      }
-
-      // BUGFIX: IE - memory leak (on-page leak)
-      if (this.__xmlhttp)
-      {
-        this.__xmlhttp.onreadystatechange = qx.lang.Function.empty;
-      }
-
-      // Remove user listeners
-      delete this.onreadystatechange;
-      delete this.ontimeout;
-      delete this.onload;
-      delete this.onerror;
-      delete this.onabort;
-
-      // Delete private properties
-      delete this.__timeoutHandle;
-      delete this.__stateListener;
-      delete this.__timeoutListener;
-      delete this.__xmlhttp;
-      delete this.__headers;
     }
+  },
+
+  /*
+  *****************************************************************************
+     DESTRUCTOR
+  *****************************************************************************
+  */
+
+  destruct : function()
+  {
+    // Stop timeout first
+    if (this.__timeoutHandle)
+    {
+      window.clearTimeout(this.__timeoutHandle);
+      this.__timeoutHandle = null;
+    }
+
+    // Memory leak protection
+    if (this.__xmlhttp)
+    {
+      this.__xmlhttp.onreadystatechange = qx.lang.Function.empty;
+      this.__xmlhttp = null;
+    }
+
+    // Clear fields
+    this.onreadystatechange = this.onload = this.onerror = this.onabort = null;
+    this.__stateListener = null;
+    this.__headers = null;
   }
 });

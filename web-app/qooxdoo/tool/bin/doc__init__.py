@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -20,7 +20,7 @@
 
 ##
 # doc__init__.py  - runs over a directory tree and adds missing
-#                   package doc files ("__init__.py"), using the
+#                   package doc files ("__init__.js"), using the
 #                   relative path as a package name
 #
 # usage: cd framework/source/class; doc__init__.py qx

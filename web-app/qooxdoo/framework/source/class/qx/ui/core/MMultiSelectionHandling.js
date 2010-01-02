@@ -141,38 +141,6 @@ qx.Mixin.define("qx.ui.core.MMultiSelectionHandling",
       this.__manager.selectAll();
     },
 
-    /**
-     * Selects the given item. Replaces current selection
-     * completely with the new item.
-     *
-     * Use {@link #addToSelection} instead if you want to add new
-     * items to an existing selection.
-     *
-     * @deprecated Use 'setSelection' instead!
-     * @param item {qx.ui.core.Widget} Any valid item.
-     */
-    select : function(item) {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use 'setSelection' instead!"
-      );
-      this.setSelection([item]);
-    },
-
-    /**
-     * Selects the given item. Replaces current selection
-     * completely with the new item.
-     *
-     * @deprecated Use 'setSelection' instead!
-     * @param item {qx.ui.core.Widget} Any valid item.
-     */
-    setSelected : function(item) {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use 'setSelection' instead!"
-      );
-      this.setSelection([item]);
-    },
 
     /**
      * Detects whether the given item is currently selected.
@@ -189,6 +157,7 @@ qx.Mixin.define("qx.ui.core.MMultiSelectionHandling",
 
       return this.__manager.isItemSelected(item);
     },
+
 
     /**
      * Adds the given item to the existing selection.
@@ -208,6 +177,7 @@ qx.Mixin.define("qx.ui.core.MMultiSelectionHandling",
       this.__manager.addItem(item);
     },
 
+
     /**
      * Removes the given item from the selection.
      *
@@ -226,6 +196,7 @@ qx.Mixin.define("qx.ui.core.MMultiSelectionHandling",
       this.__manager.removeItem(item);
     },
 
+
     /**
      * Selects an item range between two given items.
      *
@@ -236,20 +207,6 @@ qx.Mixin.define("qx.ui.core.MMultiSelectionHandling",
       this.__manager.selectItemRange(begin, end);
     },
 
-    /**
-     * Clears the whole selection at once. Also
-     * resets the lead and anchor items and their
-     * styles.
-     *
-     * @deprecated Use 'resetSelection' instead!
-     */
-    clearSelection : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use 'resetSelection' instead!"
-      );
-      this.resetSelection();
-    },
 
     /**
      * Clears the whole selection at once. Also
@@ -260,19 +217,6 @@ qx.Mixin.define("qx.ui.core.MMultiSelectionHandling",
       this.__manager.clearSelection();
     },
 
-    /**
-     * Replaces current selection with the given items
-     *
-     * @deprecated Use 'setSelection' instead!
-     * @param items {qx.ui.core.Widget} Items to select
-     */
-    replaceSelection : function(items) {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use 'setSelection' instead!"
-      );
-      this.setSelection(items);
-    },
 
     /**
      * Replaces current selection with the given items.
@@ -293,50 +237,13 @@ qx.Mixin.define("qx.ui.core.MMultiSelectionHandling",
       if (items.length === 0) {
         this.resetSelection();
       } else {
-        this.__manager.replaceSelection(items);
+        var currentSelection = this.getSelection();
+        if (!qx.lang.Array.equals(currentSelection, items)) {
+          this.__manager.replaceSelection(items);
+        }
       }
     },
 
-    /**
-     * Get the selected item. This method does only work in <code>single</code>
-     * selection mode.
-     *
-     * @deprecated Use 'getSelection' instead!
-     * @return {qx.ui.core.Widget} The selected item.
-     */
-    getSelectedItem : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use 'getSelection' instead!"
-      );
-      var result = this.getSelection();
-
-      if (result.length > 0) {
-        return result[0];
-      } else {
-        return null;
-      }
-    },
-
-    /**
-     * Get the selected item.
-     *
-     * @deprecated Use 'getSelection' instead!
-     * @return {qx.ui.core.Widget} The selected item.
-     */
-    getSelected : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use 'getSelection' instead!"
-      );
-      var result = this.getSelection();
-
-      if (result.length > 0) {
-        return result[0];
-      } else {
-        return null;
-      }
-    },
 
     /**
      * Returns an array of currently selected items.
@@ -400,6 +307,23 @@ qx.Mixin.define("qx.ui.core.MMultiSelectionHandling",
      */
     invertSelection: function() {
       this.__manager.invertSelection();
+    },
+
+
+    /**
+     * Returns the current lead item. Generally the item which was last modified
+     * by the user (clicked on etc.)
+     *
+     * @return {qx.ui.core.Widget} The lead item or <code>null</code>
+     */
+    _getLeadItem : function() {
+      var mode = this.__manager.getMode();
+
+      if (mode === "single" || mode === "one") {
+        return this.__manager.getSelectedItem();
+      } else {
+        return this.__manager.getLeadItem();
+      }
     },
 
 

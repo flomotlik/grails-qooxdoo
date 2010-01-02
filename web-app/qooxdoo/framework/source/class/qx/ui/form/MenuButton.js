@@ -99,6 +99,9 @@ qx.Class.define("qx.ui.form.MenuButton",
       {
         value.addListener("changeVisibility", this._onMenuChange, this);
         value.setOpener(this);
+
+        value.removeState("submenu");
+        value.removeState("contextmenu");
       }
     },
 
@@ -126,12 +129,13 @@ qx.Class.define("qx.ui.form.MenuButton",
         qx.ui.menu.Manager.getInstance().hideAll();
 
         // Open the attached menu
+        menu.setOpener(this);
         menu.open();
 
         // Select first item
         if (selectFirst)
         {
-          var first = menu.getChildren()[0];
+          var first = menu.getSelectables()[0];
           if (first) {
             menu.setSelectedButton(first);
           }

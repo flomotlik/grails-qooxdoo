@@ -52,9 +52,13 @@ class Packer(object):
             if node.hasParent() and not node.type in ["comment", "commentsBefore", "commentsAfter"]:
 
                 # Add comma dividers between statements in these parents
-                if node.parent.type in ["array", "params", "statementList"]:
+                if node.parent.type in ["array", "params", "expressionList"]:
                     if not node.isLastChild(True):
                         str += Packer.comma(str)
+                    else:
+                        # close the last child of a file/block-level expressionList with semicolon
+                        if node.parent.type == "expressionList" and node.parent.parent.type in ["file", "block"]:
+                            str += Packer.semicolon(str)
 
                 # Semicolon handling
                 elif node.type in ["group", "block", "assignment", "call", "operation", "definitionList", "return", "break", "continue", "delete", "accessor", "instantiation", "throw", "variable", "emptyStatement"]:

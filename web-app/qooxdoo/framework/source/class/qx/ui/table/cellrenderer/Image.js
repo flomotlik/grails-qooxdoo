@@ -82,6 +82,8 @@ qx.Class.define("qx.ui.table.cellrenderer.Image",
         imageHints.url = this.__am.resolve(cellInfo.value);
       }
 
+      imageHints.tooltip = cellInfo.tooltip;
+
       return imageHints;
     }
   },
@@ -92,8 +94,7 @@ qx.Class.define("qx.ui.table.cellrenderer.Image",
   *****************************************************************************
   */
 
-  destruct : function()
-  {
-    this._disposeFields("__am");
+  destruct : function() {
+    this.__am = null;
   }
 });

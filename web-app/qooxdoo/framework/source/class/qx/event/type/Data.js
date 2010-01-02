@@ -50,7 +50,7 @@ qx.Class.define("qx.event.type.Data",
      *     default action of a native event (e.g. open the context menu on a
      *     right click) or the default action of a qooxdoo class (e.g. close
      *     the window widget). The default action can be prevented by calling
-     *     {@link #preventDefault}
+     *     {@link qx.event.type.Event#preventDefault}
      * @return {qx.event.type.Data} the initialized instance.
      */
     init : function(data, old, cancelable)
@@ -103,42 +103,6 @@ qx.Class.define("qx.event.type.Data",
      */
     getOldData : function() {
       return this.__old;
-    },
-
-
-
-
-    /*
-    ---------------------------------------------------------------------------
-      DEPRECATED METHODS
-    ---------------------------------------------------------------------------
-    */
-
-    /**
-     * The new data of the event sending this change event.
-     * The return data type is the same as the event data type.
-     *
-     * @deprecated
-     * @return {var} The new data of the event
-     */
-    getValue : function()
-    {
-      qx.log.Logger.deprecatedMethodWarning(arguments.callee, "Better use 'getData'");
-      return this.__data;
-    },
-
-
-    /**
-     * The old data of the event sending this change event.
-     * The return data type is the same as the event data type.
-     *
-     * @deprecated
-     * @return {var} The old data of the event
-     */
-    getOldValue : function()
-    {
-      qx.log.Logger.deprecatedMethodWarning(arguments.callee, "Better use 'getOldData'");
-      return this.__old;
     }
   },
 
@@ -152,6 +116,6 @@ qx.Class.define("qx.event.type.Data",
   */
 
   destruct : function() {
-    this._disposeFields("__data", "__old");
+    this.__data = this.__old = null;
   }
 });

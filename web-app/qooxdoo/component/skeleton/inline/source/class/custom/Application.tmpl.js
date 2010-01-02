@@ -10,7 +10,7 @@
 
 /* ************************************************************************
 
-#asset(${Namespace}/*)
+#asset(${NamespacePath}/*)
 
 ************************************************************************ */
 
@@ -34,6 +34,8 @@ qx.Class.define("${Namespace}.Application",
     /**
      * This method contains the initial application code and gets called 
      * during startup of the application
+     * 
+     * @lint ignoreDeprecated(alert)
      */
     main : function()
     {
@@ -74,7 +76,7 @@ qx.Class.define("${Namespace}.Application",
       var container = new qx.ui.container.Composite(new qx.ui.layout.HBox);
 
       // Create a button
-      var button1 = new qx.ui.form.Button("First Button", "${Namespace}/test.png");
+      var button1 = new qx.ui.form.Button("First Button", "${NamespacePath}/test.png");
       button1.setAllowStretchY(false);
       container.add(button1);
       
@@ -103,7 +105,7 @@ qx.Class.define("${Namespace}.Application",
       */
       
       // Create a button
-      var button2 = new qx.ui.form.Button("First Button", "${Namespace}/test.png");
+      var button2 = new qx.ui.form.Button("First Button", "${NamespacePath}/test.png");
 
       // Add button to document at fixed coordinates
       this.getRoot().add(button2, {left: 150, top: 350});

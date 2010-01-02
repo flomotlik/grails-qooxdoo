@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
 ################################################################################
 #
 #  qooxdoo - the new era of web development
@@ -31,9 +31,37 @@ from misc import Path
 SCRIPT_DIR    = qxenviron.scriptDir
 FRAMEWORK_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, os.pardir, os.pardir))
 SKELETON_DIR  = unicode(os.path.normpath(os.path.join(FRAMEWORK_DIR, "component", "skeleton")))
-APP_TYPES     = [x for x in os.listdir(SKELETON_DIR) if not re.match(r'^\.',x)]
+APP_DIRS      = [x for x in os.listdir(SKELETON_DIR) if not re.match(r'^\.',x)]
 
 R_ILLEGAL_NS_CHAR = re.compile(r'(?u)[^\.\w]')  # allow unicode, but disallow $
+R_SHORT_DESC      = re.compile(r'(?m)^short:: (.*)$')  # to search "short:: ..." in skeleton's 'readme.txt'
+QOOXDOO_VERSION   = ''  # will be filled later
+
+
+def getAppInfos():
+    appInfos = {}
+    for dir in APP_DIRS:
+        readme = os.path.join(SKELETON_DIR, dir, "readme.txt")
+        appinfo = ""
+        if os.path.isfile(readme):
+            cont = open(readme, "r").read()
+            mo   = R_SHORT_DESC.search(cont)
+            if mo:
+                appinfo = mo.group(1)
+        appInfos[dir] = appinfo
+    return appInfos
+
+APP_INFOS = getAppInfos()
+
+
+def getQxVersion():
+    global QOOXDOO_VERSION
+    versionFile = os.path.join(FRAMEWORK_DIR, "version.txt")
+    version = codecs.open(versionFile,"r", "utf-8").read()
+    version = version.strip()
+    QOOXDOO_VERSION = version
+    return
+
 
 
 def createApplication(options):
@@ -142,9 +170,7 @@ def patchSkeleton(dir, framework_dir, options):
         sys.exit(1)
 
     if options.type == "contribution":
-        # TODO: in a final release the following "trunk" would need to be changed 
-        # to an actual version number like "0.8.3"
-        relPath = os.path.join(os.pardir, os.pardir, "qooxdoo", "0.8.3")
+        relPath = os.path.join(os.pardir, os.pardir, "qooxdoo", QOOXDOO_VERSION)
         relPath = re.sub(r'\\', "/", relPath)
 
     for root, dirs, files in os.walk(dir):
@@ -161,9 +187,10 @@ def patchSkeleton(dir, framework_dir, options):
                     config.substitute({
                         "Name": options.name,
                         "Namespace": options.namespace,
+                        "NamespacePath" : (options.namespace).replace('.', '/'),
                         "REL_QOOXDOO_PATH": relPath,
                         "ABS_QOOXDOO_PATH": absPath,
-                        "QOOXDOO_VERSION": "0.8.3",
+                        "QOOXDOO_VERSION": QOOXDOO_VERSION,
                         "Cache" : options.cache,
                     }).encode('utf-8')
                 )
@@ -238,13 +265,9 @@ Example: For creating a regular GUI application \'myapp\' you could execute:
     )
     parser.add_option(
         "-t", "--type", dest="type", metavar="TYPE", default="gui",
-        help="Type of the application to create, one of: "+str(APP_TYPES)+"." +
-          "'gui' builds a standard qooxdoo GUI application, " +
-          "'inline' builds a inline qooxdoo GUI application, " +
-          "'migration' should " +
-          "be used to migrate qooxdoo 0.7 applications and " +
-          "'bom' can be used " +
-          "to build low-level qooxdoo applications. (Default: %default)"
+        help="Type of the application to create, one of: "+str(map(str, sorted(APP_INFOS.keys())))+"." +
+          str(", ".join(["'%s' %s" % (x, y) for x,y in sorted(APP_INFOS.items())])) +
+          ". (Default: %default)"
      )
     parser.add_option(
         "-l", "--logfile", dest="logfile", metavar="LOGFILE",
@@ -274,15 +297,22 @@ Example: For creating a regular GUI application \'myapp\' you could execute:
     console = Log(options.logfile, "info")
 
     if not options.namespace:
-        options.namespace = options.name.lower()
+        if R_ILLEGAL_NS_CHAR.search(options.name):
+            convertedName = R_ILLEGAL_NS_CHAR.sub("_", options.name)
+            console.log("WARNING: Converted illegal characters in name (from %s to %s)" % (options.name, convertedName))
+            options.name = convertedName
+            options.namespace = convertedName.lower()
+        else:
+            options.namespace = options.name.lower()
+        
     else:
         options.namespace = options.namespace.decode('utf-8')
+        if R_ILLEGAL_NS_CHAR.search(options.namespace):
+            convertedNamespace = R_ILLEGAL_NS_CHAR.sub("_", options.namespace)
+            console.log("WARNING: Converted illegal characters in namespace (from %s to %s)" % (options.namespace, convertedNamespace))
+            options.namespace = convertedNamespace
 
-    if R_ILLEGAL_NS_CHAR.search(options.namespace):
-        convertedNamespace = R_ILLEGAL_NS_CHAR.sub("_", options.namespace)
-        console.log("WARNING: Converted illegal characters in namespace (from %s to %s)" % (options.namespace, convertedNamespace))
-        options.namespace = convertedNamespace
-
+    getQxVersion()
     createApplication(options)
 
     console.log("DONE")

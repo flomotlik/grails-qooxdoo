@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -57,6 +57,35 @@ class ExtMap(object):
                 return default
 
         return data
+    
+    ##
+    # set a (possibly nested) data element in the dict
+    
+    def set(self, key, value):
+        
+        data = self._data
+        if key in data:
+            data[key] = value
+            
+        else:
+            splits    = key.split('/')
+            splitslen =  len(splits)
+            for i in range(splitslen):
+                part =  splits[i]
+                if part == "." or part == "":
+                    pass
+                elif isinstance(data, types.DictionaryType):
+                    if i == splitslen-1:  # it's the last
+                        data[part] = value
+                    else:
+                        if part not in data:
+                            data[part] = {}
+                        data = data[part]
+                else:  # leaf type map value
+                    raise ValueError("Cannot insert entry in non-dict data value: %r" % data)
+
+        return
+
 
 
     def extract(self, key):

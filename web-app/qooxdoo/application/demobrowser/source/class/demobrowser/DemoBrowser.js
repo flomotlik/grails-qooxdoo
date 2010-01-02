@@ -24,10 +24,12 @@
 
 #asset(qx/icon/Tango/22/actions/media-playback-start.png)
 #asset(qx/icon/Tango/22/actions/media-playback-stop.png)
+#asset(qx/icon/Tango/16/actions/edit-find.png) 
 #asset(qx/icon/Tango/22/actions/go-previous.png)
 #asset(qx/icon/Tango/22/actions/go-next.png)
 #asset(qx/icon/Tango/22/actions/edit-redo.png)
 #asset(qx/icon/Tango/22/actions/edit-clear.png)
+#asset(qx/icon/Tango/22/actions/application-exit.png)
 
 #asset(qx/icon/Tango/22/apps/utilities-color-chooser.png)
 #asset(qx/icon/Tango/22/apps/office-spreadsheet.png)
@@ -87,8 +89,41 @@ qx.Class.define("demobrowser.DemoBrowser",
 
     this.add(mainsplit, {flex : 1});
 
-    mainsplit.add(this.__makeTree(), 0);
-    mainsplit.add(infosplit, 1);
+    // tree side
+    var leftComposite = new qx.ui.container.Composite();
+    leftComposite.setLayout(new qx.ui.layout.VBox(3));
+    leftComposite.setBackgroundColor("background-splitpane");
+    mainsplit.add(leftComposite, 0);
+
+    // search    
+    var searchComposlite = new qx.ui.container.Composite();
+    searchComposlite.setLayout(new qx.ui.layout.HBox(3));
+    searchComposlite.setAppearance("textfield");
+    leftComposite.add(searchComposlite);
+    
+    var searchIcon = new qx.ui.basic.Image("icon/16/actions/edit-find.png");
+    searchComposlite.add(searchIcon);
+    
+    this.__searchTextField = new qx.ui.form.TextField();
+    this.__searchTextField.setLiveUpdate(true);
+    this.__searchTextField.setAppearance("widget");
+    this.__searchTextField.setPlaceholder("Filter...");
+    this.__searchTextField.addListener("changeValue", function(e) {
+      this.filter(e.getData());
+    }, this);    
+    searchComposlite.add(this.__searchTextField, {flex: 1});
+    
+    // create the status of the tree
+    this.__status = new qx.ui.basic.Label("");
+    this.__status.setAppearance("widget");
+    this.__status.setWidth(80);
+    this.__status.setTextAlign("right");
+    searchComposlite.add(this.__status);
+            
+    mainsplit.add(infosplit, 1);    
+    
+    this.__tree = this.__makeTree();
+    leftComposite.add(this.__tree, {flex: 1});
 
     var demoView = this.__makeDemoView();
     infosplit.add(demoView, 2);
@@ -186,28 +221,36 @@ qx.Class.define("demobrowser.DemoBrowser",
     __currentTheme : null,
     __logSync : null,
     __logDone : null,
+    __tree : null,
+    __status : null,
+    __searchTextField : null,
+    __playgroundButton : null,
+    __currentJSCode : null,
+    
+    defaultUrl : "demo/welcome.html",
+    playgroundUrl : "http://demo.qooxdoo.org/" + qx.core.Setting.get("qx.version") + "/playground/",
 
     __makeCommands : function()
     {
-      this._cmdObjectSummary = new qx.event.Command("Ctrl+O");
+      this._cmdObjectSummary = new qx.ui.core.Command("Ctrl+O");
       this._cmdObjectSummary.addListener("execute", this.__getObjectSummary, this);
 
-      this._cmdRunSample = new qx.event.Command("F5");
+      this._cmdRunSample = new qx.ui.core.Command("F5");
       this._cmdRunSample.addListener("execute", this.runSample, this);
 
-      this._cmdPrevSample = new qx.event.Command("Ctrl+Left");
+      this._cmdPrevSample = new qx.ui.core.Command("Ctrl+Left");
       this._cmdPrevSample.addListener("execute", this.playPrev, this);
 
-      this._cmdNextSample = new qx.event.Command("Ctrl+Right");
+      this._cmdNextSample = new qx.ui.core.Command("Ctrl+Right");
       this._cmdNextSample.addListener("execute", this.playNext, this);
 
-      this._cmdSampleInOwnWindow = new qx.event.Command("Ctrl+N");
+      this._cmdSampleInOwnWindow = new qx.ui.core.Command("Ctrl+N");
       this._cmdSampleInOwnWindow.addListener("execute", this.__openWindow, this);
 
-      this._cmdDisposeSample = new qx.event.Command("Ctrl+D");
+      this._cmdDisposeSample = new qx.ui.core.Command("Ctrl+D");
       this._cmdDisposeSample.addListener("execute", this.__disposeSample, this);
 
-      this._cmdNamespacePollution = new qx.event.Command("Ctrl+P");
+      this._cmdNamespacePollution = new qx.ui.core.Command("Ctrl+P");
       this._cmdNamespacePollution.addListener("execute", this.__showPollution, this);
     },
 
@@ -233,6 +276,31 @@ qx.Class.define("demobrowser.DemoBrowser",
       var sampUrl = this.__iframe.getWindow().location.href;
       window.open(sampUrl, "_blank");
     },
+    
+    
+    __setCurrentJSCode : function(code) {
+      var playable = !!code;
+      
+      var currentTags = this.__tree.getSelection()[0].getUserData("tags");
+      if (currentTags) {
+        playable = playable && !qx.lang.Array.contains(currentTags, "noPlayground"); 
+      }
+      this.__playgroundButton.setEnabled(playable);
+      this.__currentJSCode = code;
+    },
+    
+    
+    __toPlayground : function() {    
+      if (this.__currentJSCode) {
+        var code = this.__currentJSCode;
+        var codeJson = '{"code": ' + '"' + encodeURIComponent(code) + '"}';
+        var url = this.playgroundUrl + "#" + encodeURIComponent(codeJson);
+        window.open(url, "_blank");
+      } else {
+        alert(this.tr("Could not open the Playground."));
+      }
+    },
+
 
     /**
      * TODOC
@@ -311,6 +379,14 @@ qx.Class.define("demobrowser.DemoBrowser",
       sobutt.addListener("execute", this.__openWindow, this);
       sobutt.setToolTipText("Open demo in new window");
       this._navPart.add(sobutt);
+      
+      // -- to playground
+      var playgroundButton = new qx.ui.toolbar.Button(this.tr("To Playground"), "icon/22/actions/application-exit.png");
+      playgroundButton.addListener("execute", this.__toPlayground, this);
+      playgroundButton.setToolTipText("Open demo in the playground");
+      playgroundButton.setEnabled(false);
+      this.__playgroundButton = playgroundButton;
+      this._navPart.add(playgroundButton);
 
 
 
@@ -403,7 +479,9 @@ qx.Class.define("demobrowser.DemoBrowser",
 
     __makeDemoView : function()
     {
-      var iframe = new qx.ui.embed.Iframe();
+      var iframe = new qx.ui.embed.Iframe().set({
+        nativeContextMenu: true
+      });
       iframe.addListener("load", this.__ehIframeLoaded, this);
       this.__iframe = iframe;
 
@@ -599,6 +677,7 @@ qx.Class.define("demobrowser.DemoBrowser",
           else
           {
             t = new qx.ui.tree.TreeFile(that.polish(currNode.label));
+            t.setUserData("tags", currNode.tags);            
             var fullName = currNode.pwd().slice(1).join("/") + "/" + currNode.label;
             _sampleToTreeNodeMap[fullName] = t;
           }
@@ -781,7 +860,13 @@ qx.Class.define("demobrowser.DemoBrowser",
           // Register to logger
           this.logappender.$$id = null;
           this.logappender.clear();
-          fwindow.qx.log.Logger.register(this.logappender);
+          
+          try {
+            fwindow.qx.log.Logger.register(this.logappender);            
+          } catch (e) {
+            // if the logger is not available, ignore it
+            return;
+          }
 
           // update state on example change
           this._history.addToHistory(this._currentSample.replace("/", "~"), document.title);
@@ -804,6 +889,71 @@ qx.Class.define("demobrowser.DemoBrowser",
     // ------------------------------------------------------------------------
     //   MISC HELPERS
     // ------------------------------------------------------------------------
+
+    /**
+     * This method filters the folders in the tree.
+     * @param term {String} The search term.
+     */
+    filter : function(term) 
+    {
+      var searchRegExp = new RegExp("^.*" + term + ".*", "ig");
+      var items = this.__tree.getRoot().getItems(true, true);
+      
+      var showing = 0;
+      var count = 0;
+      for (var i = 0; i < items.length; i++) {
+        var folder = items[i];
+        var parent = folder.getParent();
+        
+        // check for the tags
+        var tags = folder.getUserData("tags");
+        var inTags = false;
+        if (tags != null) {
+          for (var j = 0; j < tags.length; j++) {
+            inTags = !!tags[j].match(searchRegExp);
+            if (inTags) {
+              break;
+            }
+          };          
+        }
+
+        if (folder.getChildren().length == 0) {
+          count++;
+        }
+
+        if (inTags || !folder.getLabel().search(searchRegExp) ||
+            !parent.getLabel().search(searchRegExp))
+        {
+          if (folder.getChildren().length == 0) {
+            showing++;
+          }
+          folder.show();
+          folder.getParent().setOpen(true);
+          folder.getParent().show();
+        } else {
+          folder.exclude();
+        }
+      }
+      
+      // special case for the empty sting
+      if (term == "") {
+        var folders = this.__tree.getRoot().getItems(false, true);
+        var selection = this.__tree.getSelection();
+
+        // close all folders
+        for (var i = 0; i < folders.length; i++) {
+          // don't close the current selected
+          if (folders[i] == selection[0] || folders[i] == selection[0].getParent()) {
+            continue;
+          }
+          folders[i].setOpen(false);
+        }
+      }
+      
+      // update the status
+      this.__status.setValue(showing + "/" + count);
+    },
+
 
     /**
      * This method re-gets (through XHR) the HTML page of the current demo.  The page is
@@ -857,6 +1007,10 @@ qx.Class.define("demobrowser.DemoBrowser",
           reqJSFile.setProhibitCaching(false);
           reqJSFile.addListener("completed", function(evt2) {
             var jsCode = evt2.getContent();
+            
+            // store the current visible code
+            this.__setCurrentJSCode(jsCode);
+            
             if (jsCode) {
               // set the javascript code to the javascript page
               this.widgets["outputviews.sourcepage.js.page"].setHtml(this.__beautySource(jsCode, "javascript"));
@@ -1166,10 +1320,7 @@ qx.Class.define("demobrowser.DemoBrowser",
       header.add(version);
 
       return header;
-    },
-
-
-    defaultUrl : "demo/welcome.html"
+    }
   },
 
 
@@ -1183,7 +1334,11 @@ qx.Class.define("demobrowser.DemoBrowser",
 
   destruct : function()
   {
-    this._disposeFields("widgets", "tests", "_sampleToTreeNodeMap", "tree", "logelem");
-    this._disposeObjects("mainsplit", "tree1", "left", "runbutton", "toolbar", "f1", "f2", "_history", "logappender", '_cmdObjectSummary', '_cmdRunSample', '_cmdPrevSample', '_cmdNextSample', '_cmdSampleInOwnWindow', '_cmdDisposeSample', '_cmdNamespacePollution');
+    this.widgets = this.tests = this._sampleToTreeNodeMap = this.tree =
+      this.logelem = null;
+    this._disposeObjects("mainsplit", "tree1", "left", "runbutton", "toolbar", 
+      "f1", "f2", "_history", "logappender", '_cmdObjectSummary', 
+      '_cmdRunSample', '_cmdPrevSample', '_cmdNextSample', 
+      '_cmdSampleInOwnWindow', '_cmdDisposeSample', '_cmdNamespacePollution');
   }
 });

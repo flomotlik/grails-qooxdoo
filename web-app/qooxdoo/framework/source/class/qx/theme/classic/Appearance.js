@@ -111,7 +111,7 @@ qx.Theme.define("qx.theme.classic.Appearance",
           decorator : "tooltip",
           shadow : "shadow-small",
           padding : [ 1, 3, 2, 3 ],
-          offset : [ 5, 5, 20, 5 ]
+          offset : [ 15, 5, 5, 5 ]
         };
       }
     },
@@ -224,6 +224,20 @@ qx.Theme.define("qx.theme.classic.Appearance",
         return {
           center : true
         };
+      }
+    },
+
+    "hover-button" :
+    {
+      alias : "atom",
+      include : "atom",
+
+      style : function(states)
+      {
+        return {
+          backgroundColor : states.hovered ? "background-selected" : undefined,
+          textColor : states.hovered ? "text-selected" : undefined
+        }
       }
     },
 
@@ -1045,8 +1059,8 @@ qx.Theme.define("qx.theme.classic.Appearance",
           height    : 14,
           width     : 14,
 
-          minHeight : states.horizontal ? undefined : 14,
-          minWidth  : states.horizontal ? 14 : undefined
+          minHeight : states.horizontal ? undefined : 9,
+          minWidth  : states.horizontal ? 9 : undefined
         };
       }
     },
@@ -1866,7 +1880,8 @@ qx.Theme.define("qx.theme.classic.Appearance",
           spacingY : 1,
           iconColumnWidth : 16,
           arrowColumnWidth : 4,
-          padding : 1
+          padding : 1,
+          placementModeY : states.submenu || states.contextmenu ? "best-fit" : "keep-align"
         };
 
         if (states.submenu)
@@ -1880,6 +1895,46 @@ qx.Theme.define("qx.theme.classic.Appearance",
         }
 
         return result;
+      }
+    },
+
+    "menu/slidebar" : "menu-slidebar",
+
+    "menu-slidebar" : "widget",
+
+    "menu-slidebar-button" :
+    {
+      style : function(states)
+      {
+        return {
+          backgroundColor : states.hovered  ? "background-selected" : undefined,
+          padding : 6,
+          center : true
+        };
+      }
+    },
+
+    "menu-slidebar/button-backward" :
+    {
+      include : "menu-slidebar-button",
+
+      style : function(states)
+      {
+        return {
+          icon : states.hovered ? "decoration/arrows/up-invert.gif" : "decoration/arrows/up.gif"
+        };
+      }
+    },
+
+    "menu-slidebar/button-forward" :
+    {
+      include : "menu-slidebar-button",
+
+      style : function(states)
+      {
+        return {
+          icon : states.hovered ? "decoration/arrows/down-invert.gif" : "decoration/arrows/down.gif"
+        };
       }
     },
 
@@ -1953,6 +2008,8 @@ qx.Theme.define("qx.theme.classic.Appearance",
 
     "menu-button/arrow" :
     {
+      include : "image",
+
       style : function(states)
       {
         return {
@@ -2246,6 +2303,7 @@ qx.Theme.define("qx.theme.classic.Appearance",
       style : function(states)
       {
         return {
+          minWidth: 13,
           paddingLeft : 2,
           paddingRight : 2,
           paddingBottom : states.hovered ? 0 : 2,
@@ -2407,6 +2465,8 @@ qx.Theme.define("qx.theme.classic.Appearance",
       VIRTUAL WIDGETS
     ---------------------------------------------------------------------------
     */
+    "virtual-list" : "list",
+    "virtual-list/row-layer" : "row-layer",
 
     "row-layer" : "widget",
     "column-layer" : "widget",
@@ -2419,7 +2479,7 @@ qx.Theme.define("qx.theme.classic.Appearance",
           backgroundColor: states.selected ?
             "table-row-background-selected" :
             "table-row-background-even",
-          textColor: states.selected ? "text-selected" : "text-label",
+          textColor: states.selected ? "text-selected" : "text",
           padding: [3, 6]
         }
       }
@@ -2440,7 +2500,25 @@ qx.Theme.define("qx.theme.classic.Appearance",
     "cell-boolean" : "cell",
     "cell-atom" : "cell",
     "cell-date" : "cell",
-    "cell-html" : "cell"
+    "cell-html" : "cell",
 
+
+    /*
+    ---------------------------------------------------------------------------
+      HTMLAREA
+    ---------------------------------------------------------------------------
+    */
+
+    "htmlarea" :
+    {
+      "include" : "widget",
+
+      style : function(states)
+      {
+        return {
+          backgroundColor : "white"
+        }
+      }
+    }
   }
 });

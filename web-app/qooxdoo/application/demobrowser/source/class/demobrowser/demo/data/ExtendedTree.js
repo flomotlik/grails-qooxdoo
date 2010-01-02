@@ -16,6 +16,14 @@
      * Martin Wittemann (martinwittemann)
 
 ************************************************************************ */
+/* ************************************************************************
+
+#tag(databinding)
+#tag(tree controller)
+#tag(delegate)
+#tag(noPlayground)
+
+************************************************************************ */
 qx.Class.define("demobrowser.demo.data.ExtendedTree",
 {
   extend : qx.application.Standalone,

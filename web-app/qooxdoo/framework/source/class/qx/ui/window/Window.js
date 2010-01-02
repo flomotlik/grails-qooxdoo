@@ -16,6 +16,7 @@
      * Sebastian Werner (wpbasti)
      * Andreas Ecker (ecker)
      * Fabian Jakobs (fjakobs)
+     * Christian Schmidt (chris_schmidt)
 
 ************************************************************************ */
 
@@ -594,11 +595,13 @@ qx.Class.define("qx.ui.window.Window",
     /**
      * Closes the current window instance.
      * Technically calls the {@link qx.ui.core.Widget#hide} method.
-     *
-     * @return {void}
      */
     close : function()
     {
+      if (!this.isVisible()) {
+        return;
+      }
+
       if (this.fireNonBubblingEvent("beforeClose", qx.event.type.Event, [false, true]))
       {
         this.hide();
@@ -609,8 +612,6 @@ qx.Class.define("qx.ui.window.Window",
 
     /**
      * Opens the window.
-     *
-     * @return {void}
      */
     open : function()
     {
@@ -662,8 +663,6 @@ qx.Class.define("qx.ui.window.Window",
 
     /**
      * Maximize the window.
-     *
-     * @return {void}
      */
     maximize : function()
     {
@@ -675,14 +674,14 @@ qx.Class.define("qx.ui.window.Window",
       // First check if the parent uses a canvas layout
       // Otherwise maximize() is not possible
       var parent = this.getLayoutParent();
-      if (!parent) {
-        return;
-      }
-
-      if (parent.supportsMaximize())
+      if (parent != null && parent.supportsMaximize())
       {
         if (this.fireNonBubblingEvent("beforeMaximize", qx.event.type.Event, [false, true]))
         {
+          if (!this.isVisible()) {
+            this.open();
+          }
+
           // store current dimension and location
           var props = this.getLayoutProperties();
           this.__restoredLeft = props.left === undefined ? 0 : props.left;
@@ -710,13 +709,21 @@ qx.Class.define("qx.ui.window.Window",
 
     /**
      * Minimized the window.
-     *
-     * @return {void}
      */
     minimize : function()
     {
+      if (!this.isVisible()) {
+        return;
+      }
+
       if (this.fireNonBubblingEvent("beforeMinimize", qx.event.type.Event, [false, true]))
       {
+        // store current dimension and location
+        var props = this.getLayoutProperties();
+        this.__restoredLeft = props.left === undefined ? 0 : props.left;
+        this.__restoredTop = props.top === undefined ? 0 : props.top;
+
+        this.removeState("maximized");
         this.hide();
         this.fireEvent("minimize");
       }
@@ -724,18 +731,21 @@ qx.Class.define("qx.ui.window.Window",
 
 
     /**
-     * Restore the window, if it is maximized.
-     *
-     * @return {void}
+     * Restore the window to <code>"normal"</code>, if it is
+     * <code>"maximized"</code> or <code>"minimized"</code>.
      */
     restore : function()
     {
-      if (!this.isMaximized()) {
+      if (this.getMode() === "normal") {
         return;
       }
 
       if (this.fireNonBubblingEvent("beforeRestore", qx.event.type.Event, [false, true]))
       {
+        if (!this.isVisible()) {
+          this.open();
+        }
+
         // Restore old properties
         var left = this.__restoredLeft;
         var top = this.__restoredTop;
@@ -889,7 +899,6 @@ qx.Class.define("qx.ui.window.Window",
      * Stops every event
      *
      * @param e {qx.event.type.Event} any event
-     * @return {void}
      */
     _onWindowEventStop : function(e) {
       e.stopPropagation();
@@ -900,7 +909,6 @@ qx.Class.define("qx.ui.window.Window",
      * Focuses the window instance.
      *
      * @param e {qx.event.type.Mouse} mouse down event
-     * @return {void}
      */
     _onWindowMouseDown : function(e) {
       this.setActive(true);
@@ -912,7 +920,6 @@ qx.Class.define("qx.ui.window.Window",
      * currently focused widget is not a child of the window)
      *
      * @param e {qx.event.type.Focus} focus event
-     * @return {void}
      */
     _onWindowFocusOut : function(e) {
       // only needed for non-modal windows
@@ -935,7 +942,6 @@ qx.Class.define("qx.ui.window.Window",
      * maximized.
      *
      * @param e {qx.event.type.Mouse} double click event
-     * @return {void}
      */
     _onCaptionMouseDblClick : function(e)
     {
@@ -958,7 +964,6 @@ qx.Class.define("qx.ui.window.Window",
      * stops the further propagation of the event (calling {@link qx.event.type.Event#stopPropagation}).
      *
      * @param e {qx.event.type.Mouse} mouse click event
-     * @return {void}
      */
     _onMinimizeButtonClick : function(e)
     {
@@ -972,7 +977,6 @@ qx.Class.define("qx.ui.window.Window",
      * stops the further propagation of the event (calling {@link qx.event.type.Event#stopPropagation}).
      *
      * @param e {qx.event.type.Mouse} mouse click event
-     * @return {void}
      */
     _onRestoreButtonClick : function(e)
     {
@@ -986,7 +990,6 @@ qx.Class.define("qx.ui.window.Window",
      * stops the further propagation of the event (calling {@link qx.event.type.Event#stopPropagation}).
      *
      * @param e {qx.event.type.Mouse} mouse click event
-     * @return {void}
      */
     _onMaximizeButtonClick : function(e)
     {
@@ -1000,7 +1003,6 @@ qx.Class.define("qx.ui.window.Window",
      * stops the further propagation of the event (calling {@link qx.event.type.Event#stopPropagation}).
      *
      * @param e {qx.event.type.Mouse} mouse click event
-     * @return {void}
      */
     _onCloseButtonClick : function(e)
     {

@@ -145,6 +145,10 @@ qx.Class.define("qx.util.fsm.State",
    *     this.getUserData("<propertyName>") during the state's onentry and
    *     onexit functions.
    *   </pre>
+   *
+   * @throws {Error} If the state info is not a valid object.
+   * @throws {Error} If the events object is not provided in new state info.
+   *
    */
   construct : function(stateName, stateInfo)
   {
@@ -266,9 +270,16 @@ qx.Class.define("qx.util.fsm.State",
      * @param value {Object}
      *   The property value which is being validated
      *
-     * @return {var} TODOC
+     * @return {Function}
+     *   Function that implements calls to each of the requested automatic actions
      *
-     * @throws TODOC
+     * @throws {Error} If the value has an invalid type.
+     * @throws {Error} If the function type is not an array.
+     * @throws {Error} If the function request parameter type is not valid.
+     * @throws {Error} If the function parameters are not valid.
+     * @throws {Error} If 'objects' list is invalid.
+     * @throws {Error} If a name in the 'objects' list is not valid.
+     * @throws {Error} If the 'groups' list is not valid.
      */
     _commonTransformAutoActions : function(actionType, value)
     {
@@ -715,7 +726,6 @@ qx.Class.define("qx.util.fsm.State",
 
         default:
           throw new Error("Invalid onentry type: " + typeof (value));
-          return null;
       }
     },
 

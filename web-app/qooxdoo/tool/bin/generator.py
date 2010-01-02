@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
 ################################################################################
 #
 #  qooxdoo - the new era of web development
@@ -7,7 +7,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -27,11 +27,15 @@ from generator.config.Config import Config
 from generator.runtime.Log import Log
 from generator.runtime.InterruptRegistry import InterruptRegistry
 
+#import warnings
+#warnings.filterwarnings("error") # turn warnings into errors - e.g. for UnicodeWarning
+
 ## TODO: The next on is a hack, and should be removed once all string handling is
 ## properly done in unicode; it is advisable to comment out the call to setdefaultencoding()
 ## when working on string handling in other parts of the generator
 reload(sys)
 sys.setdefaultencoding('utf-8')
+sys.setrecursionlimit(1500)  # due to bug#2922; maybe this can be removed later
 
 interruptRegistry = InterruptRegistry()
 
@@ -54,28 +58,27 @@ def listJobs(console, jobs, config):
 
 
 def main():
+    global options
     parser = optparse.OptionParser(option_class=ExtendAction)
 
     usage_str = '''%prog [options] job,...
 
 Arguments:
   job,...               a list of jobs (like 'source' or 'copy-files',
-                        without the quotes) to perform
-  ?                     use '?' to get a list of all available jobs
-                        from the configuration file'''
+                        without the quotes) to run
+  x                     use 'x' (or some undefined job name) to get a 
+                        list of all available jobs from the configuration file'''
     parser.set_usage(usage_str)
 
 
     # Common options
     parser.add_option("-c", "--config", dest="config", metavar="CFGFILE", default="config.json", help="path to configuration file containing job definitions (default: %default)")
-    #parser.add_option("-j", "--jobs", action="extend", dest="jobs", type="string", default=[], help="List of jobs to run")
     parser.add_option("-q", "--quiet", action="store_true", dest="quiet", default=False, help="quiet output mode (extra quiet)")
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False, help="verbose output mode (extra verbose)")
     parser.add_option("-l", "--logfile", dest="logfile", metavar="FILENAME", default=None, type="string", help="log file")
+    parser.add_option("-s", "--stacktrace", action="store_true", dest="stacktrace", default=False, help="enable stack traces on fatal exceptions")
+    parser.add_option("-m", "--macro", dest="letmacros", metavar="KEY:VAL", action="map", type="string", default={}, help="define/overwrite a global 'let' macro KEY with value VAL")
     
-    # wpbasti: TODO: Add option to insert arbitrary number of macros values
-    # Could also be an good replacement for the four in the following listed options
-
     # Dynamic options (currently not supported)
     #parser.add_option("--setting", action="extend", dest="settings", metavar="KEY:VALUE", type="string", default=[], help="Used settings")
     #parser.add_option("--variant", action="extend", dest="variants", metavar="KEY:VALUE", type="string", default=[], help="Selected variants")
@@ -83,7 +86,6 @@ Arguments:
     #parser.add_option("--use", action="extend", dest="use", metavar="CLASS1:CLASS2", type="string", default=[], help="Special runtime class dependencies")
 
     (options, args) = parser.parse_args(sys.argv[1:])
-
 
     if not args:
         parser.print_help()
@@ -110,7 +112,7 @@ Arguments:
     console.info(u"Jobs: %s" % ", ".join(options.jobs))
 
     # Load configuration
-    config = Config(console, options.config)
+    config = Config(console, options.config, **options.letmacros)
 
     # Resolve "include"-Keys
     console.info("Resolving config includes...")
@@ -161,6 +163,7 @@ Arguments:
 
 
 if __name__ == '__main__':
+    options = None
     try:
         main()
 
@@ -168,4 +171,16 @@ if __name__ == '__main__':
         print
         print "Keyboard interrupt!"
         interruptCleanup()
-        sys.exit(1)
+        sys.exit(2)
+
+    except Exception, e:
+        if (options == None or            # do a stack trace if we fail when parsing options
+           (hasattr(options, "stacktrace") and options.stacktrace)):  # or when 'stacktrace' is enabled
+            raise
+        else:
+            raise
+            if str(e): # there's something to print
+                print >> sys.stderr, e
+            else:
+                print >> sys.stderr, "Terminating on terminal exception (%r)" % e
+            sys.exit(1)

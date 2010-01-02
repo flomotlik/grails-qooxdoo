@@ -50,31 +50,14 @@ qx.Class.define("qx.test.Class",
 
         members :
         {
-          /**
-           * TODOC
-           *
-           * @return {string} TODOC
-           */
           startEngine : function() {
             return "start";
           },
 
-
-          /**
-           * TODOC
-           *
-           * @return {string} TODOC
-           */
           stopEngine : function() {
             return "stop";
           },
 
-
-          /**
-           * TODOC
-           *
-           * @return {var} TODOC
-           */
           getName : function() {
             return this._name;
           }
@@ -96,37 +79,26 @@ qx.Class.define("qx.test.Class",
 
         members :
         {
-          /**
-           * TODOC
-           *
-           * @return {var} TODOC
-           */
           startEngine : function()
           {
             var ret = this.base(arguments);
             return "brrr " + ret;
           },
 
-
-          /**
-           * TODOC
-           *
-           * @return {var} TODOC
-           */
           stopEngine : function()
           {
             var ret = arguments.callee.base.call();
             return "brrr " + ret;
           },
 
-
-          /**
-           * TODOC
-           *
-           * @return {var} TODOC
-           */
           getWheels : function() {
             return this.self(arguments).WHEELS;
+          },
+
+          getMaxSpeed : function()
+          {
+            // call base in non overridden method
+            this.base(arguments);
           }
         },
 
@@ -138,6 +110,13 @@ qx.Class.define("qx.test.Class",
       this.assertEquals("brrr start", bmw.startEngine());
       this.assertEquals("brrr stop", bmw.stopEngine());
       this.assertEquals(4, bmw.getWheels());
+
+      if (this.isDebugOn())
+      {
+        this.assertException(function() {
+          bmw.getMaxSpeed();
+        }, qx.core.AssertionError);
+      }
     },
 
 
@@ -205,10 +184,10 @@ qx.Class.define("qx.test.Class",
         }, Error, new RegExp("The class .* is a singleton"));
       };
     },
-    
+
     /* disabled acc. to state of bug #1433
     testMissingExtendKey : function()
-    {            
+    {
       // missing "extend" key should cause an exception
       if (this.isDebugOn())
       {
@@ -220,7 +199,7 @@ qx.Class.define("qx.test.Class",
             ]
           });
         }, Error, new RegExp('.*has to extend at least.*'));
-      }  
+      }
     },
     */
 
@@ -347,9 +326,7 @@ qx.Class.define("qx.test.Class",
 
     testSubClassOf : function()
     {
-      this.assertTrue(qx.Class.isSubClassOf(qx.legacy.ui.core.Widget, qx.core.Object));
-      this.assertTrue(qx.Class.isSubClassOf(qx.legacy.ui.basic.Terminator, qx.core.Object));
-      this.assertFalse(qx.Class.isSubClassOf(qx.legacy.ui.basic.Terminator, qx.legacy.ui.core.Parent));
+      this.assertTrue(qx.Class.isSubClassOf(qx.ui.core.Widget, qx.core.Object));
     }
   }
 });

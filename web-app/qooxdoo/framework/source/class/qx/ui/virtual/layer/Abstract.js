@@ -27,7 +27,7 @@
  * and {@link #updateLayerData} and only performs the absolute necessary
  * actions. Concrete implementation of this class must at least implement
  * the {@link #_fullUpdate} method. Additionally the two methods
- * {@link #_updateLayerWindow} and {@link _updateLayerData} may be implemented
+ * {@link #_updateLayerWindow} and {@link #_updateLayerData} may be implemented
  * to increase the performance.
  */
 qx.Class.define("qx.ui.virtual.layer.Abstract",
@@ -145,7 +145,7 @@ qx.Class.define("qx.ui.virtual.layer.Abstract",
       {
         this._updateLayerWindow.apply(this, this.__arguments);
       }
-      else if (this.__jobs.updateLayerData)
+      else if (this.__jobs.updateLayerData  && this.__rowSizes)
       {
         this._updateLayerData();
       }
@@ -158,6 +158,7 @@ qx.Class.define("qx.ui.virtual.layer.Abstract",
         this.__rowSizes = args[2];
         this.__columnSizes = args[3];
       }
+
       this.__jobs = {};
     },
 
@@ -262,8 +263,7 @@ qx.Class.define("qx.ui.virtual.layer.Abstract",
   *****************************************************************************
   */
 
-  destruct : function()
-  {
-    this._disposeFields("__jobs", "__arguments", "__rowSizes", "__columnSizes");
+  destruct : function() {
+    this.__jobs = this.__arguments = this.__rowSizes = this.__columnSizes = null;
   }
 });

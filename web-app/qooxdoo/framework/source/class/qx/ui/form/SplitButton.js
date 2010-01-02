@@ -25,8 +25,8 @@
 qx.Class.define("qx.ui.form.SplitButton",
 {
   extend : qx.ui.core.Widget,
-  include : [qx.ui.core.MExecutable, qx.ui.form.MFormElement],
-  implement : [qx.ui.form.IFormElement, qx.ui.form.IExecutable],
+  include : [qx.ui.core.MExecutable],
+  implement : [qx.ui.form.IExecutable],
 
 
 
@@ -40,7 +40,7 @@ qx.Class.define("qx.ui.form.SplitButton",
    * @param label {String} Label to use
    * @param icon {String?null} Icon to use
    * @param menu {qx.ui.menu.Menu} Connect to menu instance
-   * @param command {qx.event.Command} Command instance to connect with
+   * @param command {qx.ui.core.Command} Command instance to connect with
    */
   construct : function(label, icon, menu, command)
   {
@@ -79,22 +79,6 @@ qx.Class.define("qx.ui.form.SplitButton",
 
 
 
-
-  /*
-  *****************************************************************************
-     EVENTS
-  *****************************************************************************
-  */
-  events : {
-    /**
-     * The old value change event.
-     * @deprecated
-     */
-    "changeValue" : "qx.event.type.Data"
-  },
-
-
-
   /*
   *****************************************************************************
      PROPERTIES
@@ -123,7 +107,6 @@ qx.Class.define("qx.ui.form.SplitButton",
     {
       apply : "_applyLabel",
       nullable : true,
-      dispose : true,
       check : "String"
     },
 
@@ -397,67 +380,6 @@ qx.Class.define("qx.ui.form.SplitButton",
       if (!this.getMenu().isVisible() && this.__cursorIsOut) {
         this.removeState("hovered");
       }
-    },
-
-
-
-    /*
-    ---------------------------------------------------------------------------
-      DEPRECATED STUFF
-    ---------------------------------------------------------------------------
-    */
-    __value : null,
-
-
-    /**
-     * Old set method for the value property.
-     *
-     * @param value {String} The value of the label.
-     * @deprecated
-     */
-    setValue: function(value) {
-      qx.log.Logger.deprecatedMethodWarning(arguments.callee);
-
-      var oldValue = this.__value;
-      this.__value = value;
-      this.fireDataEvent("changeValue", value, oldValue);
-    },
-
-
-    /**
-     * Old get method for the value property.
-     *
-     * @deprecated
-     */
-    getValue: function() {
-      qx.log.Logger.deprecatedMethodWarning(arguments.callee);
-
-      return this.__value;
-    },
-
-
-    /**
-     * Old reset method for the value property.
-     *
-     * @deprecated
-     */
-    resetValue: function() {
-      qx.log.Logger.deprecatedMethodWarning(arguments.callee);
-
-      this.__value = null;
-    },
-
-
-    // overridden
-    addListener: function(type, listener, self, capture) {
-      if (type == "changeValue") {
-        qx.log.Logger.deprecatedEventWarning(
-          arguments.callee,
-          "changeValue",
-          "The value property will be removed."
-        );
-      }
-      return this.base(arguments, type, listener, self, capture);
     }
   }
 });

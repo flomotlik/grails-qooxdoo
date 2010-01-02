@@ -7,7 +7,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -86,6 +86,9 @@ class ImageClipping(object):
             allfiles.extend(glob.glob(file))
         #self._console.debug("Combining the following images: %r" % allfiles)
         for file in allfiles:
+            if not os.path.exists(file):
+                self._console.warn("Non-existing file spec, skipping: %s" % file)
+                continue
             clips.append(file)
             imginfo = self._imageInfo.getImageInfo(file, file)
             width, height = imginfo['width'], imginfo['height']

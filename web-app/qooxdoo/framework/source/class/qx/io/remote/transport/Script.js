@@ -120,7 +120,7 @@ qx.Class.define("qx.io.remote.transport.Script",
      * @param id {String} Id of the corresponding transport object,
      *     which is passed as an URL parameter to the server an
      * @param content {String} This string is passed to the content property
-     *     of the {@link #Response} object.
+     *     of the {@link qx.io.remote.Response} object.
      */
     _requestFinished : qx.event.GlobalError.observeMethod(function(id, content)
     {
@@ -330,7 +330,7 @@ qx.Class.define("qx.io.remote.transport.Script",
      * Provides the status text for the current request if available and null otherwise.
      * This method needs implementation (returns always an empty string)
      *
-     * @return {string} TODOC
+     * @return {String} always an empty string.
      */
     getStatusText : function() {
       return "";
@@ -414,9 +414,6 @@ qx.Class.define("qx.io.remote.transport.Script",
     // basic registration to qx.io.remote.Exchange
     // the real availability check (activeX stuff and so on) follows at the first real request
     qx.io.remote.Exchange.registerType(qx.io.remote.transport.Script, "qx.io.remote.transport.Script");
-
-    // Alias (compatibility to 0.7 qooxdoo)
-    qx.io.remote.ScriptTransport = statics;
   },
 
 
@@ -436,6 +433,6 @@ qx.Class.define("qx.io.remote.transport.Script",
       document.body.removeChild(this.__element);
     }
 
-    this._disposeFields("__element", "_responseContent");
+    this.__element = this._responseContent = null;
   }
 });

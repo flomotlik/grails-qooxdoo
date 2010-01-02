@@ -17,8 +17,6 @@
 
 ************************************************************************ */
 /**
- * EXPERIMENTAL!
- *
  * <h2>Form Controller</h2>
  *
  * *General idea*
@@ -50,18 +48,16 @@ qx.Class.define("qx.data.controller.Form",
   extend : qx.core.Object,
 
   /**
-   * @param model {qx.core.Object | null} The model to bind the target to. The
+   * @param model {qx.core.Object | null} The model to bind the target to. The
    *   given object will be set as {@link #model} property.
-   * @param target {qx.ui.form.Form | null} The form which contains the form
+   * @param target {qx.ui.form.Form | null} The form which contains the form
    *   items. The given form will be set as {@link #target} property.
    */
   construct : function(model, target)
   {
     this.base(arguments);
 
-    // set up the caches
-    this.__modelBindingIds = [];
-    this.__selectableBindingIds = {};
+    this.__bindingOptions = {};
 
     if (model != null) {
       this.setModel(model);
@@ -100,8 +96,46 @@ qx.Class.define("qx.data.controller.Form",
   members :
   {
     __objectController : null,
-    __modelBindingIds : null,
-    __selectableBindingIds : null,
+    __bindingOptions : null,
+
+
+    /**
+     * The form controller uses for setting up the bindings the fundamental
+     * binding layer, the {@link qx.data.SingleValueBinding}. To achieve a
+     * binding in both directions, two bindings are neede. With this method,
+     * you have the oppertunity to set the options used for the bindings.
+     *
+     * @param name {String} The name of the form item for which the options
+     *   should be used.
+     * @param model2target {Map} Options map used for the binding from model
+     *   to target. The possible options can be found in the
+     *   {@link qx.data.SingleValueBinding} class.
+     * @param target2model {Map} Optiosn map used for the binding from target
+     *   to model. The possible options can be found in the
+     *   {@link qx.data.SingleValueBinding} class.
+     */
+    addBindingOptions : function(name, model2target, target2model)
+    {
+      this.__bindingOptions[name] = [model2target, target2model];
+
+      // return if not both, model and target are given
+      if (this.getModel() == null || this.getTarget() == null) {
+        return;
+      }
+
+      // renew the affected binding
+      var item = this.getTarget().getItems()[name];
+      var targetProperty =
+        this.__isModelSelectable(item) ? "modelSelection[0]" : "value";
+
+      // remove the binding
+      this.__objectController.removeTarget(item, targetProperty, name);
+      // set up the new binding with the options
+      this.__objectController.addTarget(
+        item, targetProperty, name, true, model2target, target2model
+      );
+    },
+
 
     /**
      * Creates and sets a model using the {@link qx.data.marshal.Json} object.
@@ -124,7 +158,13 @@ qx.Class.define("qx.data.controller.Form",
       var items = target.getItems();
       var data = {};
       for (var name in items) {
-        data[name] = null;
+        // check if the target is a selection
+        var clazz = items[name].constructor;
+        if (qx.Class.hasInterface(clazz, qx.ui.core.ISingleSelection)) {
+          data[name] = items[name].getModelSelection();
+        } else {
+          data[name] = items[name].getValue();
+        }
       }
 
       var model = qx.data.marshal.Json.createModel(data, includeBubbleEvents);
@@ -189,30 +229,16 @@ qx.Class.define("qx.data.controller.Form",
       // connect all items
       for (var name in items) {
         var item = items[name];
+        var targetProperty =
+          this.__isModelSelectable(item) ? "modelSelection[0]" : "value";
+        var options = this.__bindingOptions[name];
 
-        // check for all selection widgets
-        if (this.__isModelSelectable(item)) {
-          // set up the binding without the object controller
-          var model = this.getModel();
-          // from model to item
-          this.__modelBindingIds.push(model.bind(name, item, "modelSelection", {
-          converter : function(data) {
-            return [data];
-          }}));
-          // from item to model
-          this.__selectableBindingIds[item.toHashCode()] =
-            item.bind("selection", model, name, {
-              converter : function(data) {
-                var selectedItem = data[0];
-                if (selectedItem != null) {
-                  return selectedItem.getModel();
-                };
-                return null;
-            }});
-
+        if (options == null) {
+          this.__objectController.addTarget(item, targetProperty, name, true);
         } else {
-          // default case is the value property
-          this.__objectController.addTarget(item, "value", name, true);
+          this.__objectController.addTarget(
+            item, targetProperty, name, true, options[0], options[1]
+          );
         }
       }
     },
@@ -233,27 +259,13 @@ qx.Class.define("qx.data.controller.Form",
       // get the items
       var items = oldTarget.getItems();
 
-      var model = this.getModel();
-      // remove the binding from the model
-      for (var i = 0; i < this.__modelBindingIds.length; i++) {
-        model.removeBinding(this.__modelBindingIds[i]);
-      }
-      this.__modelBindingIds = [];
-
       // disconnect all items
       for (var name in items) {
         var item = items[name];
-        if (this.__isModelSelectable(item)) {
-          // remove the bindings from the selectable item
-          var id = this.__selectableBindingIds[item.toHashCode()];
-          item.removeBinding(id);
-
-        } else {
-          this.__objectController.removeTarget(item, "value", name);
-        }
+        var targetProperty =
+          this.__isModelSelectable(item) ? "modelSelection[0]" : "value";
+        this.__objectController.removeTarget(item, targetProperty, name);
       }
-      // get rid of the old selectable binding ids
-      this.__selectableBindingIds = {};
     },
 
 

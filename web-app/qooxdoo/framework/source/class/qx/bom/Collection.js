@@ -429,7 +429,7 @@
        * and checkboxes or radiobuttons (for convenience).
        *
        * Please note: To modify the value attribute of a checkbox or
-       * radiobutton use {@link qx.bom.element.Attribute.set} instead.
+       * radiobutton use {@link qx.bom.element.Attribute#set} instead.
        *
        * @signature function(value)
        * @param value {String|Number|Array} Value to apply to each element
@@ -1324,7 +1324,7 @@
         if (scripts)
         {
           var script;
-          var Loader = qx.io2.ScriptLoader;
+          var Loader = qx.io.ScriptLoader;
           var Func = qx.lang.Function;
 
           for (var i=0, l=scripts.length; i<l; i++)

@@ -67,7 +67,14 @@ qx.Class.define("qx.ui.table.pane.Pane",
      * data or not. Can be used to give the user feedback of the loading state
      * of the rows.
      */
-    "paneReloadsData" : "qx.event.type.Data"
+    "paneReloadsData" : "qx.event.type.Data",
+
+    /**
+     * Whenever the content of the table panehas been updated (rendered)
+     * trigger a paneUpdated event. This allows the canvas cellrenderer to act
+     * once the new cells have beeen integrated in the dom.
+     */
+    "paneUpdated" : "qx.event.type.Event"
   },
 
 
@@ -205,13 +212,11 @@ qx.Class.define("qx.ui.table.pane.Pane",
         // Update the focused row background
         if (row != oldRow && !massUpdate)
         {
-          if (row !== null && oldRow !== null)
-          {
-            // NOTE: Only the old and the new row need update
+          if (oldRow !== null) {
             this.updateContent(false, null, oldRow, true);
+          }
+          if (row !== null) {
             this.updateContent(false, null, row, true);
-          } else {
-            this.updateContent();
           }
         }
       }
@@ -591,9 +596,7 @@ qx.Class.define("qx.ui.table.pane.Pane",
       var tabelModel = this.getTable().getTableModel();
       var modelRowCount = 0;
 
-      if (tabelModel != null) {
-        modelRowCount = tabelModel.getRowCount();
-      }
+      modelRowCount = tabelModel.getRowCount();
 
       // don't handle this special case here
       if (firstRow + rowCount > modelRowCount) {
@@ -649,6 +652,7 @@ qx.Class.define("qx.ui.table.pane.Pane",
         this._updateRowStyles(this.__focusedRow - rowOffset);
         this._updateRowStyles(this.__focusedRow);
       }
+      this.fireEvent("paneUpdated");
     },
 
 
@@ -674,11 +678,7 @@ qx.Class.define("qx.ui.table.pane.Pane",
       var firstRow = this.getFirstVisibleRow();
 
       var rowCount = this.getVisibleRowCount();
-      var modelRowCount = 0;
-
-      if (tableModel != null) {
-        modelRowCount = tableModel.getRowCount();
-      }
+      var modelRowCount = tableModel.getRowCount();
 
       if (firstRow + rowCount > modelRowCount) {
         rowCount = Math.max(0, modelRowCount - firstRow);
@@ -715,11 +715,11 @@ qx.Class.define("qx.ui.table.pane.Pane",
 
       //this.debug(">>>" + data + "<<<")
       elem.innerHTML = data;
-
       this.setWidth(rowWidth);
 
       this.__lastColCount = colCount;
       this.__lastRowCount = rowCount;
+      this.fireEvent("paneUpdated");
     }
 
   },
@@ -734,6 +734,6 @@ qx.Class.define("qx.ui.table.pane.Pane",
   */
 
   destruct : function() {
-    this._disposeFields("__tableContainer", "__paneScroller", "__rowCache");
+    this.__tableContainer = this.__paneScroller = this.__rowCache = null;
   }
 });

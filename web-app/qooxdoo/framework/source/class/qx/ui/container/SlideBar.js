@@ -53,7 +53,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/widget/SlideBar' target='_blank'>
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/SlideBar' target='_blank'>
  * Documentation of this widget in the qooxdoo wiki.</a> */
 qx.Class.define("qx.ui.container.SlideBar",
 {
@@ -89,6 +89,7 @@ qx.Class.define("qx.ui.container.SlideBar",
       this.initOrientation();
     }
 
+    this.addListener("mousewheel", this._onMouseWheel, this);
   },
 
 
@@ -115,6 +116,14 @@ qx.Class.define("qx.ui.container.SlideBar",
       check : ["horizontal", "vertical"],
       init : "horizontal",
       apply : "_applyOrientation"
+    },
+
+    /** The number of pixels to scroll if the buttons are pressed */
+    scrollStep :
+    {
+      check : "Integer",
+      init : 15,
+      themeable : true
     }
   },
 
@@ -178,8 +187,10 @@ qx.Class.define("qx.ui.container.SlideBar",
           break;
 
         case "scrollpane":
-          control = new qx.ui.core.ScrollPane();
+          control = new qx.ui.core.scroll.ScrollPane();
           control.addListener("update", this._onResize, this);
+          control.addListener("scrollX", this._onScroll, this);
+          control.addListener("scrollY", this._onScroll, this);
           break;
       }
 
@@ -236,8 +247,6 @@ qx.Class.define("qx.ui.container.SlideBar",
         pane.scrollToY(value);
       }
     },
-
-
 
 
     /*
@@ -301,6 +310,28 @@ qx.Class.define("qx.ui.container.SlideBar",
     */
 
     /**
+     * Scolls pane on mousewheel events
+     *
+     * @param e {qx.event.type.Mouse} the mouse event
+     */
+    _onMouseWheel : function(e)
+    {
+      this.scrollBy(e.getWheelDelta() * this.getScrollStep());
+
+      // Stop bubbling and native event
+      e.stop();
+    },
+
+
+    /**
+     * Update arrow enabled state after scrolling
+     */
+    _onScroll : function() {
+      this._updateArrowsEnabled();
+    },
+
+
+    /**
      * Listener for resize event. This event is fired after the
      * first flush of the element which leads to another queuing
      * when the changes modify the visibility of the scroll buttons.
@@ -322,7 +353,12 @@ qx.Class.define("qx.ui.container.SlideBar",
         contentSize.width > innerSize.width :
         contentSize.height > innerSize.height;
 
-      overflow ? this._showArrows() : this._hideArrows();
+      if (overflow) {
+        this._showArrows()
+        this._updateArrowsEnabled();
+      } else {
+        this._hideArrows();
+      }
     },
 
 
@@ -332,7 +368,7 @@ qx.Class.define("qx.ui.container.SlideBar",
      * @return {void}
      */
     _onExecuteBackward : function() {
-      this.scrollBy(-20);
+      this.scrollBy(-this.getScrollStep());
     },
 
 
@@ -342,7 +378,7 @@ qx.Class.define("qx.ui.container.SlideBar",
      * @return {void}
      */
     _onExecuteForward : function() {
-      this.scrollBy(20);
+      this.scrollBy(this.getScrollStep());
     },
 
 
@@ -357,7 +393,8 @@ qx.Class.define("qx.ui.container.SlideBar",
           this.scrollBy(this.getChildControl("scrollpane").getScrollX());
         },
         this,
-        50);
+        50
+      );
     },
 
 
@@ -366,6 +403,29 @@ qx.Class.define("qx.ui.container.SlideBar",
       UTILITIES
     ---------------------------------------------------------------------------
     */
+
+    /**
+     * Update arrow enabled state
+     */
+    _updateArrowsEnabled : function()
+    {
+      var pane = this.getChildControl("scrollpane");
+
+      if (this.getOrientation() === "horizontal")
+      {
+        var position = pane.getScrollX();
+        var max = pane.getScrollMaxX();
+      }
+      else
+      {
+        var position = pane.getScrollY();
+        var max = pane.getScrollMaxY();
+      }
+
+      this.getChildControl("button-backward").setEnabled(position > 0);
+      this.getChildControl("button-forward").setEnabled(position < max);
+    },
+
 
     /**
      * Show the arrows (Called from resize event)

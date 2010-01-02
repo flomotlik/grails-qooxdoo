@@ -8,6 +8,12 @@
     "QOOXDOO_PATH" : "../../..",
     //"CACHE"        : "cache",
     "CACHE"        : "${TMPDIR}/cache",
+    "CACHE_KEY"    : 
+    {
+      "compile"      : "${CACHE}",
+      "downloads"    : "${CACHE}/downloads",
+      "invalidate-on-tool-change" : true
+    },
     "QXTHEME"      : "qx.theme.Modern",
     "QXICONTHEME"  : ["Tango"],
     "OPTIMIZE"     : ["basecalls", "variables", "privates", "strings"],
@@ -31,10 +37,7 @@
         }
       ],
 
-      "cache" :
-      {
-        "compile" :  "${CACHE}"
-      }
+      "cache" : "${CACHE_KEY}"
     },
 
 
@@ -66,11 +69,7 @@
         "${APPLICATION_MAIN_CLASS}"
       ],
 
-      "cache" :
-      {
-        "compile"   :  "${CACHE}",
-        "downloads" :  "${CACHE}/downloads"
-      },
+      "cache" : "${CACHE_KEY}",
 
       "settings" :
       {
@@ -94,12 +93,20 @@
 
       "extend" : ["common"],
 
-      "compile-source" :
+      "compile-options" :
       {
-        "file" : "${ROOT}/source/script/${APPLICATION}.js",
-        "locales" : "${LOCALES}",
-        "root" : "source"
-      }
+        "paths" :
+        {
+          "file" : "${ROOT}/source/script/${APPLICATION}.js",
+          "app-root" : "source"
+        },
+        "code" :
+        {
+          "locales" : "${LOCALES}"
+        }
+      },
+
+      "compile" : { "type" : "source" }
     },
 
 
@@ -128,18 +135,23 @@
       ],
       "exclude" :
       [
-        "qx.legacy.*",
         "qx.test.*"
       ],
-      /*
-      */
 
-      "compile-source" :
+      "compile-options" :
       {
-        "file" : "${ROOT}/source/script/${APPLICATION}.js",
-        "locales" : "${LOCALES}",
-        "root" : "source"
-      }
+        "paths" :
+        {
+          "file" : "${ROOT}/source/script/${APPLICATION}.js",
+          "app-root" : "source"
+        },
+        "code" :
+        {
+          "locales" : "${LOCALES}"
+        }
+      },
+      
+      "compile" : { "type" : "source" }
     },
 
 
@@ -152,6 +164,98 @@
         "source-all-script"
       ]
     },
+
+    /*
+    "source-hybrid" :
+    {
+      "desc"    : "create a hybrid source version (application as source, framework compiled)",
+
+      "run" :
+      [
+        "source-hybrid-framework",
+        "source-hybrid-application"
+      ]
+    },
+
+    "source-hybrid-framework" :
+    {
+      "desc"    : "compile a framework all-classes package",
+
+      "library" :
+      [
+        {
+          "manifest" : "${QOOXDOO_PATH}/framework/Manifest.json"
+        }
+      ],
+
+      "cache"  : "${CACHE_KEY}",
+
+      "include": ["qx.*"],
+      "exclude": ["=qx.test.*"],
+
+      "variants" :
+      {
+        "qx.debug" : ["on"],
+        "qx.aspects" : ["off"]
+      },
+
+      "compile-options" :
+      {
+        "paths" :
+        {
+          "file" : "${ROOT}/source/script/qx.js"
+        },
+        "code"  :
+        {
+          "format"   : "on",
+          "optimize" : []
+        }
+      },
+
+      "compile" : { "type" : "build" },
+      
+      "packages":
+      {
+        "parts" :
+        {
+          "all" :
+          {
+            "include" : ["qx.*"]
+          }
+        },
+        "init" : "all",
+        "loader-with-boot" : false
+      }
+    },
+
+    "source-hybrid-application" :
+    {
+      "desc"     : "create a source version of the application only",
+
+      "extend"   : ["common"],
+      
+      "=library"  :
+      [
+        {
+          "manifest" : "${ROOT}/Manifest.json"
+        }
+      ],
+
+      "=include" :
+      [
+        "=${APPLICATION}.*"
+      ],
+
+      //"exclude": ["=qx.*"],
+
+      "compile-source" :
+      {
+        "file" : "${ROOT}/source/script/${APPLICATION}.js",
+        "locales" : "${LOCALES}",
+        "root" : "source"
+      }
+    },
+    */
 
     // -- build jobs ---------------------------------------------------
 
@@ -166,7 +270,7 @@
         "qx.debug" : ["off"]
       },
 
-      "compile-dist" :
+      "compile-options" :
       {
         "paths"  :
         {
@@ -183,7 +287,9 @@
           "locales"  : "${LOCALES}",
           "optimize" : "${OPTIMIZE}"
         }
-      }
+      },
+      
+      "compile" : { "type" : "build" }
     },
 
 
@@ -238,7 +344,7 @@
     {
       "desc"    : "create .po files for current library",
 
-      "extend" : ["common"],
+      "extend" : ["scan-local-lib"],
 
       "translate" :
       {
@@ -281,6 +387,8 @@
     {
       "desc"    : "remove local cache and generated .js files (source/build)",
 
+      "cache"   : "${CACHE_KEY}",
+
       "clean-files" :
       {
         "Cleaning up build" :
@@ -291,11 +399,13 @@
         "Cleaning up source" :
         [
           "${ROOT}/source/script/${APPLICATION}.js"
-        ],
-        "Deleting local cache" :
+        ]
+        /*
+        ,"Deleting local cache" :
         [
           "${ROOT}/cache"
         ]
+        */
       }
     },
 
@@ -304,7 +414,7 @@
     {
       "desc"    : "remove the cache and all generated artefacts of this library (source, build, ...)",
 
-      "cache"   : { "compile" : "${CACHE}" },    // this is to check cache lock
+      "cache"   : "${CACHE_KEY}", 
 
       "clean-files" :
       {
@@ -327,11 +437,13 @@
         "Deleting inspector folder" :
         [
           "${ROOT}/inspector"
-        ],
-        "Deleting cache" :
+        ]
+        /*
+        ,"Deleting cache" :
         [
           "${CACHE}"
         ]
+        */
       }
     },
 
@@ -383,6 +495,14 @@
       "extend" : [ "scan-local-lib" ],
 
       "fix-files" : {}
+    },
+    
+    
+    "info" : 
+    {
+      "desc" : "collects environment information like the qooxdoo version etc., and prints it out",
+      
+      "collect-environment-info" : {}
     }
   }
 }

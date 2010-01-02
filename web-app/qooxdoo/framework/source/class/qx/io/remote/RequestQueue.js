@@ -79,7 +79,7 @@ qx.Class.define("qx.io.remote.RequestQueue",
     },
 
     /**
-     * @deprecated
+     * The maximum number of total requests.
      */
     maxTotalRequests :
     {
@@ -133,9 +133,9 @@ qx.Class.define("qx.io.remote.RequestQueue",
 
 
     /**
-     * Get the queued requests
+     * Get a list of queued requests
      *
-     * @return {Request[} The queued requests
+     * @return {Request[]} The list of queued requests
      */
     getRequestQueue : function() {
       return this.__queue;
@@ -143,9 +143,11 @@ qx.Class.define("qx.io.remote.RequestQueue",
 
 
     /**
-     * Get the active queued requests
+     * Get a list of active queued requests, each one wrapped in an instance of
+     * {@link qx.io.remote.Exchange}
      *
-     * @return {Request[} The active queued requests
+     * @return {Exchange[]} The list of active queued requests, each one
+     *   wrapped in an instance of {@link qx.io.remote.Exchange}
      */
     getActiveQueue : function() {
       return this.__active;
@@ -287,7 +289,7 @@ qx.Class.define("qx.io.remote.RequestQueue",
         }
       }
 
-      e.getTarget().getRequest()._onsending(e.clone());
+      e.getTarget().getRequest()._onsending(e);
     },
 
 
@@ -299,7 +301,7 @@ qx.Class.define("qx.io.remote.RequestQueue",
      * @return {void}
      */
     _onreceiving : function(e) {
-      e.getTarget().getRequest()._onreceiving(e.clone());
+      e.getTarget().getRequest()._onreceiving(e);
     },
 
 
@@ -328,11 +330,46 @@ qx.Class.define("qx.io.remote.RequestQueue",
       // on the current type of the event ( completed|aborted|timeout|failed )
       var request = e.getTarget().getRequest();
       var requestHandler = "_on" + e.getType();
-      if (request[requestHandler]) {
-        request[requestHandler](e.clone());
-      }
 
-      this._remove(e.getTarget());
+      // It's possible that the request handler can fail, possibly due to
+      // being sent garbage data. We want to prevent that from crashing
+      // the program, but instead  display an error, and, importantly
+      // (regardless of error) remove the request from the queue.
+      try
+      {
+        if (request[requestHandler])
+        {
+          request[requestHandler](e);
+        }
+      }
+      catch(ex)
+      {
+        var stacktrace = qx.dev.StackTrace.getStackTraceFromError(ex);
+
+        this.error(
+          "Request " + request + " handler " + requestHandler + " threw an error: " + ex +
+          "\nStack Trace:\n" + stacktrace
+        );
+
+        // Issue an "aborted" event so the application gets notified.
+        // If that too fails, or if there's no "aborted" handler, ignore it.
+        try
+        {
+          if (request["_onaborted"])
+          {
+            var event = qx.event.Registration.createEvent("aborted",
+                                                      qx.event.type.Event);
+            request["_onaborted"](event);
+          }
+        }
+        catch(ex)
+        {
+        }
+      }
+      finally
+      {
+        this._remove(e.getTarget());
+      }
     },
 
 
@@ -489,6 +526,6 @@ qx.Class.define("qx.io.remote.RequestQueue",
   {
     this._disposeArray("__active");
     this._disposeObjects("__timer");
-    this._disposeFields("__queue");
+    this.__queue = null;
   }
 });

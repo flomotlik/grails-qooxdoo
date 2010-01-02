@@ -82,7 +82,8 @@ qx.Class.define("apiviewer.ui.SearchView",
 
       // Search form - input field
       this.sinput = new qx.ui.form.TextField().set({
-        allowGrowY: true
+        allowGrowY: true,
+        placeholder : "Search..."
       });
 
       // Search form - submit button
@@ -219,7 +220,7 @@ qx.Class.define("apiviewer.ui.SearchView",
         this._tableModel.setData(sresult);
 
         // Clear old selection
-        this._table.clearSelection();
+        this._table.resetSelection();
 
       }
     },
@@ -379,7 +380,7 @@ qx.Class.define("apiviewer.ui.SearchView",
      */
     _load : function()
     {
-      var url = "./script/apiindex.js";
+      var url = "./script/apiindex.json";
       var req = new qx.io.remote.Request(url);
 
       req.setAsynchronous(true);
@@ -476,8 +477,7 @@ qx.Class.define("apiviewer.ui.SearchView",
     {
       this.__note = new qx.ui.popup.Popup(new qx.ui.layout.Canvas).set({
         autoHide : false,
-        width : 170,
-        offsetTop : 10
+        width : 170
       });
       var hintText = this.tr("Hint: You can use regular expressions in the search field.");
       var hint = new qx.ui.basic.Label(hintText);
@@ -510,7 +510,9 @@ qx.Class.define("apiviewer.ui.SearchView",
 
   destruct : function()
   {
-    this._disposeFields("apiindex");
-    this._disposeObjects("sinput", "__button");
+    this.apiindex = this._table = this.__table = this._tableModel =
+      this._selectionModel = null;
+    this._disposeObjects("sinput", "__button", "__note");
+    this._disposeArray("listdata");
   }
 });

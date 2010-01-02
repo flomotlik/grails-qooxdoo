@@ -10,7 +10,7 @@
 
 /* ************************************************************************
 
-#asset(${Namespace}.demo/*)
+#asset(${NamespacePath}.demo/*)
 
 ************************************************************************ */
 
@@ -34,6 +34,8 @@ qx.Class.define("${Namespace}.demo.Application",
     /**
      * This method contains the initial application code and gets called 
      * during startup of the application
+     * 
+     * @lint ignoreDeprecated(alert)
      */
     main : function()
     {
@@ -56,7 +58,7 @@ qx.Class.define("${Namespace}.demo.Application",
       */
 
       // Create a button
-      var button1 = new ${Namespace}.Contribution("First Contribution", "${Namespace}/test.png");
+      var button1 = new ${Namespace}.Contribution("First Contribution", "${NamespacePath}/test.png");
 
       // Document is the application root
       var doc = this.getRoot();

@@ -191,6 +191,17 @@ qx.Class.define("apiviewer.dao.Package", {
       return true;
     }
 
+  },
+
+
+  /*
+  *****************************************************************************
+     DESTRUCTOR
+  *****************************************************************************
+  */
+
+  destruct : function() {
+    this._package = this._classes = this._functions = this._packages = null;
   }
 
 });

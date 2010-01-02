@@ -25,6 +25,9 @@
 #asset(qx/icon/${qx.icontheme}/22/status/dialog-information.png)
 #asset(qx/icon/${qx.icontheme}/16/apps/office-calendar.png)
 
+#tag(showcase)
+#tag(noPlayground)
+
 ************************************************************************ */
 
 /**

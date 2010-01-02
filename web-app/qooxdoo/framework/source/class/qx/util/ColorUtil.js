@@ -106,8 +106,7 @@ qx.Class.define("qx.util.ColorUtil",
       transparent : [ -1, -1, -1 ],
       magenta     : [ 255, 0, 255 ],   // alias for fuchsia
       orange      : [ 255, 165, 0 ],
-      brown       : [ 165, 42, 42 ],
-      grey        : [ 128, 128, 128 ]  // alias for gray
+      brown       : [ 165, 42, 42 ]
     },
 
 
@@ -362,9 +361,9 @@ qx.Class.define("qx.util.ColorUtil",
     },
 
    /**
-    * Detects if a string is a valid RGBA string
+    * Converts a regexp object match of a rgba string to an RGB array.
     *
-    * @return {Boolean} true when the incoming value is a valid RGBA string
+    * @return {Array} an array with red, green, blue
     */
     __rgbaStringToRgb : function()
     {
@@ -525,7 +524,7 @@ qx.Class.define("qx.util.ColorUtil",
      * Convert HSB colors to RGB
      *
      * @param hsb {Number[]} an array with hue, saturation and brightness
-     * @return {Array} an array with red, green, blue
+     * @return {Integer[]} an array with red, green, blue
      */
     hsbToRgb : function(hsb)
     {
@@ -606,7 +605,7 @@ qx.Class.define("qx.util.ColorUtil",
         }
       }
 
-      return rgb;
+      return [rgb.red, rgb.green, rgb.blue];
     },
 
 

@@ -63,10 +63,7 @@ qx.Class.define("qx.test.lang.Function",
       result = add(1, 2);
 
       // The assertEquals test fails in Safari 3 but is fixed in WebKit nightly
-      // TODO: Switch to native browser detection once it's implemented
-      //       (bug #1783).
-      var safari3 = /Version\/3[\.\d]+ Safari/.exec(navigator.userAgent);
-      if (qx.bom.client.Engine.WEBKIT && safari3) {
+      if (qx.bom.client.Browser.NAME == "safari" && qx.bom.client.Browser.VERSION < 4 ) {
         this.assertNotEquals(context, window, "This test fails if the issue is "
         + "fixed in Safari 3.");
       } else {
@@ -122,7 +119,9 @@ qx.Class.define("qx.test.lang.Function",
         throw new Error("fail");
       };
 
-      var onError = function() { this.resume(function() {}); };
+      var onError = function() { this.resume(function() {
+        qx.event.GlobalError.setErrorHandler(null, null);
+      })};
       qx.event.GlobalError.setErrorHandler(onError, this);
 
       var delayed = qx.lang.Function.create(fail, {

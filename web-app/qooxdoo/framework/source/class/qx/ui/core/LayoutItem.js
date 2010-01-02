@@ -527,7 +527,7 @@ qx.Class.define("qx.ui.core.LayoutItem",
      * <ul>
      * <li>User value: Value defined by the widget user, using the size properties</li>
      *
-     * <li>Layout value: The value computed by {@link #_getContentHint}</li>
+     * <li>Layout value: The value computed by {@link qx.ui.core.Widget#_getContentHint}</li>
      * </ul>
      *
      * <h3>Algorithm</h3>
@@ -566,34 +566,38 @@ qx.Class.define("qx.ui.core.LayoutItem",
         hint.height = this.__computedHeightForWidth;
       }
 
-      // Support shrink
-      if (!this.getAllowShrinkX()) {
-        hint.minWidth = Math.max(hint.minWidth, hint.width);
-      } else if (hint.minWidth > hint.width && this.getAllowGrowX()) {
+
+      // normalize width
+      if (hint.minWidth > hint.width) {
         hint.width = hint.minWidth;
       }
-
-      if (!this.getAllowShrinkY()) {
-        hint.minHeight = Math.max(hint.minHeight, hint.height);
-      }
-      if (hint.minHeight > hint.height && this.getAllowGrowY()) {
-        hint.height = hint.minHeight;
-      }
-
-      // Support grow
-      if (!this.getAllowGrowX()) {
-        hint.maxWidth = Math.min(hint.maxWidth, hint.width);
-      }
-      if (hint.width > hint.maxWidth) {
+      if (hint.maxWidth < hint.width) {
         hint.width = hint.maxWidth;
       }
 
-      if (!this.getAllowGrowY()) {
-        hint.maxHeight = Math.min(hint.maxHeight, hint.height);
+      if (!this.getAllowGrowX()) {
+        hint.maxWidth = hint.width;
       }
-      if (hint.height > hint.maxHeight) {
+      if (!this.getAllowShrinkX()) {
+        hint.minWidth = hint.width;
+      }
+
+
+      // normalize height
+      if (hint.minHeight > hint.height) {
+        hint.height = hint.minHeight;
+      }
+      if (hint.maxHeight < hint.height) {
         hint.height = hint.maxHeight;
       }
+
+      if (!this.getAllowGrowY()) {
+        hint.maxHeight = hint.height;
+      }
+      if (!this.getAllowShrinkY()) {
+        hint.minHeight = hint.height;
+      }
+
 
       // Finally return
       return hint;
@@ -772,7 +776,11 @@ qx.Class.define("qx.ui.core.LayoutItem",
     ---------------------------------------------------------------------------
     */
 
-    /** {Map} Empty storage pool */
+    /**
+     * {Map} Empty storage pool
+     *
+     * @lint ignoreReferenceField(__emptyProperties)
+     */
     __emptyProperties : {},
 
 
@@ -957,7 +965,7 @@ qx.Class.define("qx.ui.core.LayoutItem",
 
     /*
     ---------------------------------------------------------------------------
-      CLONE/SERIALIZE SUPPORT
+      CLONE SUPPORT
     ---------------------------------------------------------------------------
     */
 
@@ -972,20 +980,6 @@ qx.Class.define("qx.ui.core.LayoutItem",
       }
 
       return clone;
-    },
-
-
-    // overridden
-    serialize : function()
-    {
-      var result = this.base(arguments);
-
-      var props = this.__layoutProperties;
-      if (props) {
-        result.layoutProperties = qx.lang.Object.clone(props);
-      }
-
-      return result;
     }
   },
 
@@ -1000,12 +994,7 @@ qx.Class.define("qx.ui.core.LayoutItem",
 
   destruct : function()
   {
-    this._disposeFields(
-      "$$parent",
-      "$$subparent",
-      "__layoutProperties",
-      "__computedLayout",
-      "__userBounds",
-      "__sizeHint");
+    this.$$parent = this.$$subparent = this.__layoutProperties =
+      this.__computedLayout = this.__userBounds = this.__sizeHint = null;
   }
 });

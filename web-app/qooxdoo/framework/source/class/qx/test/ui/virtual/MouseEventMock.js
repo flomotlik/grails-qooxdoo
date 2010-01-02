@@ -19,7 +19,7 @@
 
 qx.Class.define("qx.test.ui.virtual.MouseEventMock",
 {
-  extend : qx.event.type.Event,
+  extend : qx.event.type.Mouse,
 
   construct : function(type, config)
   {
@@ -30,7 +30,11 @@ qx.Class.define("qx.test.ui.virtual.MouseEventMock",
 
   members :
   {
-    getDocumentLeft: function() {
+    clone : function() {
+      return this;
+    },
+
+    getDocumentLeft : function() {
       return this.__config.documentLeft || 0;
     },
 
@@ -39,8 +43,7 @@ qx.Class.define("qx.test.ui.virtual.MouseEventMock",
     }
   },
 
-  destruct : function()
-  {
-    this._disposeFields("__config");
+  destruct : function() {
+    this.__config = null;
   }
 });

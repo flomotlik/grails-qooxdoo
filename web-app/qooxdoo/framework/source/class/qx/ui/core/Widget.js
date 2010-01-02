@@ -53,7 +53,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/widget/Widget' target='_blank'>
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/Widget' target='_blank'>
  * Documentation of this widget in the qooxdoo wiki.</a>
  *
  * @state disabled set by {@link #enabled}
@@ -163,7 +163,7 @@ qx.Class.define("qx.ui.core.Widget",
     /** Mouse button is released on the widget. */
     mouseup : "qx.event.type.Mouse",
 
-    /** Widget is clicked using the left mouse button. */
+    /** Widget is clicked using. */
     click : "qx.event.type.Mouse",
 
     /** Widget is double clicked using the left mouse button. */
@@ -176,7 +176,7 @@ qx.Class.define("qx.ui.core.Widget",
     beforeContextmenuOpen : "qx.event.type.Mouse",
 
     /** Fired if the mouse wheel is used over the widget. */
-    mousewheel : "qx.event.type.Mouse",
+    mousewheel : "qx.event.type.MouseWheel",
 
 
 
@@ -205,7 +205,7 @@ qx.Class.define("qx.ui.core.Widget",
      * getter. This event gets repeated if the user keeps pressing the key(s).
      *
      * The unicode code of the pressed key can be read using
-     * {@link qx.event.type.KeyInput#getKeyCode}.
+     * {@link qx.event.type.KeyInput#getCharCode}.
      */
     keyinput : "qx.event.type.KeyInput",
 
@@ -246,7 +246,7 @@ qx.Class.define("qx.ui.core.Widget",
 
 
     /**
-     * Fired is the widget becomes the capturing widget by a call to {@link #capture}.
+     * Fired if the widget becomes the capturing widget by a call to {@link #capture}.
      */
     capture : "qx.event.type.Event",
 
@@ -288,8 +288,8 @@ qx.Class.define("qx.ui.core.Widget",
 
     /**
      * Fired during the drag. Contains the current mouse coordinates
-     * using {@link #qx.event.type.Drag#getDocumentLeft} and
-     * {@link #qx.event.type.Drag#getDocumentTop}
+     * using {@link qx.event.type.Drag#getDocumentLeft} and
+     * {@link qx.event.type.Drag#getDocumentTop}
      *
      * Modeled after the WHATWG specification of Drag&Drop:
      * http://www.whatwg.org/specs/web-apps/current-work/#dnd
@@ -320,7 +320,7 @@ qx.Class.define("qx.ui.core.Widget",
      * Fired when the drop was successfully done and the target widget
      * is now asking for data. The listener should transfer the data,
      * respecting the selected action, to the event. This can be done using
-     * the event's {@link #qx.event.type.Drag#addData} method.
+     * the event's {@link qx.event.type.Drag#addData} method.
      */
     droprequest : "qx.event.type.Drag"
   },
@@ -497,7 +497,8 @@ qx.Class.define("qx.ui.core.Widget",
       check : "Font",
       event : "changeFont",
       themeable : true,
-      inheritable : true
+      inheritable : true,
+      dispose : true
     },
 
 
@@ -572,7 +573,7 @@ qx.Class.define("qx.ui.core.Widget",
      * The text of the widget's tooltip. This text can contain HTML markup.
      * The text is displayed using a shared tooltip instance. If the tooltip
      * must be customized beyond the text and an icon {@link #toolTipIcon}, the
-     * {@link #tooltip} property has to be used
+     * {@link #toolTip} property has to be used
      */
     toolTipText :
     {
@@ -586,15 +587,24 @@ qx.Class.define("qx.ui.core.Widget",
     /**
     * The icon URI of the widget's tooltip. This icon is displayed using a shared
     * tooltip instance. If the tooltip must be customized beyond the tooltip text
-    * {@link #toolTipText} and the icon, the {@link #tooltip} property has to be
+    * {@link #toolTipText} and the icon, the {@link #toolTip} property has to be
     * used.
     */
-   toolTipIcon :
-   {
-     check : "String",
-     nullable : true,
-     event : "changeToolTipText"
-   },
+    toolTipIcon :
+    {
+      check : "String",
+      nullable : true,
+      event : "changeToolTipText"
+    },
+
+    /**
+     * Controls if a tooltip should shown or not.
+     */
+    blockToolTip :
+    {
+      check : "Boolean",
+      init : false
+    },
 
 
     /*
@@ -689,7 +699,7 @@ qx.Class.define("qx.ui.core.Widget",
      * will never get focused. The focus keeps at the currently
      * focused widget.
      *
-     * This only works for widgets which are not {@link focusable}.
+     * This only works for widgets which are not {@link #focusable}.
      *
      * This is mainly useful for widget authors. Please use with caution!
      */
@@ -737,7 +747,9 @@ qx.Class.define("qx.ui.core.Widget",
     /**
      * Whether the widget contains content which may be selected by the user.
      *
-     * Normally only useful for forms fields, longer texts/documents, editors, etc.
+     * If the value set to <code>true</code> the native browser selection can
+     * be used for text selection. But it is normally useful for
+     * forms fields, longer texts/documents, editors, etc.
      */
     selectable :
     {
@@ -809,24 +821,17 @@ qx.Class.define("qx.ui.core.Widget",
      */
     getWidgetByElement : function(element)
     {
-      // In Firefox 2 the related target of mouse events is sometimes an
-      // anonymous div inside of text area, which raise an exception if
-      // the parent node is read. This is why the try/catch block is needed.
-      try
+      while(element)
       {
-        while(element)
-        {
-          var widgetKey = element.$$widget;
+        var widgetKey = element.$$widget;
 
-          // dereference "weak" reference to the widget.
-          if (widgetKey != null) {
-            return qx.core.ObjectRegistry.fromHashCode(widgetKey);
-          }
-
-          element = element.parentNode;
+        // dereference "weak" reference to the widget.
+        if (widgetKey != null) {
+          return qx.core.ObjectRegistry.fromHashCode(widgetKey);
         }
-      } catch(ex) {}
 
+        element = element.parentNode;
+      }
       return null;
     },
 
@@ -854,10 +859,10 @@ qx.Class.define("qx.ui.core.Widget",
 
 
     /** {Map} Contains all pooled decorators for reuse */
-    __decoratorPool : {},
+    __decoratorPool : new qx.ui.core.DecoratorFactory(),
 
     /** {Map} Contains all pooled shadows for reuse */
-    __shadowPool : {}
+    __shadowPool : new qx.ui.core.DecoratorFactory()
   },
 
 
@@ -937,14 +942,16 @@ qx.Class.define("qx.ui.core.Widget",
         return;
       }
 
+      var container = this.getContainerElement();
+
       if (this.$$parent && !this.$$parent.$$disposed) {
-        this.$$parent.getContentElement().remove(this.__containerElement);
+        this.$$parent.getContentElement().remove(container);
       }
 
       this.$$parent = parent || null;
 
       if (parent && !parent.$$disposed) {
-        this.$$parent.getContentElement().add(this.__containerElement);
+        this.$$parent.getContentElement().add(container);
       }
 
       // Update inheritable properties
@@ -956,7 +963,38 @@ qx.Class.define("qx.ui.core.Widget",
 
 
     /** {Boolean} Whether insets have changed and must be updated */
-    __updateInsets : null,
+    _updateInsets : null,
+
+
+    /**
+     * Detects whether the move from decorator <code>a</code> to <code>b</code>
+     * results into modified insets.
+     *
+     * @param a {Decorator} Old decorator or <code>null</code>
+     * @param b {Decorator} New decorator or <code>null</code>
+     * @return {Boolean} Whether the insets have been modified
+     */
+    __checkInsetsModified : function(a, b)
+    {
+      if (a == b) {
+        return false;
+      }
+
+      if (a == null || b == null) {
+        return true;
+      }
+
+      var manager = qx.theme.manager.Decoration.getInstance();
+
+      var first = manager.resolve(a).getInsets();
+      var second = manager.resolve(b).getInsets();
+
+      if (first.top != second.top || first.right != second.right || first.bottom != second.bottom || first.left != second.left) {
+        return true;
+      }
+
+      return false;
+    },
 
 
     // overridden
@@ -970,23 +1008,29 @@ qx.Class.define("qx.ui.core.Widget",
         return;
       }
 
-      var container = this.__containerElement;
-      var content = this.__contentElement;
-      var inner = changes.size || this.__updateInsets;
+      var container = this.getContainerElement();
+      var content = this.getContentElement();
+      var inner = changes.size || this._updateInsets;
       var pixel = "px";
+
+      var containerStyles = {};
 
       // Move container to new position
       if (changes.position)
       {
-        container.setStyle("left", left + pixel);
-        container.setStyle("top", top + pixel);
+        containerStyles.left = left + pixel;
+        containerStyles.top = top + pixel;
       }
 
       // Update container size
       if (changes.size)
       {
-        container.setStyle("width", width + pixel);
-        container.setStyle("height", height + pixel);
+        containerStyles.width = width + pixel;
+        containerStyles.height = height + pixel;
+      }
+
+      if (changes.position || changes.size) {
+        container.setStyles(containerStyles);
       }
 
       if (inner || changes.local || changes.margin)
@@ -999,16 +1043,22 @@ qx.Class.define("qx.ui.core.Widget",
         innerHeight = innerHeight < 0 ? 0 : innerHeight;
       }
 
-      if (this.__updateInsets)
+      var contentStyles = {};
+
+      if (this._updateInsets)
       {
-        content.setStyle("left", insets.left + pixel);
-        content.setStyle("top", insets.top + pixel);
+        contentStyles.left = insets.left + pixel;
+        contentStyles.top = insets.top + pixel;
       }
 
       if (inner)
       {
-        content.setStyle("width", innerWidth + pixel);
-        content.setStyle("height", innerHeight + pixel);
+        contentStyles.width = innerWidth + pixel;
+        contentStyles.height = innerHeight + pixel;
+      }
+
+      if (inner || this._updateInsets) {
+        content.setStyles(contentStyles);
       }
 
       if (changes.size)
@@ -1023,33 +1073,23 @@ qx.Class.define("qx.ui.core.Widget",
         }
       }
 
-      if (changes.size || this.__updateInsets)
+      if (changes.size || this._updateInsets)
       {
-        var manager = qx.theme.manager.Decoration.getInstance();
-
-        var decorator = this.getDecorator();
-        if (decorator)
-        {
-          var element = this.__decoratorElement;
-          var instance = manager.resolve(decorator);
-
-          instance.resize(element.getDomElement(), width, height);
+        if (this.__decoratorElement) {
+          this.__decoratorElement.resize(width, height);
         }
       }
 
       if (changes.size)
       {
-        var shadow = this.getShadow();
-        if (shadow)
+        if (this.__shadowElement)
         {
-          var element = this.__shadowElement;
-          var instance = manager.resolve(shadow);
-          var insets = instance.getInsets();
+          var insets = this.__shadowElement.getInsets();
 
           var shadowWidth = width + insets.left + insets.right;
           var shadowHeight = height + insets.top + insets.bottom;
 
-          instance.resize(element.getDomElement(), shadowWidth, shadowHeight);
+          this.__shadowElement.resize(shadowWidth, shadowHeight);
         }
       }
 
@@ -1072,7 +1112,9 @@ qx.Class.define("qx.ui.core.Widget",
       }
 
       // Cleanup flags
-      delete this.__updateInsets;
+      delete this._updateInsets;
+
+      return changes;
     },
 
 
@@ -1101,22 +1143,13 @@ qx.Class.define("qx.ui.core.Widget",
       }
 
       var pool = qx.ui.core.Widget.__decoratorPool;
-      var content = this.__contentElement;
-      var separator, elem;
+      var content = this.getContentElement();
+      var elem;
 
       for (var i=0, l=reg.length; i<l; i++)
       {
         elem = reg[i];
-        separator = elem.$$separator;
-
-        // Pool instance
-        if (!pool[separator]) {
-          pool[separator] = [elem];
-        } else {
-          pool[separator].push(elem);
-        }
-
-        // Remove from content
+        pool.poolDecorator(elem);
         content.remove(elem);
       }
 
@@ -1128,38 +1161,18 @@ qx.Class.define("qx.ui.core.Widget",
     // overridden
     renderSeparator : function(separator, bounds)
     {
-      var pool = qx.ui.core.Widget.__decoratorPool;
-      var mgr = qx.theme.manager.Decoration.getInstance();
-
-      if (typeof separator == "object")
-      {
-        var id = separator.toHashCode();
-        var instance = separator;
-      }
-      else
-      {
-        var id = separator;
-        var instance = mgr.resolve(separator);
-      }
-
-      // Instance management
-      var list = pool[separator];
-      if (list && list.length > 0) {
-        var elem = list.pop();
-      } else {
-        var elem = this.__createDecoratorElement(instance);
-      }
-
       // Insert
-      this.__contentElement.add(elem);
+      var elem = qx.ui.core.Widget.__decoratorPool.getDecoratorElement(separator);
+      this.getContentElement().add(elem);
 
       // Resize
-      instance.resize(elem.getDomElement(), bounds.width, bounds.height);
+      elem.resize(bounds.width, bounds.height);
 
       // Move
-      var style = elem.getDomElement().style;
-      style.left = bounds.left + "px";
-      style.top = bounds.top + "px";
+      elem.setStyles({
+        left : bounds.left + "px",
+        top : bounds.top + "px"
+      });
 
       // Remember element
       if (!this.__separators) {
@@ -1167,9 +1180,6 @@ qx.Class.define("qx.ui.core.Widget",
       } else {
         this.__separators.push(elem);
       }
-
-      // Remember separator used
-      elem.$$separator = id;
     },
 
 
@@ -1196,6 +1206,15 @@ qx.Class.define("qx.ui.core.Widget",
       var minHeight = this.getMinHeight();
       var maxHeight = this.getMaxHeight();
 
+      if (qx.core.Variant.isSet("qx.debug", "on"))
+      {
+        if (minWidth !== null && maxWidth !== null) {
+          this.assert(minWidth <= maxWidth, "minWidth is larger than maxWidth!");
+        }
+        if (minHeight !== null && maxHeight !== null) {
+          this.assert(minHeight <= maxHeight, "minHeight is larger than maxHeight!");
+        }
+      }
 
       // Ask content
       var contentHint = this._getContentHint();
@@ -1382,12 +1401,9 @@ qx.Class.define("qx.ui.core.Widget",
       var right = this.getPaddingRight();
       var bottom = this.getPaddingBottom();
       var left = this.getPaddingLeft();
-      var decorator = this.getDecorator();
-      if (decorator)
+      if (this.__decoratorElement)
       {
-        var manager = qx.theme.manager.Decoration.getInstance();
-        var instance = manager.resolve(decorator);
-        var inset = instance.getInsets();
+        var inset = this.__decoratorElement.getInsets();
 
         if (qx.core.Variant.isSet("qx.debug", "on"))
         {
@@ -1438,7 +1454,7 @@ qx.Class.define("qx.ui.core.Widget",
      * through the layout process.
      *
      * This function is guaranteed to return a correct value
-     * during a {@link #changeSize} or {@link #changePosition} event dispatch.
+     * during a {@link #resize} or {@link #move} event dispatch.
      *
      * @return {Map} The widget inner dimension in pixel (if the layout is
      *    valid). Contains the keys <code>width</code> and <code>height</code>.
@@ -1538,10 +1554,11 @@ qx.Class.define("qx.ui.core.Widget",
     /**
      * Detects if the widget and all its parents are visible.
      *
-     * @return {Boolean} true, if the widget is currenlty on the screen
+     * @return {Boolean} true, if the widget is currently on the screen
      */
-    isSeeable : function() {
-      // if the element is already renderd, a check for the offsetWidth is enough
+    isSeeable : function()
+    {
+      // if the element is already rendered, a check for the offsetWidth is enough
       var element = this.getContainerElement().getDomElement();
       if (element) {
         return element.offsetWidth > 0;
@@ -1583,13 +1600,10 @@ qx.Class.define("qx.ui.core.Widget",
         el.setAttribute("qxType", "container");
       }
 
-      el.setStyle("position", "absolute");
-
-      // TODO
-      // What was the reason for this (wpbasti)?
-      // Seems that it at least fixes issue with the SplitPane
-      // where the slider is not visible during dragging it around.
-      el.setStyle("zIndex", 0);
+      el.setStyles({
+        "position": "absolute",
+        "zIndex": 0
+      });
 
       // Store "weak" reference to the widget in the DOM element.
       el.setAttribute("$$widget", this.toHashCode());
@@ -1616,8 +1630,10 @@ qx.Class.define("qx.ui.core.Widget",
         el.setAttribute("qxType", "content");
       }
 
-      el.setStyle("position", "absolute");
-      el.setStyle("zIndex", 10);
+      el.setStyles({
+        "position": "absolute",
+        "zIndex": 10
+      });
 
       return el;
     },
@@ -1635,8 +1651,10 @@ qx.Class.define("qx.ui.core.Widget",
     {
       var el = new qx.html.Element("div");
 
-      el.setStyle("overflowX", "hidden");
-      el.setStyle("overflowY", "hidden");
+      el.setStyles({
+        "overflowX": "hidden",
+        "overflowY": "hidden"
+      });
 
       return el;
     },
@@ -1668,12 +1686,22 @@ qx.Class.define("qx.ui.core.Widget",
      * Returns the element wrapper of the widget's decorator element.
      * This method exposes widget internals and must be used with caution!
      *
-     * @return {qx.html.Element|null} The widget's decorator element (may be null)
+     * @return {qx.html.Decorator|null} The widget's decorator element (may be null)
      */
     getDecoratorElement : function() {
-      return this.__decoratorElement;
+      return this.__decoratorElement || null;
     },
 
+
+    /**
+     * Returns the element wrapper of the widget's shadow element.
+     * This method exposes widget internals and must be used with caution!
+     *
+     * @return {qx.html.Decorator|null} The widget's shadow element (may be null)
+     */
+    getShadowElement : function() {
+      return this.__shadowElement || null;
+    },
 
 
     /*
@@ -1782,7 +1810,9 @@ qx.Class.define("qx.ui.core.Widget",
 
     /**
      * {Array} Placeholder for children list in empty widgets.
-     * Mainly to keep instance number low.
+     *     Mainly to keep instance number low.
+     *
+     * @lint ignoreReferenceField(__emptyChildren)
      */
     __emptyChildren : [],
 
@@ -1989,7 +2019,7 @@ qx.Class.define("qx.ui.core.Widget",
     _remove : function(child)
     {
       if (!this.__widgetChildren) {
-        return;
+        throw new Error("This widget has no children!");
       }
 
       qx.lang.Array.remove(this.__widgetChildren, child);
@@ -2128,10 +2158,12 @@ qx.Class.define("qx.ui.core.Widget",
      */
     __removeHelper : function(child)
     {
-      if (qx.core.Variant.isSet("qx.debug", "on"))
-      {
+      if (qx.core.Variant.isSet("qx.debug", "on")) {
         this.assertNotUndefined(child);
-        this.assertIdentical(child.getLayoutParent(), this, "Remove Error: " + child + " is not a child of this widget!");
+      }
+
+      if (child.getLayoutParent() !== this) {
+        throw new Error("Remove Error: " + child + " is not a child of this widget!");
       }
 
       // Clear parent connection
@@ -2166,9 +2198,13 @@ qx.Class.define("qx.ui.core.Widget",
      * mouse button is clicked. If the widgets becomes the capturing widget the
      * {@link #capture} event is fired. Once it looses capture mode the
      * {@link #losecapture} event is fired.
+     *
+     * @param containerCapture {Boolean?true} If true all events originating in
+     *   the container are captured. If false events originating in the container
+     *   are not captured.
      */
-    capture : function() {
-      this.__containerElement.capture();
+    capture : function(containerCapture) {
+      this.getContainerElement().capture(containerCapture);
     },
 
 
@@ -2176,7 +2212,7 @@ qx.Class.define("qx.ui.core.Widget",
      * Disables mouse capture mode enabled by {@link #capture}.
      */
     releaseCapture : function() {
-      this.__containerElement.releaseCapture();
+      this.getContainerElement().releaseCapture();
     },
 
 
@@ -2191,7 +2227,7 @@ qx.Class.define("qx.ui.core.Widget",
     // property apply
     _applyPadding : function(value, old, name)
     {
-      this.__updateInsets = true;
+      this._updateInsets = true;
       qx.ui.core.queue.Layout.add(this);
     },
 
@@ -2257,122 +2293,52 @@ qx.Class.define("qx.ui.core.Widget",
         });
       }
 
-      this.__containerElement.add(protect);
-    },
-
-
-    /**
-     * Creates an element which may be used for a
-     * decoration render to fill.
-     *
-     * @param decorator {qx.ui.decoration.IDecorator} Any instance implementing the decorator interface
-     * @return {qx.html.Element} The element to be used for decorations/shadows
-     */
-    __createDecoratorElement : function(decorator)
-    {
-      var element = new qx.html.Element;
-      element.setStyles({
-        position: "absolute",
-        top: 0,
-        left: 0
-      });
-
-      if (qx.core.Variant.isSet("qx.debug", "on")) {
-        element.setAttribute("qxType", "decorator");
-      }
-
-      element.useMarkup(decorator.getMarkup());
-
-      return element;
+      this.getContainerElement().add(protect);
     },
 
 
     // property apply
     _applyDecorator : function(value, old)
     {
-      var pool = qx.ui.core.Widget.__decoratorPool;
-      var mgr = qx.theme.manager.Decoration.getInstance();
-      var container = this.__containerElement;
-      var elem = this.__decoratorElement;
-
-      // Create protector
-      if (!this.__protectorElement) {
-        this._createProtectorElement();
-      }
-
-      // Support for decorator objects and identifiers
-      var oldId;
-      if (old)
+      if (qx.core.Variant.isSet("qx.debug", "on"))
       {
-        if (typeof old === "object")
-        {
-          oldId = old.toHashCode();
-        }
-        else
-        {
-          oldId = old;
-          old = mgr.resolve(old);
-        }
-      }
-
-      var valueId;
-      if (value)
-      {
-        if (typeof value === "object")
-        {
-          valueId = value.toHashCode();
-
-          if (qx.core.Variant.isSet("qx.debug", "on"))
-          {
-            if (qx.ui.core.Widget.DEBUG) {
-              this.warn("Decorator instances may increase memory usage and processing time. Often it is better to lay them out to a theme file. Hash code of decorator object: " + value);
-            }
+        if (value && typeof value === "object") {
+          if (qx.ui.core.Widget.DEBUG) {
+            this.warn("Decorator instances may increase memory usage and processing time. Often it is better to lay them out to a theme file. Hash code of decorator object: " + value);
           }
         }
-        else
-        {
-          valueId = value;
-          value = mgr.resolve(value);
-        }
+      }
+
+      var pool = qx.ui.core.Widget.__decoratorPool;
+      var container = this.getContainerElement();
+
+      // Create protector
+
+      // if the browser supports pointer events the decorator will never receive
+      // any mouse events so the protector is not required.
+      if (!this.__protectorElement && !qx.bom.client.Feature.CSS_POINTER_EVENTS) {
+        this._createProtectorElement();
       }
 
       // Process old value
       if (old)
       {
-        // Dynamically created needed pool
-        if (!pool[oldId]) {
-          pool[oldId] = [];
-        }
-
-        // Remove from container
-        container.remove(elem);
-
-        // Add to pool
-        pool[oldId].push(elem);
+        container.remove(this.__decoratorElement);
+        pool.poolDecorator(this.__decoratorElement);
       }
 
       // Process new value
       if (value)
       {
-        // Reuse or create element
-        if (pool[valueId] && pool[valueId].length > 0) {
-          elem = pool[valueId].pop();
-        }
-        else
-        {
-          elem = this.__createDecoratorElement(value);
-          elem.setStyle("zIndex", 5);
-        }
+        var elem = this.__decoratorElement = pool.getDecoratorElement(value);
+        elem.setStyle("zIndex", 5);
 
         // Tint decorator
         var bgcolor = this.getBackgroundColor();
-        value.tint(elem.getDomElement(), bgcolor);
+        elem.tint(bgcolor);
 
         // Add to container
         container.add(elem);
-
-        // Register element
-        this.__decoratorElement = elem;
       }
       else
       {
@@ -2386,11 +2352,11 @@ qx.Class.define("qx.ui.core.Widget",
       }
 
       // Apply change
-      if (qx.ui.decoration.Util.insetsModified(old, value))
+      if (this.__checkInsetsModified(old, value))
       {
         // We have changes to the insets, which means we
         // delegate the resize to the layout system.
-        this.__updateInsets = true;
+        this._updateInsets = true;
         qx.ui.core.queue.Layout.add(this);
       }
       else if (value)
@@ -2400,14 +2366,13 @@ qx.Class.define("qx.ui.core.Widget",
         var bounds = this.getBounds();
         if (bounds)
         {
-          mgr.resolve(value).resize(elem.getDomElement(), bounds.width, bounds.height);
+          elem.resize(bounds.width, bounds.height);
 
           // Update protector element
-          this.__protectorElement.setStyles({
+          this.__protectorElement && this.__protectorElement.setStyles({
             width : bounds.width + "px",
             height : bounds.height + "px"
           });
-
         }
       }
     },
@@ -2417,72 +2382,25 @@ qx.Class.define("qx.ui.core.Widget",
     _applyShadow : function(value, old)
     {
       var pool = qx.ui.core.Widget.__shadowPool;
-      var mgr = qx.theme.manager.Decoration.getInstance();
-      var container = this.__containerElement;
-
-      // Support for decorator objects and identifiers
-      var oldId;
-      if (old)
-      {
-        if (typeof old === "object")
-        {
-          oldId = old.toHashCode();
-        }
-        else
-        {
-          oldId = old;
-          old = mgr.resolve(old);
-        }
-      }
-
-      var valueId;
-      if (value)
-      {
-        if (typeof value === "object")
-        {
-          valueId = value.toHashCode();
-        }
-        else
-        {
-          valueId = value;
-          value = mgr.resolve(value);
-        }
-      }
+      var container = this.getContainerElement();
 
       // Clear old value
       if (old)
       {
-        // Dynamically created needed pool
-        if (!pool[oldId]) {
-          pool[oldId] = [];
-        }
-
-        // Remove from container
         container.remove(this.__shadowElement);
-
-        // Add to pool
-        pool[oldId].push(this.__shadowElement);
+        pool.poolDecorator(this.__shadowElement);
       }
 
       // Apply new value
       if (value)
       {
-        // Reuse or create element
-        var elem;
-        if (pool[valueId] && pool[valueId].length > 0) {
-          elem = pool[valueId].pop();
-        } else {
-          elem = this.__createDecoratorElement(value);
-        }
+        var elem = this.__shadowElement = pool.getDecoratorElement(value);
 
         // Add to container
         container.add(elem);
 
-        // Register element
-        this.__shadowElement = elem;
-
         // Move out of container by top/left inset
-        var insets = value.getInsets();
+        var insets = elem.getInsets();
         elem.setStyles({
           left: (-insets.left) + "px",
           top: (-insets.top) + "px"
@@ -2495,10 +2413,10 @@ qx.Class.define("qx.ui.core.Widget",
           var shadowWidth = bounds.width + insets.left + insets.right;
           var shadowHeight = bounds.height + insets.top + insets.bottom;
 
-          value.resize(elem.getDomElement(), shadowWidth, shadowHeight);
+          elem.resize(shadowWidth, shadowHeight);
         }
 
-        value.tint(elem.getDomElement(), null);
+        elem.tint(null);
       }
       else
       {
@@ -2524,11 +2442,11 @@ qx.Class.define("qx.ui.core.Widget",
           return;
         }
         var manager = qx.locale.Manager.getInstance();
-        this.__toolTipTextListenerId = manager.addListener("changeLocale", 
+        this.__toolTipTextListenerId = manager.addListener("changeLocale",
           function() {
             if (value && value.translate) {
               this.setToolTipText(value.translate());
-            }          
+            }
           }
         , this);
       }
@@ -2542,17 +2460,19 @@ qx.Class.define("qx.ui.core.Widget",
 
     // property apply
     _applyZIndex : function(value, old) {
-      this.__containerElement.setStyle("zIndex", value == null ? 0 : value);
+      this.getContainerElement().setStyle("zIndex", value == null ? 0 : value);
     },
 
 
     // property apply
     _applyVisibility : function(value, old)
     {
+      var container = this.getContainerElement();
+
       if (value === "visible") {
-        this.__containerElement.show();
+        container.show();
       } else {
-        this.__containerElement.hide();
+        container.hide();
       }
 
       // only force a layout update if visibility change from/to "exclude"
@@ -2569,17 +2489,17 @@ qx.Class.define("qx.ui.core.Widget",
     // property apply
     _applyOpacity : function(value, old)
     {
-      this.__containerElement.setStyle("opacity", value == 1 ? null : value);
+      this.getContainerElement().setStyle("opacity", value == 1 ? null : value);
 
       // Fix for AlphaImageLoader - see Bug #1894 for details
       if (qx.core.Variant.isSet("qx.client", "mshtml"))
       {
         //Do not apply this fix on images - see Bug #2748
-        if (!qx.Class.isSubClassOf(this.__contentElement.constructor, qx.html.Image))
+        if (!qx.Class.isSubClassOf(this.getContentElement().constructor, qx.html.Image))
         {
           // 0.99 is necessary since 1.0 is ignored and not being applied
           var contentElementOpacity = (value == 1 || value == null) ? null : 0.99;
-          this.__contentElement.setStyle("opacity", contentElementOpacity);
+          this.getContentElement().setStyle("opacity", contentElementOpacity);
         }
       }
     },
@@ -2594,28 +2514,20 @@ qx.Class.define("qx.ui.core.Widget",
 
       // In Opera the cursor must be set directly.
       // http://bugzilla.qooxdoo.org/show_bug.cgi?id=1729
-      this.__containerElement.setStyle("cursor", value, qx.bom.client.Engine.OPERA);
+      this.getContainerElement().setStyle("cursor", value, qx.bom.client.Engine.OPERA);
     },
 
 
     // property apply
     _applyBackgroundColor : function(value, old)
     {
-      var decorator = this.getDecorator();
       var color = this.getBackgroundColor();
-      var container = this.__containerElement;
+      var container = this.getContainerElement();
 
-      if (decorator)
+      if (this.__decoratorElement)
       {
         // Apply to decoration element
-        var elem = this.__decoratorElement;
-        if (elem)
-        {
-          var instance = qx.theme.manager.Decoration.getInstance().resolve(decorator);
-          instance.tint(this.__decoratorElement.getDomElement(), color);
-        }
-
-        // Remove from container
+        this.__decoratorElement.tint(color);
         container.setStyle("backgroundColor", null);
       }
       else
@@ -2899,20 +2811,6 @@ qx.Class.define("qx.ui.core.Widget",
         }
 
         // Apply new data
-        // TODO: Compat mode to 0.8 final, remove this warning with 0.8.2
-        // @deprecated
-        if (qx.core.Variant.isSet("qx.debug", "on"))
-        {
-          for (var prop in newData)
-          {
-            if (newData[prop] === "undefined")
-            {
-              this.warn("Old undefined value. Please use the identifier undefined instead of the string value.");
-              newData[prop] = undefined;
-            }
-          }
-        }
-
         for (var prop in newData) {
           newData[prop] === undefined ? this[unstyler[prop]]() : this[styler[prop]](newData[prop]);
         }
@@ -3076,7 +2974,7 @@ qx.Class.define("qx.ui.core.Widget",
      * @return {qx.html.Element} The html element to focus.
      */
     getFocusElement : function() {
-      return this.__containerElement;
+      return this.getContainerElement();
     },
 
 
@@ -3090,7 +2988,7 @@ qx.Class.define("qx.ui.core.Widget",
      * @return {Boolean} Whether the element is tabable.
      */
     isTabable : function() {
-      return this.getContainerElement().getDomElement() && this.isFocusable();
+      return (!!this.getContainerElement().getDomElement()) && this.isFocusable();
     },
 
 
@@ -3165,8 +3063,8 @@ qx.Class.define("qx.ui.core.Widget",
       this._applyCursor(this.getCursor());
 
       // Apply qooxdoo attribute
-      this.__containerElement.setSelectable(value);
-      this.__contentElement.setSelectable(value);
+      this.getContainerElement().setSelectable(value);
+      this.getContentElement().setSelectable(value);
     },
 
 
@@ -3191,6 +3089,16 @@ qx.Class.define("qx.ui.core.Widget",
           // Remove tabIndex
           this._applyFocusable(false, true);
         }
+
+        // Remove draggable
+        if (this.isDraggable()) {
+          this._applyDraggable(false, true);
+        }
+
+        // Remove droppable
+        if (this.isDroppable()) {
+          this._applyDroppable(false, true);
+        }
       }
       else
       {
@@ -3199,6 +3107,16 @@ qx.Class.define("qx.ui.core.Widget",
         // Re-add tabIndex
         if (this.isFocusable()) {
           this._applyFocusable(true, false);
+        }
+
+        // Re-add draggable
+        if (this.isDraggable()) {
+          this._applyDraggable(true, false);
+        }
+
+        // Re-add droppable
+        if (this.isDroppable()) {
+          this._applyDroppable(true, false);
         }
       }
     },
@@ -3257,13 +3175,13 @@ qx.Class.define("qx.ui.core.Widget",
      */
     _onContextMenuOpen : function(e)
     {
-      var menu = this.getContextMenu();
-      menu.placeToMouse(e);
-      menu.show();
+      this.getContextMenu().openAtMouse(e);
 
       // Do not show native menu
-      e.preventDefault();
+      // don't open any other contextmenus
+      e.stop();
     },
+
 
     /**
      * Event listener for <code>beforeContextmenuOpen</code> event
@@ -3308,6 +3226,10 @@ qx.Class.define("qx.ui.core.Widget",
     // property apply
     _applyDraggable : function(value, old)
     {
+      if (!this.isEnabled() && value === true) {
+        value = false;
+      }
+
       // Force cursor creation
       qx.ui.core.DragDropCursor.getInstance();
 
@@ -3328,15 +3250,19 @@ qx.Class.define("qx.ui.core.Widget",
       }
 
       // Sync DOM attribute
-      this.__containerElement.setAttribute("qxDraggable", value ? "on" : null);
+      this.getContainerElement().setAttribute("qxDraggable", value ? "on" : null);
     },
 
 
     // property apply
     _applyDroppable : function(value, old)
     {
+      if (!this.isEnabled() && value === true) {
+        value = false;
+      }
+
       // Sync DOM attribute
-      this.__containerElement.setAttribute("qxDroppable", value ? "on" : null);
+      this.getContainerElement().setAttribute("qxDroppable", value ? "on" : null);
     },
 
 
@@ -3400,7 +3326,7 @@ qx.Class.define("qx.ui.core.Widget",
     /**
      * Event handler which is executed when the widget receives the focus.
      *
-     * This method is used by the {@link #qx.ui.core.FocusHandler} to
+     * This method is used by the {@link qx.ui.core.FocusHandler} to
      * apply states etc. to a focused widget.
      *
      * @internal
@@ -3414,7 +3340,7 @@ qx.Class.define("qx.ui.core.Widget",
     /**
      * Event handler which is executed when the widget lost the focus.
      *
-     * This method is used by the {@link #qx.ui.core.FocusHandler} to
+     * This method is used by the {@link qx.ui.core.FocusHandler} to
      * remove states etc. from a previously focused widget.
      *
      * @internal
@@ -3469,7 +3395,7 @@ qx.Class.define("qx.ui.core.Widget",
      *   directly when possible
      */
     scrollChildIntoViewX : function(child, align, direct) {
-      this.__contentElement.scrollChildIntoViewX(child.getContainerElement(), align, direct);
+      this.getContentElement().scrollChildIntoViewX(child.getContainerElement(), align, direct);
     },
 
 
@@ -3485,7 +3411,7 @@ qx.Class.define("qx.ui.core.Widget",
      *   directly when possible
      */
     scrollChildIntoViewY : function(child, align, direct) {
-      this.__contentElement.scrollChildIntoViewY(child.getContainerElement(), align, direct);
+      this.getContentElement().scrollChildIntoViewY(child.getContainerElement(), align, direct);
     },
 
 
@@ -3534,7 +3460,7 @@ qx.Class.define("qx.ui.core.Widget",
      * @return {void}
      */
     activate : function() {
-      this.__containerElement.activate();
+      this.getContainerElement().activate();
     },
 
 
@@ -3544,7 +3470,7 @@ qx.Class.define("qx.ui.core.Widget",
      * @return {void}
      */
     deactivate : function() {
-      this.__containerElement.deactivate();
+      this.getContainerElement().deactivate();
     },
 
 
@@ -3573,23 +3499,6 @@ qx.Class.define("qx.ui.core.Widget",
     /**
      * Whether the given ID is assigned to a child control.
      *
-     * @deprecated Use public 'hasChildControl' instead!
-     * @param id {String} ID of the child control
-     * @return {Boolean} <code>true</code> when the child control is registered.
-     */
-    _hasChildControl : function(id)
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'hasChildControl' instead!"
-      );
-      return this.hasChildControl(id);
-    },
-
-
-    /**
-     * Whether the given ID is assigned to a child control.
-     *
      * @param id {String} ID of the child control
      * @return {Boolean} <code>true</code> when the child control is registered.
      */
@@ -3614,26 +3523,6 @@ qx.Class.define("qx.ui.core.Widget",
      */
     _getCreatedChildControls : function() {
       return this.__childControls;
-    },
-
-
-    /**
-     * Returns the child control from the given ID. Returns
-     * <code>null</code> when the child control is unknown.
-     *
-     * @deprecated Use public 'getChildControl' instead!
-     * @param id {String} ID of the child control
-     * @param notcreate {Boolean?false} Whether the child control
-     *    should not be created dynamically if not yet available.
-     * @return {qx.ui.core.Widget} Child control
-     */
-    _getChildControl : function(id, notcreate)
-    {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee,
-        "Use public 'getChildControl' instead!"
-      );
-      return this.getChildControl(id, notcreate);
     },
 
 
@@ -3902,7 +3791,7 @@ qx.Class.define("qx.ui.core.Widget",
      *
      * Use with caution! This may be used for animations, drag&drop
      * or other cases where high performance location manipulation
-     * is important. Otherwise please use {@link #setUserBounds} instead.
+     * is important. Otherwise please use {@link qx.ui.core.LayoutItem#setUserBounds} instead.
      *
      * @param value {Integer} Left position
      * @return {void}
@@ -3924,7 +3813,7 @@ qx.Class.define("qx.ui.core.Widget",
      *
      * Use with caution! This may be used for animations, drag&drop
      * or other cases where high performance location manipulation
-     * is important. Otherwise please use {@link #setUserBounds} instead.
+     * is important. Otherwise please use {@link qx.ui.core.LayoutItem#setUserBounds} instead.
      *
      * @param value {Integer} Top position
      * @return {void}
@@ -3946,7 +3835,7 @@ qx.Class.define("qx.ui.core.Widget",
      *
      * Use with caution! This may be used for animations, drag&drop
      * or other cases where high performance location manipulation
-     * is important. Otherwise please use {@link #setUserBounds} instead.
+     * is important. Otherwise please use {@link qx.ui.core.LayoutItem#setUserBounds} instead.
      *
      * @param left {Integer} Left position
      * @param top {Integer} Top position
@@ -4003,7 +3892,7 @@ qx.Class.define("qx.ui.core.Widget",
 
     /*
     ---------------------------------------------------------------------------
-      CLONE/SERIALIZE SUPPORT
+      CLONE SUPPORT
     ---------------------------------------------------------------------------
     */
 
@@ -4021,36 +3910,8 @@ qx.Class.define("qx.ui.core.Widget",
       }
 
       return clone;
-    },
-
-
-    // overridden
-    serialize : function()
-    {
-      var result = this.base(arguments);
-
-      if (this.getChildren)
-      {
-        var children = this.getChildren();
-        if (children.length > 0)
-        {
-          result.children = [];
-          for (var i=0, l=children.length; i<l; i++) {
-            result.children.push(children[i].serialize());
-          }
-        }
-      }
-
-      if (this.getLayout)
-      {
-        var layout = this.getLayout();
-        if (layout) {
-          result.layout = layout.serialize();
-        }
-      }
-
-      return result;
     }
+
   },
 
 
@@ -4071,16 +3932,16 @@ qx.Class.define("qx.ui.core.Widget",
     {
       if (qx.core.Variant.isSet("qx.dynlocale", "on"))
       {
-        if (this.__toolTipTextListenerId) 
+        if (this.__toolTipTextListenerId)
         {
           qx.locale.Manager.getInstance().removeListenerById(
             this.__toolTipTextListenerId
           );
         }
       }
-      
+
       // Remove widget pointer from DOM
-      this.__containerElement.setAttribute("$$widget", null, true);
+      this.getContainerElement().setAttribute("$$widget", null, true);
 
       // Clean up all child controls
       this._disposeChildControls();
@@ -4092,25 +3953,49 @@ qx.Class.define("qx.ui.core.Widget",
       qx.ui.core.queue.Widget.remove(this);
     }
 
+    // pool decorators if not in global shutdown
+    if (!qx.core.ObjectRegistry.inShutDown)
+    {
+      var clazz = qx.ui.core.Widget;
+      var container = this.getContainerElement();
+
+      if (this.__decoratorElement)
+      {
+        container.remove(this.__decoratorElement);
+        clazz.__decoratorPool.poolDecorator(this.__decoratorElement);
+      }
+
+      if (this.__shadowElement)
+      {
+        container.remove(this.__shadowElement);
+        clazz.__shadowPool.poolDecorator(this.__shadowElement);
+      }
+
+      this.clearSeparators();
+      this.__decoratorElement = this.__shadowElement = this.__separators = null;
+    }
+    else
+    {
+      this._disposeArray("__separators");
+      this._disposeObjects(
+        "__decoratorElement",
+        "__shadowElement"
+      );
+    }
+
     // Clear children array
     this._disposeArray("__widgetChildren");
 
-    // Clear separator elements
-    this._disposeArray("__separators");
 
     // Cleanup map of appearance states
-    this._disposeFields(
-      "__states",
-      "__childControls"
-    );
+    this.__states = this.__childControls = null;
+
 
     // Dispose layout manager and HTML elements
     this._disposeObjects(
       "__layoutManager",
       "__containerElement",
       "__contentElement",
-      "__decoratorElement",
-      "__shadowElement",
       "__protectorElement"
     );
   }

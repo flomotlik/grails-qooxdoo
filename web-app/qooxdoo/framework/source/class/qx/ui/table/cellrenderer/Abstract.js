@@ -105,7 +105,7 @@ qx.Class.define("qx.ui.table.cellrenderer.Abstract",
      * This method may be overridden by sub classes.
      *
      * @param cellInfo {Map} The information about the cell.
-     *          See {@link #createDataCellHtml}.
+     *          See {@link qx.ui.table.cellrenderer.Abstract#createDataCellHtml}.
      * @return {var} the CSS styles of the main div.
      */
     _getCellStyle : function(cellInfo) {
@@ -119,7 +119,7 @@ qx.Class.define("qx.ui.table.cellrenderer.Abstract",
      * "onclick='handleClick()';"
      *
      * @param cellInfo {Map} The information about the cell.
-     *          See {@link #createDataCellHtml}.
+     *          See {@link qx.ui.table.cellrenderer.Abstract#createDataCellHtml}.
      *
      * @return {String}
      *   The extra attributes to be applied to this cell.
@@ -136,7 +136,7 @@ qx.Class.define("qx.ui.table.cellrenderer.Abstract",
      * This method may be overridden by sub classes.
      *
      * @param cellInfo {Map} The information about the cell.
-     *          See {@link #createDataCellHtml}.
+     *          See {@link qx.ui.table.cellrenderer.Abstract#createDataCellHtml}.
      * @return {String} the inner HTML of the cell.
      */
     _getContentHtml : function(cellInfo) {
@@ -164,8 +164,8 @@ qx.Class.define("qx.ui.table.cellrenderer.Abstract",
         height -= insetY;
       }
 
-      style += "width:" +  width + "px;";
-      style += "height:" + height + "px;";
+      style += "width:" + Math.max(width, 0) + "px;";
+      style += "height:" + Math.max(height, 0) + "px;";
 
       return style;
     },

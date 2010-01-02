@@ -39,7 +39,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/widget/Image' target='_blank'>
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/Image' target='_blank'>
  * Documentation of this widget in the qooxdoo wiki.</a>
  */
 qx.Class.define("qx.ui.basic.Image",
@@ -59,6 +59,8 @@ qx.Class.define("qx.ui.basic.Image",
    */
   construct : function(source)
   {
+    this.__contentElements = {};
+
     this.base(arguments);
 
     if (source) {
@@ -156,6 +158,8 @@ qx.Class.define("qx.ui.basic.Image",
   {
     __width : null,
     __height : null,
+    __mode : null,
+    __contentElements : null,
 
 
 
@@ -166,8 +170,14 @@ qx.Class.define("qx.ui.basic.Image",
     */
 
     // overridden
+    getContentElement : function() {
+      return this.__getSuitableContentElement();
+    },
+
+
+    // overridden
     _createContentElement : function() {
-      return new qx.html.Image();
+      return this.__getSuitableContentElement();
     },
 
 
@@ -208,10 +218,100 @@ qx.Class.define("qx.ui.basic.Image",
 
 
     // property apply
-    _applyScale : function(value)
+    _applyScale : function(value) {
+       this._styleSource();
+    },
+
+
+    /**
+     * Remembers the mode to keep track which contentElement is currently in use.
+     * @param mode {String} internal mode (alphaScaled|scaled|nonScaled)
+     */
+    __setMode : function(mode) {
+      this.__mode = mode;
+    },
+
+
+    /**
+     * Returns the current mode if set. Otherwise checks the current source and
+     * the current scaling to determine the current mode.
+     *
+     * @return {String} current internal mode
+     */
+    __getMode : function()
     {
-      var el = this.getContentElement();
-      el.setScale(value);
+      if (this.__mode == null)
+      {
+        var source = this.getSource();
+        var isPng = false;
+        if (source != null) {
+          isPng = qx.lang.String.endsWith(source, ".png");
+        }
+
+        if (this.getScale() && isPng && qx.bom.element.Decoration.isAlphaImageLoaderEnabled()) {
+          this.__mode = "alphaScaled";
+        } else if (this.getScale()) {
+          this.__mode = "scaled";
+        } else {
+          this.__mode = "nonScaled";
+        }
+      }
+
+      return this.__mode;
+    },
+
+
+    /**
+     * Creates a contentElement suitable for the current mode
+     *
+     * @param mode {String} internal mode
+     * @return {qx.html.Image} suitable image content element
+     */
+    __createSuitableContentElement : function(mode)
+    {
+      var scale;
+      var tagName;
+      if (mode == "alphaScaled")
+      {
+        scale = true;
+        tagName = "div";
+      }
+      else if (mode == "nonScaled")
+      {
+        scale = false;
+        tagName = "div";
+      }
+      else
+      {
+        scale = true;
+        tagName = "img";
+      }
+
+      var element = new qx.html.Image(tagName);
+      element.setScale(scale);
+      element.setStyles({
+        "overflowX": "hidden",
+        "overflowY": "hidden"
+      });
+
+      return element;
+    },
+
+
+    /**
+     * Returns a contentElement suitable for the current mode
+     *
+     * @return {qx.html.Image} suitable image contentElement
+     */
+    __getSuitableContentElement : function()
+    {
+      var mode = this.__getMode();
+
+      if (this.__contentElements[mode] == null) {
+        this.__contentElements[mode] = this.__createSuitableContentElement(mode);
+      }
+
+      return this.__contentElements[mode];
     },
 
 
@@ -224,21 +324,108 @@ qx.Class.define("qx.ui.basic.Image",
     _styleSource : function()
     {
       var source = qx.util.AliasManager.getInstance().resolve(this.getSource());
-      var el = this.getContentElement();
 
       if (!source)
       {
-        el.resetSource();
+        this.getContentElement().resetSource();
         return;
       }
 
+      this.__checkForContentElementSwitch(source);
+
       // Detect if the image registry knows this image
       if (qx.util.ResourceManager.getInstance().has(source)) {
-        this.__setManagedImage(el, source);
-      } else if (qx.io2.ImageLoader.isLoaded(source)) {
-        this.__setUnmanagedImage(el, source);
+        this.__setManagedImage(this.getContentElement(), source);
+      } else if (qx.io.ImageLoader.isLoaded(source)) {
+        this.__setUnmanagedImage(this.getContentElement(), source);
       } else {
-        this.__loadUnmanagedImage(el, source);
+        this.__loadUnmanagedImage(this.getContentElement(), source);
+      }
+    },
+
+
+    /**
+     * Checks if the current content element is capable to display the image
+     * with the current settings (scaling, alpha PNG)
+     *
+     * @param source {String} source of the image
+     * @return {void}
+     */
+    __checkForContentElementSwitch : qx.core.Variant.select("qx.client",
+    {
+      "mshtml" : function(source)
+      {
+        var alphaImageLoader = qx.bom.element.Decoration.isAlphaImageLoaderEnabled();
+        var isPng = qx.lang.String.endsWith(source, ".png");
+
+        if (alphaImageLoader && isPng)
+        {
+          if (this.getScale() && this.__getMode() != "alphaScaled") {
+            this.__setMode("alphaScaled");
+          } else if (!this.getScale() && this.__getMode() != "nonScaled") {
+            this.__setMode("nonScaled");
+          }
+        }
+        else
+        {
+          if (this.getScale() && this.__getMode() != "scaled") {
+            this.__setMode("scaled");
+          } else if (!this.getScale() && this.__getMode() != "nonScaled") {
+            this.__setMode("nonScaled");
+          }
+        }
+
+        this.__checkForContentElementReplacement(this.__getSuitableContentElement());
+      },
+
+      "default" : function(source)
+      {
+        if (this.getScale() && this.__getMode() != "scaled") {
+          this.__setMode("scaled");
+        } else if (!this.getScale() && this.__getMode("nonScaled")) {
+          this.__setMode("nonScaled");
+        }
+
+        this.__checkForContentElementReplacement(this.__getSuitableContentElement());
+      }
+    }),
+
+
+    /**
+     * Checks the current child and replaces it if necessary
+     *
+     * @param elementToAdd {qx.html.Image} content element to add
+     * @return {void}
+     */
+    __checkForContentElementReplacement : function(elementToAdd)
+    {
+      var container = this.getContainerElement();
+      var currentContentElement = container.getChild(0);
+
+      if (currentContentElement != elementToAdd)
+      {
+        if (currentContentElement != null)
+        {
+          var pixel = "px";
+          var styles = {};
+
+          var innerSize = this.getInnerSize();
+          if (innerSize != null)
+          {
+            styles.width = innerSize.width + pixel;
+            styles.height = innerSize.height + pixel;
+          }
+
+          var insets = this.getInsets();
+          styles.left = insets.left + pixel;
+          styles.top = insets.top + pixel;
+
+          elementToAdd.setStyles(styles, true);
+          elementToAdd.setSelectable(this.getSelectable());
+        }
+
+        container.removeAt(0);
+        container.addAt(elementToAdd, 0);
       }
     },
 
@@ -292,7 +479,7 @@ qx.Class.define("qx.ui.basic.Image",
      */
     __setUnmanagedImage : function(el, source)
     {
-      var ImageLoader = qx.io2.ImageLoader;
+      var ImageLoader = qx.io.ImageLoader;
 
       // Apply source
       el.setSource(source);
@@ -313,7 +500,7 @@ qx.Class.define("qx.ui.basic.Image",
      */
     __loadUnmanagedImage : function(el, source)
     {
-      var ImageLoader = qx.io2.ImageLoader;
+      var ImageLoader = qx.io.ImageLoader;
 
       if (qx.core.Variant.isSet("qx.debug", "on"))
       {
@@ -387,5 +574,16 @@ qx.Class.define("qx.ui.basic.Image",
         qx.ui.core.queue.Layout.add(this);
       }
     }
+  },
+
+
+  /*
+  *****************************************************************************
+     DESTRUCTOR
+  *****************************************************************************
+  */
+
+  destruct : function() {
+    this._disposeMap("__contentElements");
   }
 });

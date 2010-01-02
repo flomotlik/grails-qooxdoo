@@ -44,6 +44,7 @@ qx.Class.define("inspector.console.ConsoleWindow",
 
     // search text field
     this._findField = new qx.ui.form.TextField();
+    this._findField.setPlaceholder("Filter...");
     this._findField.setLiveUpdate(true);
     this._findField.setMarginRight(5);
     this._toolbar.add(this._findField);
@@ -146,5 +147,11 @@ qx.Class.define("inspector.console.ConsoleWindow",
       this._domView.clear();
     }
 
+  },
+  
+  destruct : function()
+  {
+    this._disposeObjects("_clearButton", "_consoleButton", "_domButton",
+      "_findField", "_stack", "_consoleView", "_domView");
   }
 });

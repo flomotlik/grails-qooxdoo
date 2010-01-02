@@ -24,7 +24,7 @@
 ************************************************************************ */
 
 /**
- * State of renderering by Progressive.  EXPERIMENTAL!  INTERFACE MAY CHANGE.
+ * State of renderering by Progressive.
  */
 qx.Class.define("qx.ui.progressive.State",
 {
@@ -66,7 +66,7 @@ qx.Class.define("qx.ui.progressive.State",
   {
     /**
      * The {@link qx.ui.progressive.Progressive} with which this {@link
-     * #State} is associated. This property should be treated as read-only.
+     * State} is associated. This property should be treated as read-only.
      */
     progressive    : { nullable : true },
 

@@ -18,8 +18,6 @@
 ************************************************************************ */
 
 /**
- * EXPERIMENTAL!
- *
  * <h2>Tree Controller</h2>
  *
  * *General idea*
@@ -183,7 +181,7 @@ qx.Class.define("qx.data.controller.Tree",
 
     /**
      * Delegation object, which can have one ore more function defined by the
-     * {@link #IControllerDelegate} interface.
+     * {@link IControllerDelegate} interface.
      */
     delegate :
     {
@@ -368,8 +366,10 @@ qx.Class.define("qx.data.controller.Tree",
 
       // add a new change listener
       var modelNode = oldRef.modelNode;
-      var properties = qx.util.PropertyUtil.getProperties(oldRef.modelNode.constructor);
-      var eventName = properties[this.getChildPath()].event;
+      var property = qx.Class.getPropertyDefinition(
+        oldRef.modelNode.constructor, this.getChildPath()
+      );
+      var eventName = property.event;
       var changeChildernListenerId = modelNode.addListener(
         eventName, this.__changeChildrenArray, this
       );
@@ -487,8 +487,10 @@ qx.Class.define("qx.data.controller.Tree",
           "change", this.__changeModelChildren, this
         );
         // add a listener for the change of the children array itself
-        var properties = qx.util.PropertyUtil.getProperties(modelNode.constructor);
-        var eventName = properties[this.getChildPath()].event;
+        var property = qx.Class.getPropertyDefinition(
+          modelNode.constructor, this.getChildPath()
+        );
+        var eventName = property.event;
         var changeChildernListenerId = modelNode.addListener(
           eventName, this.__changeChildrenArray, this
         );
@@ -648,11 +650,88 @@ qx.Class.define("qx.data.controller.Tree",
         this.__bindings[targetPath] = {};
       }
       // store the binding reference
-      this.__bindings[targetPath][modelNode.toHashCode()] = {id: id, treeNode: targetWidget};
+      var storage = this.__bindings[targetPath];
+      if (storage[modelNode.toHashCode()]) {
+        storage[modelNode.toHashCode()].reverseId = id;
+      } else {
+        storage[modelNode.toHashCode()] = {
+          id: id,
+          reverseId: null,
+          treeNode: targetWidget
+        };
+      }
 
       // save the bound property
       if (!qx.lang.Array.contains(this.__boundProperties, targetPath)) {
         this.__boundProperties.push(targetPath);
+      }
+    },
+
+
+    /**
+     * Helper-Method for binding a given property from the target widget to
+     * the model.
+     * This method should only be called in the
+     * {@link qx.data.controller.IControllerDelegate#bindItem} function
+     * implemented by the {@link #delegate} property.
+     *
+     * @param targetPath {String} The name of the property in the target
+     *   widget.
+     * @param sourcePath {String | null} The path to the property in the model.
+     * @param options {Map | null} The options to use for the binding.
+     * @param sourceWidget {qx.ui.tree.AbstractTreeItem} The source widget.
+     * @param modelNode {var} The model node which should be bound to the target.
+     */
+    bindPropertyReverse : function(
+      targetPath, sourcePath, options, sourceWidget, modelNode
+    )
+    {
+      // set up the binding
+      var id = sourceWidget.bind(sourcePath, modelNode, targetPath, options);
+
+      // check for the storage for the references
+      if (this.__bindings[sourcePath] == null) {
+        this.__bindings[sourcePath] = {};
+      }
+      // check if there is already a stored item
+      var storage = this.__bindings[sourcePath];
+      if (storage[modelNode.toHashCode()]) {
+        storage[modelNode.toHashCode()].reverseId = id;
+      } else {
+        storage[modelNode.toHashCode()] = {
+          id: null,
+          reverseId: id,
+          treeNode: sourceWidget
+        };
+      }
+
+      // save the bound property
+      if (!qx.lang.Array.contains(this.__boundProperties, sourcePath)) {
+        this.__boundProperties.push(sourcePath);
+      }
+    },
+
+
+    /**
+     * Helper-Method for binding the default properties (label and icon) from
+     * the model to the target widget.
+     *
+     * This method should only be called in the
+     * {@link qx.data.controller.IControllerDelegate#bindItem} function
+     * implemented by the {@link #delegate} property.
+     *
+     * @param modelNode {qx.core.Object} The model node holding the data.
+     * @param treeNode {qx.ui.tree.TreeFolder} The corresponding tree folder
+     *   to the model node.
+     */
+    bindDefaultProperties : function(treeNode, modelNode)
+    {
+      // label binding
+      this.bindProperty(this.getLabelPath(), "label", this.getLabelOptions(), treeNode, modelNode);
+
+      // icon binding
+      if (this.getIconPath() != null) {
+        this.bindProperty(this.getIconPath(), "icon", this.getIconOptions(), treeNode, modelNode);
       }
     },
 
@@ -698,13 +777,7 @@ qx.Class.define("qx.data.controller.Tree",
 
       // otherwise, try to bind the listItem by default
       } else {
-        // label binding
-        this.bindProperty(this.getLabelPath(), "label", this.getLabelOptions(), treeNode, modelNode);
-
-        // icon binding
-        if (this.getIconPath() != null) {
-          this.bindProperty(this.getIconPath(), "icon", this.getIconOptions(), treeNode, modelNode);
-        }
+        this.bindDefaultProperties(treeNode, modelNode);
       }
     },
 
@@ -720,7 +793,12 @@ qx.Class.define("qx.data.controller.Tree",
         var property = this.__boundProperties[i];
         var bindingsMap = this.__bindings[property][modelNode.toHashCode()];
         if (bindingsMap != null) {
-          modelNode.removeBinding(bindingsMap.id);
+          if (bindingsMap.id) {
+            modelNode.removeBinding(bindingsMap.id);
+          }
+          if (bindingsMap.reverseId) {
+            bindingsMap.treeNode.removeBinding(bindingsMap.reverseId);
+          }
           delete this.__bindings[property][modelNode.toHashCode()];
         }
       }
@@ -740,7 +818,10 @@ qx.Class.define("qx.data.controller.Tree",
      * @param old {Object} The old delegate.
      */
     _setConfigureItem: function(value, old) {
-      if (value != null && value.configureItem != null && this.getTarget() != null) {
+      if (
+        value != null && value.configureItem != null &&
+        this.getTarget() != null && this.getModel() != null
+      ) {
         var children = this.getTarget().getRoot().getItems(true, true, false);
         for (var i = 0; i < children.length; i++) {
           value.configureItem(children[i]);
@@ -807,7 +888,6 @@ qx.Class.define("qx.data.controller.Tree",
    */
 
    destruct : function() {
-     this._disposeFields("__bindings", "__childrenRef");
-     this._disposeArray("__boundProperties");
+     this.__bindings = this.__childrenRef = this.__boundProperties = null;
    }
 });

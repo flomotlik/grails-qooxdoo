@@ -16,6 +16,15 @@
      * Martin Wittemann (martinwittemann)
 
 ************************************************************************ */
+/* ************************************************************************
+
+#tag(databinding)
+#tag(form)
+#tag(object controller)
+#tag(validation)
+#tag(serialization)
+
+************************************************************************ */
 
 /**
  * @lint ignoreDeprecated(alert)

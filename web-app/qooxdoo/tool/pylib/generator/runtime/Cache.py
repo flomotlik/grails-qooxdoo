@@ -23,34 +23,158 @@ import os, sys, time
 import cPickle as pickle
 from misc import filetool
 from misc.securehash import sha_construct
+from generator.action.ActionLib import ActionLib
 
-memcache = {}
+memcache  = {}
+actionLib = None
+check_file = u".cache_check_file"
 
 class Cache:
+
+
     def __init__(self, path, context):
-        self._path         = path
+        global actionLib
+        self._cache_revision = 20891   # Change this to the current qooxdoo svn revision when existing caches need clearing
+        self._path           = path
+        self._context        = context
+        self._console        = self._context['console']
+        self._downloads      = self._context['jobconf'].get("cache/downloads")
+        self._check_file     = os.path.join(self._path, check_file)
+        actionLib            = ActionLib(self._context['config'], self._console)
+        self._console.info("Initializing cache...")
+        self._console.indent()
         self._check_path(self._path)
-        self._console      = context['console']
-        self._locked_files = set(())
-        context['interruptRegistry'].register(self._unlock_files)
+        self._locked_files   = set(())
+        self._context['interruptRegistry'].register(self._unlock_files)
+        self._assureCacheIsValid()  # checks and pot. clears existing cache
+        self._console.outdent()
+        return
+
+
+    def _assureCacheIsValid(self, ):
+        self._toolChainIsNewer = self._checkToolsNewer()
+        if self._toolChainIsNewer:
+            if self._context['jobconf'].get("cache/invalidate-on-tool-change", False):
+                self._console.info("Cleaning compile cache, as tool chain is newer")
+                self.cleanCompileCache()  # will also remove checkFile
+            else:
+                self._console.warn("! Detected newer tool chain; you might want to clear the cache.")
+        self._update_checkfile()
+        return
+
+
+    def _update_checkfile(self, ):
+        fd  = os.open(self._check_file, os.O_CREAT|os.O_RDWR, 0666)  # open or create
+        numbytes = os.write(fd, str(self._cache_revision))
+        os.close(fd)
+        if numbytes < 1:
+            raise IOError("Cannot write cache check file '%s'" % check_file)
+        return
+
+    def _update_checkfile_1(self, check_file):
+        if not os.path.isfile(check_file):
+            #os.mknod(check_file, 0666)
+            os.close(os.open(check_file, os.O_CREAT|os.O_RDWR, 0666))  # portable form of os.mknod
+        return
+
+
+    def _checkToolsNewer(self, ):
+        cacheRevision = self.getCacheFileVersion()
+        if not cacheRevision:
+            return True
+        elif self._cache_revision > cacheRevision:
+            return True  # current caches rev is lower than that of the Cache class
+        else:
+            return False
+
+
+    ##
+    # returns the number in the check file on disk, if existent, None otherwise
+
+    def getCacheFileVersion(self):
+        if not os.path.isfile(self._check_file):
+            return None
+        else:
+            cacheRevision = open(self._check_file, "r").read()
+            try:
+                cacheRevision = int(cacheRevision)
+            except:
+                return None
+            return cacheRevision
+
+
+    ##
+    # predicate to check for files in the 'tool' path that are newer than the
+    # cache check file
+
+    def _checkToolsNewer_1(self, path, checkFile, context):
+        if not os.path.isfile(checkFile):
+            return True
+        checkFileMTime = os.stat(checkFile).st_mtime
+        # find youngst tool file
+        _, toolCheckMTime = filetool.findYoungest(os.path.dirname(filetool.root()))
+        # compare
+        if checkFileMTime < toolCheckMTime:
+            return True
+        else:
+            return False
+        
+
+    ##
+    # delete the files in the compile cache
+
+    def cleanCompileCache(self):
+        self._check_path(self._path)
+        self._console.info("Deleting compile cache")
+        for f in os.listdir(self._path):   # currently, just delete the files in the top-level dir
+            file = os.path.join(self._path, f)
+            if os.path.isfile(file):
+                os.unlink(file)
+        self._update_checkfile()
+
+
+    def cleanDownloadCache(self):
+        if self._downloads:
+            actionLib.clean({"Deleting download cache" : [self._downloads]})
+        else:
+            self._console.warn("Cannot clean download cache - no path information!")
+
+
+    ##
+    # make sure there is a cache directory to work with (no r/w test currently)
 
     def _check_path(self, path):
         if not os.path.exists(path):
             filetool.directory(path)
+            self._update_checkfile()
         elif not os.path.isdir(path):
             raise RuntimeError, "The cache path is not a directory: %s" % path
         else: # it's an existing directory
             # defer read/write access to the first call of read()/write()
             pass
 
+    ##
+    # clean up lock files interrupt handler
+
     def _unlock_files(self):
-        # this is for an interrupt handler
         for file in self._locked_files:
             try:
                 filetool.unlock(file)
                 self._console.debug("Cleaned up lock for file: %r" % file)
             except: # file might not exists since adding to _lock_files and actually locking is not atomic
                 pass   # no sense to do much fancy in an interrupt handler
+
+
+    ##
+    # warn about newer tool chain interrupt handler
+
+    def _warn_toolchain(self):
+        if self._toolChainIsNewer:
+            self._console.warn("Detected newer tool chain; you might want to run 'generate.py distclean', then re-run this job.")
+
+
+    ##
+    # create a file name from a cacheId
 
     def filename(self, cacheId):
         cacheId = cacheId.encode('utf-8')

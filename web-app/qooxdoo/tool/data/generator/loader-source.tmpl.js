@@ -19,6 +19,8 @@ for (var k in libinfo) qx.$$libraries[k] = libinfo[k];
 qx.$$resources = %{Resources};
 qx.$$translations = %{Translations};
 qx.$$locales = %{Locales};
+qx.$$i18n    = %{I18N};
+qx.$$packageData = {};
 
 qx.$$loader = {
   parts : %{Parts},
@@ -33,7 +35,9 @@ qx.$$loader = {
     {
       var uri = compressedUris[i].split(":");
       var prefix = libs[uri[0]].sourceUri;
-      uris.push(prefix + "/" + uri[1]);
+      var euri = prefix + "/" + uri[1];
+      %{DecodeUrisPlug}
+      uris.push(euri);
     }
     return uris;      
   }

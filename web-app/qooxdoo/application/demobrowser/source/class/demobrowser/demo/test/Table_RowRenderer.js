@@ -17,6 +17,12 @@
 
 ************************************************************************ */
 
+/* ************************************************************************
+
+#tag(noPlayground)
+
+************************************************************************ */
+
 qx.Class.define("demobrowser.demo.test.Table_RowRenderer",
 {
   extend : qx.application.Native,
@@ -56,7 +62,6 @@ qx.Class.define("demobrowser.demo.test.Table_RowRenderer",
       };
 
       var container = this._getNewTableDiv(width);
-      var top = 0;
       var self = this;
       qx.util.Permutation.permute(rowDataOptions, function(rowInfo)
       {
@@ -119,8 +124,7 @@ qx.Class.define("demobrowser.demo.test.Table_RowRenderer",
    *****************************************************************************
    */
 
-  destruct : function()
-  {
-    this._disposeFields("tableMock");
+  destruct : function() {
+    this.tableMock = null;
   }
 });

@@ -53,12 +53,12 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/widget/Scroll' target='_blank'>
+ * <a href='http://qooxdoo.org/documentation/1.0/widget/Scroll' target='_blank'>
  * Documentation of this widget in the qooxdoo wiki.</a>
  */
 qx.Class.define("qx.ui.container.Scroll",
 {
-  extend : qx.ui.core.AbstractScrollArea,
+  extend : qx.ui.core.scroll.AbstractScrollArea,
   include : [qx.ui.core.MContentPadding],
 
 
@@ -116,22 +116,6 @@ qx.Class.define("qx.ui.container.Scroll",
       this.getChildControl("pane").remove(widget);
     },
 
-
-    /**
-     * Returns the content of the scroll container.
-     *
-     * Scroll containers may only have one child. This
-     * method returns exactly this one child or <code>null</code>.
-     *
-     * @deprecated
-     * @return {qx.ui.core.Widget} The child
-     */
-    getChild : function() {
-      qx.log.Logger.deprecatedMethodWarning(
-        arguments.callee, "Please use getChildren instead."
-      );
-      return this.getChildControl("pane").getChild();
-    },
 
     /**
      * Returns the content of the scroll container.

@@ -298,7 +298,27 @@ qx.Class.define("qx.test.data.DataArray",
 
 
     testRemoveAll: function() {
-      this.__a.removeAll();
+
+      var self = this;
+      this.assertEventFired(self.__a, "changeLength", function () {
+        self.__a.removeAll();
+      }, function(e) {
+        self.assertEquals(0, self.__a.getLength(), "length not 0");
+      }, "Change event not fired!");
+
+
+      this.__a.push("a");
+      this.__a.push("b");
+
+      this.assertEventFired(self.__a, "change", function () {
+        self.__a.removeAll();
+      }, function(e) {
+        self.assertEquals(0, e.getData().start, "Wrong start index in the event.");
+        self.assertEquals(1, e.getData().end, "Wrong end index in the event.");
+        self.assertEquals("remove", e.getData().type, "Wrong type in the event.");
+        self.assertEquals("a", e.getData().items[0]);
+        self.assertEquals("b", e.getData().items[1]);
+      }, "Change event not fired!");
 
       this.assertEquals(0, this.__a.length, "RemoveAll does not work.");
     },
@@ -460,6 +480,43 @@ qx.Class.define("qx.test.data.DataArray",
         self.assertEquals(4, e.getData().items[0], "Wrong item in the event.");
       }, "Change event not fired!");
       a.dispose();
+    },
+
+
+    testForEach : function()
+    {
+      var self = this;
+      var i = 0;
+      var thisContext = {};
+      var handlerCalled = false;
+
+      var forEachHandler = function(item) {
+        handlerCalled = true;
+        // check for the context
+        self.assertEquals(this, thisContext);
+        // check the tree items
+        if (i == 0) {
+          i++;
+          self.assertEquals("one", item);
+          return;
+        } else if (i == 1) {
+          i++
+          self.assertEquals("two", item);
+          return;
+        } else if (i == 2) {
+          i++;
+          self.assertEquals("three", item);
+          return;
+        }
+        // something went wrong!
+        throw new Error("Wrong call in the handler.");
+      }
+
+      // invoke the forEach
+      this.__a.forEach(forEachHandler, thisContext);
+
+      // check if the handlers has been called
+      this.assertTrue(handlerCalled);
     }
   }
 });

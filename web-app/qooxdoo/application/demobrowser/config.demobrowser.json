@@ -1,0 +1,211 @@
+{
+  "name"    : "config.demobrowser.json - does the actual compile jobs, needs a generated config.demo.json",
+
+  "include" :
+  [
+    {
+      "path" : "./config.demo.json",
+      "as"   : "demos"
+
+    }
+  ],
+
+  "let" :
+  {
+    "APPLICATION"  : "demobrowser",
+    "CACHE"        : "${TMPDIR}/cache",
+    "QOOXDOO_PATH" : "../..",
+    "THEME"        : "demobrowser.Theme"
+  },
+
+  "jobs" :
+  {
+    "common" :
+    {
+      "desc"    : "common settings for Demobrowser jobs",
+
+      "library" :
+      [
+        {
+          "manifest" : "${QOOXDOO_PATH}/framework/Manifest.json"
+        },
+
+        {
+          "manifest" : "Manifest.json"
+        }
+      ],
+
+      "include" :
+      [
+        "${APPLICATION}.Application",
+        "${THEME}"
+      ],
+
+      "settings" :
+      {
+        "qx.version" : "${QOOXDOO_VERSION}",
+        "qx.application" : "${APPLICATION}.Application",
+        "qx.theme" : "${THEME}"
+      },
+
+      // the next is in since resource copying is done here for the demos as well
+      "asset-let" :
+      {
+        "qx.icontheme" : ["Tango", "Oxygen"],
+        "qx.theme"     : ["Modern"]
+      },
+
+      "cache" :
+      {
+        "compile" : "${CACHE}"
+      }
+    },
+
+
+    "source-script" :
+    {
+      "desc"    : "create includer script of Demobrowser",
+
+      "extend" : ["common"],
+
+      "compile-options" :
+      {
+        "paths"  :
+        {
+          "file" : "./source/script/${APPLICATION}.js",
+          "app-root" : "source"
+        }
+      },
+      "compile" : { "type" : "source" }
+    },
+
+
+    "source-demos" :
+    {
+      "desc"    : "create source version for each demo",
+
+      "extend" : ["demos::source"]
+    },
+
+
+    "source" :
+    {
+      "desc"    : "create source version of Demobrowser",
+
+      "run" :
+      [
+        "source-script",
+        "source-demos"
+      ]
+    },
+
+
+    "build-script" :
+    {
+      "desc"    : "create build script of Demobrowser",
+
+      "extend" : ["common"],
+
+      "compile-options" :
+      {
+        "paths" :
+        {
+          "file": "./build/script/${APPLICATION}.js"
+        },
+        "code"  :
+        {
+          "format" : true,
+          "optimize" : ["basecalls", "variables", "privates", "strings"]
+        }
+      },
+
+      "compile" : { "type" : "build" }
+    },
+
+
+    "build-files" :
+    {
+      "desc"    : "copy files of Demobrowser to build dir",
+
+      "extend" : ["common"],
+
+      "copy-files" :
+      {
+        "files" :
+        [
+          "index.html",
+          "demo"
+        ],
+
+        "target" : "build"
+      }
+    },
+
+
+    "build-resources":
+    {
+      "desc"    : "copy necessary resources for Demobrowser/demos to build dir",
+
+      "extend" : ["common"],
+
+      "include" :
+      [
+        "qx.theme.Classic",
+        "qx.theme.Modern",
+        "demobrowser.*"
+      ],
+
+      "copy-resources" :
+      {
+        "target" : "build"
+      }
+    },
+
+
+    "build-demos" :
+    {
+      "desc"    : "create build version for each demo",
+
+      "extend" : ["demos::build"]
+    },
+
+
+    "build" :
+    {
+      "desc"    : "create build version of Demobrowser",
+
+      "run" :
+      [
+        "build-resources",
+        "build-files",
+        "build-script",
+        "build-demos"
+      ]
+    },
+
+    // -- Debug jobs ----------------------------------------------------------
+
+    "debug-dependencies" :
+    {
+      "desc"    : "extension job for debugging dependencies",
+
+      "extend" : ["common"],
+      "include" : ["demobrowser.demo.io.HttpRequest_1"],
+      "debug" :
+      {
+        "dependencies" : "on"
+      }
+    },
+
+    "debug-privates" :
+    {
+      "desc"    : "extension job for debugging privates",
+
+      "extend" : ["common"],
+      "debug" :
+      {
+        "privates" : "on"
+      }
+    }
+  }
+}

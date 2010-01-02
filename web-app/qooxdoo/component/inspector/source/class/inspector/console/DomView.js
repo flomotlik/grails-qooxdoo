@@ -20,6 +20,13 @@ qx.Class.define("inspector.console.DomView",
 {
   extend : qx.ui.core.Widget,
 
+  statics :
+  {
+    /**
+     * The default search term used in the search field.
+     */
+    SEARCH_TERM: "Search..."
+  },
 
   construct : function(console)
   {
@@ -158,7 +165,7 @@ qx.Class.define("inspector.console.DomView",
       // if there is no filter set
       if (this._filter == "") {
         // return the default search string
-        return inspector.console.Console.SEARCH_TERM;
+        return inspector.console.DomView.SEARCH_TERM;
       } else {
         // otherwise, return the filter string
         return this._filter;
@@ -504,5 +511,11 @@ qx.Class.define("inspector.console.DomView",
       return returnString.get();
     }
 
+  },
+  
+  destruct : function()
+  {
+    this._console = this._breadCrumb = null;
+    this._disposeObjects("_htmlEmbed");
   }
 });

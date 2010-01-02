@@ -52,7 +52,14 @@ qx.Class.define("qx.event.Timer",
       this.setInterval(interval);
     }
 
-    this.__oninterval = qx.lang.Function.bind(this._oninterval, this);
+    // don't use qx.lang.Function.bind because this function would add a
+    // disposed check, which could break the functionality. In IE the handler
+    // may get called after "clearInterval" (i.e. after the timer is disposed)
+    // and we must be able to handle this.
+    var self = this;
+    this.__oninterval = function() {
+      self._oninterval.call(self);
+    }
   },
 
 
@@ -283,6 +290,10 @@ qx.Class.define("qx.event.Timer",
      */
     _oninterval : qx.event.GlobalError.observeMethod(function()
     {
+      if (this.$$disposed) {
+        return;
+      }
+
       if (this.getEnabled()) {
         this.fireEvent("interval");
       }
@@ -304,6 +315,6 @@ qx.Class.define("qx.event.Timer",
       window.clearInterval(this.__intervalHandler);
     }
 
-    this._disposeFields("__intervalHandler", "__oninterval");
+    this.__intervalHandler = this.__oninterval = null;
   }
 });

@@ -55,7 +55,7 @@ qx.Class.define("qx.event.handler.Mouse",
     // Define shorthands
     this.__manager = manager;
     this.__window = manager.getWindow();
-    this.__root = this.__window.document.documentElement;
+    this.__root = this.__window.document;
 
     // Initialize observers
     this._initButtonObserver();
@@ -133,31 +133,21 @@ qx.Class.define("qx.event.handler.Mouse",
 
 
     // interface implementation
-    registerEvent : qx.core.Variant.select("qx.client",
-    {
-      "webkit" : function(target, type, capture)
-      {
-        // The iPhone requires that the mouse events are at least once
-        // registered directly at the element
-        // http://www.quirksmode.org/blog/archives/2008/08/iphone_events.html
-        if (qx.bom.client.System.IPHONE)
-        {
-          var listener = qx.lang.Function.returnNull;
-          target["on" + type] = listener;
-          target["on" + type] = undefined;
-        }
-      },
-
-      "default" : qx.lang.Function.returnNull
-    }),
+    // The iPhone requires for attaching mouse events natively to every element which
+    // should react on mouse events. As of version 3.0 it also requires to keep the
+    // listeners as long as the event should work. In 2.0 it was enough to attach the
+    // listener once.
+    registerEvent : qx.bom.client.System.IPHONE ?
+      function(target, type, capture) {
+        target["on" + type] = qx.lang.Function.returnNull;
+      } : qx.lang.Function.returnNull,
 
 
     // interface implementation
-    unregisterEvent : function(target, type, capture) {
-      // Nothing needs to be done here
-    },
-
-
+    unregisterEvent : qx.bom.client.System.IPHONE ?
+      function(target, type, capture) {
+        target["on" + type] = undefined;
+      } : qx.lang.Function.returnNull,
 
 
 
@@ -173,7 +163,7 @@ qx.Class.define("qx.event.handler.Mouse",
      * Fire a mouse event with the given parameters
      *
      * @param domEvent {Event} DOM event
-     * @param type {String} type og the event
+     * @param type {String} type of the event
      * @param target {Element} event target
      */
     __fireEvent : function(domEvent, type, target)
@@ -190,7 +180,7 @@ qx.Class.define("qx.event.handler.Mouse",
         qx.event.Registration.fireEvent(
           target,
           type||domEvent.type,
-          qx.event.type.Mouse,
+          type == "mousewheel" ? qx.event.type.MouseWheel : qx.event.type.Mouse,
           [domEvent, target, null, true, true]
         );
       }
@@ -261,7 +251,8 @@ qx.Class.define("qx.event.handler.Mouse",
       var Event = qx.bom.Event;
       var type = qx.core.Variant.isSet("qx.client", "mshtml|webkit|opera") ? "mousewheel" : "DOMMouseScroll";
 
-      Event.addNativeListener(this.__root, type, this.__onWheelEventWrapper);
+      var target = qx.core.Variant.isSet("qx.client", "mshtml") ? this.__root : this.__window;
+      Event.addNativeListener(target, type, this.__onWheelEventWrapper);
     },
 
 
@@ -320,7 +311,8 @@ qx.Class.define("qx.event.handler.Mouse",
       var Event = qx.bom.Event;
       var type = qx.core.Variant.isSet("qx.client", "mshtml|webkit|opera") ? "mousewheel" : "DOMMouseScroll";
 
-      Event.removeNativeListener(this.__root, type, this.__onWheelEventWrapper);
+      var target = qx.core.Variant.isSet("qx.client", "mshtml") ? this.__root : this.__window;
+      Event.removeNativeListener(target, type, this.__onWheelEventWrapper);
     },
 
 
@@ -557,7 +549,8 @@ qx.Class.define("qx.event.handler.Mouse",
     this._stopMoveObserver();
     this._stopWheelObserver();
 
-    this._disposeFields("__manager", "__window", "__root", "__lastMouseDownTarget");
+    this.__manager = this.__window = this.__root =
+      this.__lastMouseDownTarget = null;
   },
 
 

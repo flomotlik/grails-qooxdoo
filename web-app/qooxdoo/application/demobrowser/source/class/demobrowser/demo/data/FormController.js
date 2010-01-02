@@ -16,6 +16,14 @@
      * Martin Wittemann (martinwittemann)
 
 ************************************************************************ */
+/* ************************************************************************
+
+#tag(databinding)
+#tag(form controller)
+#tag(form)
+#tag(serialization)
+
+************************************************************************ */
 
 /**
  * @lint ignoreDeprecated(alert)
@@ -59,7 +67,7 @@ qx.Class.define("demobrowser.demo.data.FormController",
       form.addButton(cancelButton);
 
       // create the view
-      groupBox.add(form.createView());
+      groupBox.add(new qx.ui.form.renderer.Single(form));
       ////////////////////////////////////
 
 

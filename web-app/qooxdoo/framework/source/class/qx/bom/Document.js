@@ -75,12 +75,37 @@ qx.Class.define("qx.bom.Document",
     /**
      * Whether the document is in quirks mode (e.g. non XHTML, HTML4 Strict or missing doctype)
      *
+     * @signature function(win)
      * @param win {Window?window} The window to query
      * @return {Boolean} true when containing document is in quirks mode
      */
-    isQuirksMode : function(win) {
-      return (win||window).document.compatMode !== "CSS1Compat";
-    },
+    isQuirksMode : qx.core.Variant.select("qx.client",
+    {
+      "mshtml" : function(win)
+      {
+        if(qx.bom.client.Engine.VERSION >= 8) {
+          return qx.bom.client.Engine.DOCUMENT_MODE === 5;
+        } else {
+          return (win||window).document.compatMode !== "CSS1Compat";
+        }
+      },
+
+      "webkit" : function(win)
+      {
+        if (document.compatMode === undefined)
+        {
+          var el = (win||window).document.createElement("div");
+          el.style.cssText = "position:absolute;width:0;height:0;width:1";
+          return el.style.width === "1px" ? true : false;
+        } else {
+          return (win||window).document.compatMode !== "CSS1Compat";
+        }
+      },
+
+      "default" : function(win) {
+        return (win||window).document.compatMode !== "CSS1Compat";
+      }
+    }),
 
 
     /**
@@ -90,7 +115,7 @@ qx.Class.define("qx.bom.Document",
      * @return {Boolean} true when containing document is in standard mode
      */
     isStandardMode : function(win) {
-      return (win||window).document.compatMode === "CSS1Compat";
+      return !this.isQuirksMode(win);
     },
 
 
@@ -116,15 +141,16 @@ qx.Class.define("qx.bom.Document",
      * @param win {Window?window} The window to query
      * @return {Integer} The width of the actual document (which includes the body and its margin).
      *
-     * NOTE: Opera 9.6 has a wrong value for the scrollWidth property!
+     * NOTE: Opera 9.5x and 9.6x have wrong value for the scrollWidth property,
+     * if a element use negative value for top and left to be outside the vieport!
+     * See: http://bugzilla.qooxdoo.org/show_bug.cgi?id=2869
      */
     getWidth : function(win)
     {
       var doc = (win||window).document;
       var view = qx.bom.Viewport.getWidth(win);
-      var buggyOpera = (qx.bom.client.Engine.OPERA && qx.bom.client.Engine.VERSION > 9.5 && qx.bom.client.Engine.VERSION <= 10);
-      var scroll = doc.compatMode === "CSS1Compat" ? doc.documentElement.scrollWidth : doc.body.scrollWidth;
-      return buggyOpera ? view : Math.max(scroll, view);
+      var scroll = this.isStandardMode(win) ? doc.documentElement.scrollWidth : doc.body.scrollWidth;
+      return Math.max(scroll, view);
     },
 
 
@@ -150,15 +176,16 @@ qx.Class.define("qx.bom.Document",
      * @param win {Window?window} The window to query
      * @return {Integer} The height of the actual document (which includes the body and its margin).
      *
-     * NOTE: Opera 9.6 has a wrong value for the scrollHeight property!
+     * NOTE: Opera 9.5x and 9.6x have wrong value for the scrollWidth property,
+     * if a element use negative value for top and left to be outside the vieport!
+     * See: http://bugzilla.qooxdoo.org/show_bug.cgi?id=2869
      */
     getHeight : function(win)
     {
       var doc = (win||window).document;
       var view = qx.bom.Viewport.getHeight(win);
-      var buggyOpera = (qx.bom.client.Engine.OPERA && qx.bom.client.Engine.VERSION > 9.5 && qx.bom.client.Engine.VERSION <= 10);
-      var scroll = doc.compatMode === "CSS1Compat" ? doc.documentElement.scrollHeight : doc.body.scrollHeight;
-      return buggyOpera ? view : Math.max(scroll, view);
+      var scroll = this.isStandardMode(win) ? doc.documentElement.scrollHeight : doc.body.scrollHeight;
+      return Math.max(scroll, view);
     }
   }
 });

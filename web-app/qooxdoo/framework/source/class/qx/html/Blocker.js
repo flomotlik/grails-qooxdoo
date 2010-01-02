@@ -47,6 +47,16 @@ qx.Class.define("qx.html.Blocker",
       backgroundColor : backgroundColor
     });
 
+    this.addListener("mousedown", this._stopPropagation, this);
+    this.addListener("mouseup", this._stopPropagation, this);
+    this.addListener("click", this._stopPropagation, this);
+    this.addListener("dblclick", this._stopPropagation, this);
+    this.addListener("mousemove", this._stopPropagation, this);
+    this.addListener("mouseover", this._stopPropagation, this);
+    this.addListener("mouseout", this._stopPropagation, this);
+    this.addListener("mousewheel", this._stopPropagation, this);
+    this.addListener("contextmenu", this._stopPropagation, this);
+
     // IE needs some extra love here to convince it to block events.
     if (qx.core.Variant.isSet("qx.client", "mshtml"))
     {
@@ -54,6 +64,32 @@ qx.Class.define("qx.html.Blocker",
         backgroundImage: "url(" + qx.util.ResourceManager.getInstance().toUri("qx/static/blank.gif") + ")",
         backgroundRepeat: "repeat"
       });
+    }
+
+    this.addListener("appear", this.__refreshCursor, this);
+    this.addListener("disappear", this.__refreshCursor, this);
+  },
+
+  members :
+  {
+    /**
+     * Stop the event propagation from the passed event.
+     *
+     * @param e {qx.event.type.Mouse} mouse event to stop propagation.
+     */
+    _stopPropagation : function(e) {
+      e.stopPropagation();
+    },
+
+
+    /**
+     * Refreshes the curser by setting it to <code>null</code> and then to the
+     * old value.
+     */
+    __refreshCursor : function() {
+      var currentCursor = this.getStyle("cursor");
+      this.setStyle("cursor", null, true);
+      this.setStyle("cursor", currentCursor, true);
     }
   }
 });

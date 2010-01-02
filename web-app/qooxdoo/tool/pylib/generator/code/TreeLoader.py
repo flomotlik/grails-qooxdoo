@@ -20,13 +20,15 @@ class TreeLoader:
         else:
             cacheId = "tree-%s" % filePath
 
-        tree = self._cache.read(cacheId, filePath)
+        tradeSpaceForSpeed = False  # Caution: setting this to True seems to make builds slower, at least on some platforms!?
+
+        tree = self._cache.read(cacheId, filePath, memory=tradeSpaceForSpeed)
         if tree != None:
             return tree
 
         # Lookup for unoptimized tree
         if variants != None:
-            tree = self._cache.read("tree-%s" % fileId, filePath)
+            tree = self._cache.read("tree-%s" % fileId, filePath, memory=tradeSpaceForSpeed)
 
         # Tree still undefined?, create it!
         if tree == None:
@@ -39,24 +41,20 @@ class TreeLoader:
             self._console.outdent()
             self._console.debug("Generating tree: %s..." % fileId)
             self._console.indent()
+            tree = treegenerator.createSyntaxTree(tokens)  # allow exceptions to propagate
 
-            try:
-                tree = treegenerator.createSyntaxTree(tokens)
-            except treegenerator.SyntaxException, detail:
-                self._console.error("%s" % detail)
-                sys.exit(1)
+            # store unoptimized tree
+            self._cache.write("tree-%s" % fileId, tree, memory=tradeSpaceForSpeed, writeToFile=True)
 
             self._console.outdent()
-            self._console.debug("Selecting variants: %s..." % fileId)
-            self._console.indent()
 
         # Call variant optimizer
         if variants != None:
+            self._console.debug("Selecting variants: %s..." % fileId)
+            self._console.indent()
             variantoptimizer.search(tree, variants, fileId)
-
-        self._console.outdent()
-
-        # Store result into cache
-        self._cache.write(cacheId, tree)
+            self._console.outdent()
+            # store optimized tree
+            self._cache.write(cacheId, tree, memory=tradeSpaceForSpeed, writeToFile=True)
 
         return tree

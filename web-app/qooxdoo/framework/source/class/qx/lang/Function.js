@@ -46,22 +46,6 @@ qx.Bootstrap.define("qx.lang.Function",
   statics :
   {
     /**
-     * Returns whether the given object is a function
-     *
-     * @deprecated Use qx.lang.Type.isArray() instead
-     * @param obj {Object} Any object
-     * @return {Boolean} whether the given object is a function
-     */
-    isFunction: function(obj)
-    {
-       qx.log.Logger.deprecatedMethodWarning(
-         arguments.callee, "Use qx.lang.Type.isFunction() instead!"
-       );
-       return qx.lang.Type.isFunction(obj);
-     },
-
-
-    /**
      * Extract the caller of a function from the arguments variable.
      * This will not work in Opera.
      *
@@ -261,7 +245,7 @@ qx.Bootstrap.define("qx.lang.Function",
           {
             qx.core.Assert.assertFalse(
               options.self.isDisposed(),
-              "Trying to call a bound function with a disposed object as context."
+              "Trying to call a bound function with a disposed object as context: " + options.self.toString() + " :: " + qx.lang.Function.getName(func)
             );
           }
         }

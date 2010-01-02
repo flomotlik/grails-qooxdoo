@@ -15,6 +15,47 @@
    Authors:
      * Fabian Jakobs (fjakobs)
      * Sebastian Werner (wpbasti)
+     * Alexander Steitz (aback)
+
+
+   ======================================================================
+
+   This class contains code based on the following work:
+
+   * Juriy Zaytsev
+     http://thinkweb2.com/projects/prototype/detecting-event-support-without-browser-sniffing/
+
+     Copyright (c) 2009 Juriy Zaytsev
+
+     Licence:
+       BSD: http://github.com/kangax/iseventsupported/blob/master/LICENSE
+
+     ----------------------------------------------------------------------
+
+     http://github.com/kangax/iseventsupported/blob/master/LICENSE
+
+     Copyright (c) 2009 Juriy Zaytsev
+
+     Permission is hereby granted, free of charge, to any person
+     obtaining a copy of this software and associated documentation
+     files (the "Software"), to deal in the Software without
+     restriction, including without limitation the rights to use,
+     copy, modify, merge, publish, distribute, sublicense, and/or sell
+     copies of the Software, and to permit persons to whom the
+     Software is furnished to do so, subject to the following
+     conditions:
+
+     The above copyright notice and this permission notice shall be
+     included in all copies or substantial portions of the Software.
+
+     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+     OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+     OTHER DEALINGS IN THE SOFTWARE.
 
 ************************************************************************ */
 
@@ -62,8 +103,19 @@ qx.Bootstrap.define("qx.bom.Event",
      */
     removeNativeListener : qx.core.Variant.select("qx.client",
     {
-      "mshtml" : function(target, type, listener) {
-        target.detachEvent("on" + type, listener);
+      "mshtml" : function(target, type, listener)
+      {
+        try {
+          target.detachEvent("on" + type, listener);
+        }
+        catch(e)
+        {
+          // IE7 sometimes dispatches "unload" events on protected windows
+          // Ignore the "permission denied" errors.
+          if(e.number !== -2146828218) {
+            throw e;
+          };
+        }
       },
 
       "default" : function(target, type, listener) {
@@ -99,6 +151,19 @@ qx.Bootstrap.define("qx.bom.Event",
         } else {
           return e.toElement;
         }
+      },
+
+      "gecko" : function(e)
+      {
+        // In Firefox the related target of mouse events is sometimes an
+        // anonymous div inside of a text area, which raises an exception if
+        // the nodeType is read. This is why the try/catch block is needed.
+        try {
+          e.relatedTarget && e.relatedTarget.nodeType;
+        } catch (e) {
+          return null;
+        }
+        return e.relatedTarget;
       },
 
       "default" : function(e) {
@@ -202,6 +267,47 @@ qx.Bootstrap.define("qx.bom.Event",
 
         return !target.dispatchEvent(evt);
       }
-    }
+    },
+
+
+    /**
+     * Whether the given target supports the given event type.
+     *
+     * Useful for testing for support of new features like
+     * touch events, gesture events, orientation change, on/offline, etc.
+     *
+     * @signature function(target, type)
+     * @param target {var} Any valid target e.g. window, dom node, etc.
+     * @param type {String} Type of the event e.g. click, mousedown
+     * @return {Boolean} Whether the given event is supported
+     */
+    supportsEvent : qx.core.Variant.select("qx.client",
+    {
+      "webkit" : function(target, type) {
+        return target.hasOwnProperty("on" + type);
+      },
+
+      "default" : function(target, type)
+      {
+        var eventName = "on" + type;
+
+        var supportsEvent = (eventName in target);
+
+        if (!supportsEvent)
+        {
+          supportsEvent = typeof target[eventName] == "function";
+
+          if (!supportsEvent && target.setAttribute)
+          {
+            target.setAttribute(eventName, "return;");
+            supportsEvent = typeof target[eventName] == "function";
+
+            target.removeAttribute(eventName);
+          }
+        }
+
+        return supportsEvent;
+      }
+    })
   }
 });

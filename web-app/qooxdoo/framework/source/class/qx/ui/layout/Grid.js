@@ -71,7 +71,7 @@
  *
  * *External Documentation*
  *
- * <a href='http://qooxdoo.org/documentation/0.8/layout/Grid'>
+ * <a href='http://qooxdoo.org/documentation/1.0/layout/Grid'>
  * Extended documentation</a> and links to demos of this layout in the qooxdoo wiki.
  */
 qx.Class.define("qx.ui.layout.Grid",
@@ -202,8 +202,8 @@ qx.Class.define("qx.ui.layout.Grid",
       var colSpans = [];
       var rowSpans = [];
 
-      var maxRowIndex = 0;
-      var maxColIndex = 0;
+      var maxRowIndex = -1;
+      var maxColIndex = -1;
 
       var children = this._getLayoutChildren();
 
@@ -220,11 +220,18 @@ qx.Class.define("qx.ui.layout.Grid",
 
         // validate arguments
         if (row == null || column == null) {
-          throw new Error("The layout properties 'row' and 'column' must be defined!");
+          throw new Error(
+            "The layout properties 'row' and 'column' of the child widget '" +
+            child + "' must be defined!"
+          );
         }
 
         if (grid[row] && grid[row][column]) {
-          throw new Error("There is already a widget in this cell (" + row + ", " + column + ")");
+          throw new Error(
+            "Cannot add widget '" + child + "'!. " +
+            "There is already a widget '" + grid[row][column] +
+            "' in this cell (" + row + ", " + column + ")"
+          );
         }
 
         for (var x=column; x<column+props.colSpan; x++)
@@ -332,6 +339,7 @@ qx.Class.define("qx.ui.layout.Grid",
     {
       this.setSpacingY(spacing);
       this.setSpacingX(spacing);
+      return this;
     },
 
 
@@ -460,10 +468,40 @@ qx.Class.define("qx.ui.layout.Grid",
 
 
     /**
+     * Get the number of rows in the grid layout.
+     *
+     * @return {Integer} The number of rows in the layout
+     */
+    getRowCount : function()
+    {
+      if (this._invalidChildrenCache) {
+        this.__buildGrid();
+      }
+
+      return this.__maxRowIndex + 1;
+    },
+
+
+    /**
+     * Get the number of columns in the grid layout.
+     *
+     * @return {Integer} The number of columns in the layout
+     */
+    getColumnCount : function()
+    {
+      if (this._invalidChildrenCache) {
+        this.__buildGrid();
+      }
+
+      return this.__maxColIndex + 1;
+    },
+
+
+    /**
      * Get a map of the cell's alignment. For vertical alignment the row alignment
      * takes precedence over the column alignment. For horizontal alignment it is
      * the over way round. If an alignment is set on the cell widget using
-     * {@link qx.ui.layout.Abstract#setLayoutProperty}, this alignment takes
+     * {@link qx.ui.core.LayoutItem#setLayoutProperties}, this alignment takes
      * always precedence over row or column alignment.
      *
      * @param row {Integer} The cell's row index
@@ -1373,9 +1411,7 @@ qx.Class.define("qx.ui.layout.Grid",
 
   destruct : function()
   {
-    this._disposeFields(
-      "__grid", "__rowData", "__colData", "__colSpans", "__rowSpans",
-      "__colWidths", "__rowHeights"
-    );
+    this.__grid = this.__rowData = this.__colData = this.__colSpans =
+      this.__rowSpans = this.__colWidths = this.__rowHeights = null;
   }
 });

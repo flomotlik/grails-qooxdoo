@@ -28,7 +28,6 @@ qx.Class.define("qx.ui.form.AbstractSelectBox",
   extend  : qx.ui.core.Widget,
   include : [
     qx.ui.core.MRemoteChildrenHandling,
-    qx.ui.form.MFormElement,
     qx.ui.form.MForm
   ],
   implement : [
@@ -55,7 +54,7 @@ qx.Class.define("qx.ui.form.AbstractSelectBox",
 
     // Register listeners
     this.addListener("keypress", this._onKeyPress);
-    this.addListener("blur", this.close, this);
+    this.addListener("blur", this._onBlur, this);
 
     // register mouse wheel listener
     var root = qx.core.Init.getApplication().getRoot();
@@ -99,26 +98,20 @@ qx.Class.define("qx.ui.form.AbstractSelectBox",
       apply : "_applyMaxListHeight",
       nullable: true,
       init : 200
-    }
-  },
+    },
 
-
-
-
-  /*
-  *****************************************************************************
-     EVENTS
-  *****************************************************************************
-  */
-
-  events :
-  {
     /**
-      * Fired everytime the selection has been modified and this way the value
-      *
-      * @deprecated
-      */
-    "changeValue" : "qx.event.type.Data"
+     * Formatter which format the value from the selected <code>ListItem</code>.
+     * Uses the default formatter {@link #_defaultFormat}.
+     */
+    format :
+    {
+      check : "Function",
+      init : function(item) {
+        return this._defaultFormat(item);
+      },
+      nullable : true
+    }
   },
 
 
@@ -238,6 +231,33 @@ qx.Class.define("qx.ui.form.AbstractSelectBox",
     },
 
 
+    /*
+    ---------------------------------------------------------------------------
+      FORMAT HANDLING
+    ---------------------------------------------------------------------------
+    */
+
+
+    /**
+     * Return the formatted label text from the <code>ListItem</code>.
+     * The formatter removes all HTML tags and converts all HTML entities
+     * to string characters when the rich property is <code>true</code>.
+     *
+     * @param item {ListItem} The list item to format.
+     * @return {String} The formatted text.
+     */
+    _defaultFormat : function(item)
+    {
+      var valueLabel = item ? item.getLabel() : "";
+      var rich = item ? item.getRich() : false;
+
+      if (rich) {
+        valueLabel = valueLabel.replace(/<[^>]+?>/g, "");
+        valueLabel = qx.bom.String.unescape(valueLabel);
+      }
+
+      return valueLabel;
+    },
 
 
     /*
@@ -245,6 +265,17 @@ qx.Class.define("qx.ui.form.AbstractSelectBox",
       EVENT LISTENERS
     ---------------------------------------------------------------------------
     */
+
+    /**
+     * Handler for the blur event of the current widget.
+     *
+     * @param e {qx.event.type.Focus} The blur event.
+     */
+    _onBlur : function(e)
+    {
+      this.close();
+    },
+
 
     /**
      * Reacts on special keys and forwards other key events to the list widget.
@@ -276,6 +307,7 @@ qx.Class.define("qx.ui.form.AbstractSelectBox",
       }
     },
 
+
     /**
      * Close the pop-up if the mousewheel event isn't on the pup-up window.
      *
@@ -287,14 +319,13 @@ qx.Class.define("qx.ui.form.AbstractSelectBox",
       var popup = this.getChildControl("popup");
 
       if (qx.ui.core.Widget.contains(popup, target)) {
-        return;
+        // needed for ComboBox widget inside an inline application
+        e.preventDefault();
+      } else {
+        this.close();
       }
-
-      this.close();
-
-      // needed for ComboBox widget inside an inline application
-      e.preventDefault();
     },
+
 
     /**
      * Updates list minimum size.

@@ -20,7 +20,7 @@
 /**
  * The model of a table pane. This model works as proxy to a
  * {@link qx.ui.table.columnmodel.Basic} and manages the visual order of the columns shown in
- * a {@link TablePane}.
+ * a {@link Pane}.
  */
 qx.Class.define("qx.ui.table.pane.Model",
 {
@@ -289,6 +289,6 @@ qx.Class.define("qx.ui.table.pane.Model",
   */
 
   destruct : function() {
-    this._disposeFields("__tableColumnModel");
+    this.__tableColumnModel = null;
   }
 });

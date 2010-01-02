@@ -117,7 +117,7 @@ qx.Class.define("apiviewer.dao.Class",
 
     isLoaded : function()
     {
-      return this._docNode.attributes.externalRef != "true";
+      return this._docNode.attributes.externalRef != true;
     },
 
 
@@ -760,5 +760,21 @@ qx.Class.define("apiviewer.dao.Class",
       return true;
     }
 
+  },
+  
+  
+  /*
+   *****************************************************************************
+      DESTRUCTOR
+   *****************************************************************************
+   */
+
+  destruct : function()
+  {
+    this._see = this._superInterfaces = this._superMixins = this._events =
+      this._statics = this._properties = this._constants = this._appearances =
+      this._members = this._package = null;
+    this._disposeObjects("_constructor");
   }
+  
 });

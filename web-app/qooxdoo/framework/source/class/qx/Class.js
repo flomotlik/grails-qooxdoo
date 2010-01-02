@@ -146,6 +146,7 @@ qx.Bootstrap.define("qx.Class",
      *       <tr><th>defer</th><td>Function</td><td>Function that is called at the end of processing the class declaration. It allows access to the declared statics, members and properties.</td></tr>
      *       <tr><th>destruct</th><td>Function</td><td>The destructor of the class.</td></tr>
      *     </table>
+     * @return {Class} The defined class
      */
     define : function(name, config)
     {
@@ -251,6 +252,7 @@ qx.Bootstrap.define("qx.Class",
           }
         });
       }
+      return clazz;
     },
 
 
@@ -453,7 +455,7 @@ qx.Bootstrap.define("qx.Class",
      *
      * @param clazz {Class} class to check
      * @param name {String} name of the event
-     * @return {Map|null} Event type of the given event.
+     * @return {String|null} Event type of the given event.
      */
     getEventType : function(clazz, name)
     {
@@ -818,7 +820,9 @@ qx.Bootstrap.define("qx.Class",
         {
           var key = maps[i];
 
-          if (config[key] !== undefined && (config[key] instanceof Array || config[key] instanceof RegExp || config[key] instanceof Date || config[key].classname !== undefined)) {
+          if (config[key] !== undefined && (
+            config[key].$$hash !== undefined || !qx.lang.Type.isObject(config[key])
+          )) {
             throw new Error('Invalid key "' + key + '" in class "' + name + '"! The value needs to be a map!');
           }
         }
@@ -1207,7 +1211,7 @@ qx.Bootstrap.define("qx.Class",
         }
 
         if (!has && config.refine) {
-          throw new Error("Could not refine non-existent property: " + name + "!");
+          throw new Error("Could not refine non-existent property: '" + name + "' of class: '" + clazz.classname + "'!");
         }
 
         if (has && !patch) {
@@ -1254,7 +1258,11 @@ qx.Bootstrap.define("qx.Class",
 
         if (config.check != null)
         {
-          if (!(typeof config.check == "string" ||config.check instanceof Array || config.check instanceof Function)) {
+          if (
+            !qx.lang.Type.isString(config.check) &&
+            !qx.lang.Type.isArray(config.check) &&
+            !qx.lang.Type.isFunction(config.check)
+          ) {
             throw new Error('Invalid check definition of property "' + name + '" in class "' + clazz.classname + '"! Needs to be a String, Array or Function.');
           }
         }
@@ -1403,7 +1411,7 @@ qx.Bootstrap.define("qx.Class",
     /**
      * Include all features of the mixin into the given class (recursive).
      *
-     * @param clazz {Class} A class previously defined where the mixin should be attached.
+     * @param clazz {Class} The class where the mixin should be attached.
      * @param mixin {Mixin} Include all features of this mixin
      * @param patch {Boolean} Overwrite existing fields, functions and properties
      */
@@ -1416,9 +1424,7 @@ qx.Bootstrap.define("qx.Class",
         }
       }
 
-      if (this.hasMixin(clazz, mixin))
-      {
-        qx.log.Logger.warn('Mixin "' + mixin.name + '" is already included into Class "' + clazz.classname + '" by class: ' + this.getByMixin(clazz, mixin).classname + '!');
+      if (this.hasMixin(clazz, mixin)) {
         return;
       }
 
@@ -1435,7 +1441,7 @@ qx.Bootstrap.define("qx.Class",
           this.__addEvents(clazz, entry.$$events, patch);
         }
 
-        // Attach properties (Properties are already readonly themselve, no patch handling needed)
+        // Attach properties (Properties are already readonly themselves, no patch handling needed)
         if (entry.$$properties) {
           this.__addProperties(clazz, entry.$$properties, patch);
         }

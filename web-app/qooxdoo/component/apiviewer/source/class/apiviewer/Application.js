@@ -76,7 +76,19 @@ qx.Class.define("apiviewer.Application",
       this.base(arguments);
 
       // Finally load the data
-      this.controller.load("script/apidata.js");
+      this.controller.load("script/apidata.json");
     }
+  },
+
+
+  /*
+  *****************************************************************************
+     DESTRUCTOR
+  *****************************************************************************
+  */
+
+  destruct : function()
+  {
+    this._disposeObjects("viewer", "controller");
   }
 });

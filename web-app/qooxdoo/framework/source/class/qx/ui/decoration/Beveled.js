@@ -209,7 +209,8 @@ qx.Class.define("qx.ui.decoration.Beveled",
       html.push('"></div>');
 
       // Inner background frame
-      html.push(this._generateBackgroundMarkup("position:absolute;top:1px;left:1px;"));
+      var backgroundStyle = { position: "absolute", top: "1px", left: "1px" };
+      html.push(this._generateBackgroundMarkup(backgroundStyle));
 
       // Inner overlay frame
       html.push('<div style="position:absolute;top:1px;left:1px;');
@@ -304,6 +305,6 @@ qx.Class.define("qx.ui.decoration.Beveled",
    */
 
    destruct : function() {
-     this._disposeFields("__markup", "__insets");
+     this.__markup = null;
    }
 });

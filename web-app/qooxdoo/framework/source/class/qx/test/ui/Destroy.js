@@ -177,9 +177,10 @@ qx.Class.define("qx.test.ui.Destroy",
     testCore : function()
     {
       var forms = [
-        [qx.ui.core.ScrollBar, []],
-        [qx.ui.core.ScrollPane, []],
-        [qx.ui.core.ScrollSlider, []],
+        [qx.ui.core.scroll.ScrollBar, []],
+        [qx.ui.core.scroll.NativeScrollBar, []],
+        [qx.ui.core.scroll.ScrollPane, []],
+        [qx.ui.core.scroll.ScrollSlider, []],
         [qx.ui.core.Widget, []]
       ];
       for (var i=0; i<forms.length; i++) {
@@ -372,6 +373,33 @@ qx.Class.define("qx.test.ui.Destroy",
 
         widget.destroy();
       }, this, "Dispose tree");
+    },
+
+
+    testRadioGroup : function()
+    {
+      this.assertDestroy(function()
+      {
+        var group = new qx.ui.form.RadioGroup(
+          new qx.ui.form.RadioButton("one"),
+          new qx.ui.form.RadioButton("two")
+        );
+
+        group.dispose();
+      });
+    },
+
+
+    testRadioButtonGroup : function()
+    {
+      this.assertDestroy(function()
+      {
+        var group = new qx.ui.form.RadioButtonGroup(new qx.ui.layout.HBox());
+        group.add(new qx.ui.form.RadioButton("one"));
+        group.add(new qx.ui.form.RadioButton("two"));
+
+        group.destroy();
+      });
     },
 
 

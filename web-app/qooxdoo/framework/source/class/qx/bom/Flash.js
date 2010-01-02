@@ -96,21 +96,6 @@ qx.Class.define("qx.bom.Flash",
      */
     create : function(element, attributes, variables, params, win)
     {
-      if (typeof attributes === "string")
-      {
-        qx.log.Logger.deprecatedMethodWarning(arguments.callee,
-          "Please only use the following arguments for this method: qx.bom.Flash.create(element, attributes, variables, params, win)");
-
-        attributes = {
-          id    : arguments[2],
-          movie : arguments[1]
-        };
-
-        variables = arguments[3];
-        params = arguments[4];
-        win = arguments[5];
-      }
-
       if (!win) {
         win = window;
       }
@@ -308,8 +293,14 @@ qx.Class.define("qx.bom.Flash",
           paramsStr += '<param name="' + name + '" value="' + params[name] + '" />';
         }
 
-        // Create element
-        element.innerHTML = '<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000">' + paramsStr + '</object>';
+        // Create element, but set attribute "id" first and not later.
+        if (attributes.id)
+        {
+          element.innerHTML = '<object id="' + attributes.id + '" classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000">' + paramsStr + '</object>';
+          delete attributes.id;
+        } else {
+          element.innerHTML = '<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000">' + paramsStr + '</object>';
+        }
 
         // Apply attributes
         for (var name in attributes) {

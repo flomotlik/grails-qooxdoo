@@ -27,7 +27,7 @@
 ************************************************************************ */
 
 /**
- * Abstract Icon cell renderer.  EXPERIMENTAL!  INTERFACE MAY CHANGE.
+ * Abstract Icon cell renderer.
  */
 qx.Class.define("qx.ui.progressive.renderer.table.cell.Icon",
 {
@@ -233,10 +233,5 @@ qx.Class.define("qx.ui.progressive.renderer.table.cell.Icon",
 
       return imageData;
     }
-  },
-
-  destruct : function()
-  {
-    this._disposeFields("__imageBlank");
   }
 });

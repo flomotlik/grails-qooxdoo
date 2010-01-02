@@ -6,7 +6,7 @@
 #  http://qooxdoo.org
 #
 #  Copyright:
-#    2006-2008 1&1 Internet AG, Germany, http://www.1und1.de
+#    2006-2009 1&1 Internet AG, Germany, http://www.1und1.de
 #
 #  License:
 #    LGPL: http://www.gnu.org/licenses/lgpl.html
@@ -57,7 +57,9 @@ MIGRATION_ORDER = [
     "0.8-rc1",
     "0.8",
     "0.8.1",
-    "0.8.2"
+    "0.8.2",
+    "0.8.3",
+    "1.0",
 ]
 
 
@@ -75,15 +77,15 @@ QXHEAD = {
     "classDefine" : re.compile('qx.(Bootstrap|List|Class|Locale|Mixin|Interface|Theme).define\s*\(\s*["\']([\.a-zA-Z0-9_]+)["\']?', re.M),
 
     # Loader hints
-    "module" : re.compile("^#module\(\s*([\.a-zA-Z0-9_-]+?)\s*\)", re.M),
-    "require" : re.compile("^#require\(\s*([\.a-zA-Z0-9_-]+?)\s*\)", re.M),
-    "use" : re.compile("^#use\(\s*([\.a-zA-Z0-9_-]+?)\s*\)", re.M),
-    "optional" : re.compile("^#optional\(\s*([\.a-zA-Z0-9_-]+?)\s*\)", re.M),
-    "ignore" : re.compile("^#ignore\(\s*([\.a-zA-Z0-9_-]+?)\s*\)", re.M),
+    "module"   : re.compile(r"^\s*#module\(\s*([\.a-zA-Z0-9_-]+?)\s*\)", re.M),
+    "require"  : re.compile(r"^\s*#require\(\s*([\.a-zA-Z0-9_-]+?)\s*\)", re.M),
+    "use"      : re.compile(r"^\s*#use\(\s*([\.a-zA-Z0-9_-]+?)\s*\)", re.M),
+    "optional" : re.compile(r"^\s*#optional\(\s*([\.a-zA-Z0-9_-]+?)\s*\)", re.M),
+    "ignore"   : re.compile(r"^\s*#ignore\(\s*([\.a-zA-Z0-9_-]+?)\s*\)", re.M),
 
     # Resource hints
-    "resource" : re.compile("^#resource\(\s*([a-zA-Z0-9]+?)\.([a-zA-Z0-9]+?):(.*?)\s*\)", re.M),
-    "embed" : re.compile("^#embed\(\s*([a-zA-Z0-9]+?)\.([a-zA-Z0-9]+?)/(.+?)\s*\)", re.M)
+    "resource" : re.compile(r"^\s*#resource\(\s*([a-zA-Z0-9]+?)\.([a-zA-Z0-9]+?):(.*?)\s*\)", re.M),
+    "embed"    : re.compile(r"^\s*#embed\(\s*([a-zA-Z0-9]+?)\.([a-zA-Z0-9]+?)/(.+?)\s*\)", re.M)
 }
 
 
@@ -743,10 +745,10 @@ def main():
 NOTE:    To apply only the necessary changes to your project, we
          need to know the qooxdoo version it currently works with.
 
-Please enter your current qooxdoo version [0.7.3] : """)
+Please enter your current qooxdoo version [0.8.3] : """)
 
         if choice == "":
-            options.from_version = "0.7.3"
+            options.from_version = "0.8.3"
         elif re.match(r'\d\.\d(\.\d)?', choice):
             options.from_version = choice
 
